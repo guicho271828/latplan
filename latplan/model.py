@@ -1,6 +1,6 @@
 import numpy as np
 
-from keras.layers import Input, Dense, Lambda
+from keras.layers import Input, Dense, Lambda, Reshape
 from keras.models import Model, Sequential
 from keras import backend as K
 from keras import objectives
@@ -16,55 +16,70 @@ class GumbelAE:
     max_temperature = 5.0
     anneal_rate = 0.0003
     
-    def __init__(self,data_dim,M=2,N=16):
-        def to2(tensor):
-            return K.reshape(tensor, (-1, N, M))
-        def to1(tensor):
-            return K.reshape(tensor, (-1, N*M))
+    def __init__(self,path,M=2,N=16):
+        import subprocess
+        subprocess.call(["mkdir",path])
+        self.path = path
+        self.M, self.N = M, N
+        self.built = False
+        self.loaded = False
         
+    def build(self,input_shape):
+        if self.built:
+            print "Avoided building {} twice.".format(self)
+            return
+        data_dim = np.prod(input_shape)
+        M, N = self.M, self.N
         tau = K.variable(self.max_temperature, name="temperature")
         def sampling(logits):
             U = K.random_uniform(K.shape(logits), 0, 1)
             z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
-            return to1(softmax(to2( z / tau )))
+            return softmax( z / tau )
         
-        x = Input(shape=(data_dim,))
+        x = Input(shape=input_shape)
         _encoder = Sequential([
-            Dense(512, activation='relu', input_shape=(data_dim,)),
+            Reshape((data_dim,),input_shape=input_shape),
+            Dense(512, activation='relu'),
             Dense(256, activation='relu'),
-            Dense(M*N),])
+            Dense(M*N),
+            Reshape((N,M))])
         logits = _encoder(x)
         z = Lambda(sampling)(logits)
         _decoder = Sequential([
-            Dense(256, activation='relu', input_shape=(N*M,)),
+            Reshape((N*M,),input_shape=(N,M,)),
+            Dense(256, activation='relu'),
             Dense(512, activation='relu'),
-            Dense(data_dim, activation='sigmoid')])
+            Dense(data_dim, activation='sigmoid'),
+            Reshape(input_shape),])
         y = _decoder(z)
 
         def gumbel_loss(x, y):
-            q = softmax(to2(logits))
+            q = softmax(logits)
             log_q = K.log(q + 1e-20)
             kl_tmp = q * (log_q - K.log(1.0/M))
             KL = K.sum(kl_tmp, axis=(1, 2))
             elbo = data_dim * bce(x, y) - KL
             return elbo
         
-        self.M, self.N = M, N
         self.__tau = tau
         self.__loss = gumbel_loss
         self.encoder     = Model(x, z)
         self.decoder     = _decoder
         self.autoencoder = Model(x, y)
+        self.built = True
 
-    import os.path as p
-    def save(self,path):
-        import subprocess
-        subprocess.call(["mkdir",path])
-        self.encoder.save_weights(p.join(path,"encoder.h5"))
-        self.decoder.save_weights(p.join(path,"decoder.h5"))
-    def load(self,path):
-        self.encoder.load_weights(p.join(path,"encoder.h5"))
-        self.decoder.load_weights(p.join(path,"decoder.h5"))
+    def save(self):
+        import os.path as p
+        self.encoder.save_weights(p.join(self.path,"encoder.h5"))
+        self.decoder.save_weights(p.join(self.path,"decoder.h5"))
+    def do_load(self):
+        import os.path as p
+        self.encoder.load_weights(p.join(self.path,"encoder.h5"))
+        self.decoder.load_weights(p.join(self.path,"decoder.h5"))
+        self.loaded = True
+    def load(self):
+        if not self.loaded:
+            self.do_load()
         
     def cool(self, epoch, logs):
         new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
@@ -72,7 +87,8 @@ class GumbelAE:
         print "Tau = {}".format(new_tau)
         K.set_value(self.__tau, new_tau)
         
-    def train(self,train_data,epoch=200,batch_size=1000,optimizer='adam',test_data=None):
+    def train(self,train_data,epoch=200,batch_size=1000,optimizer='adam',test_data=None,save=True):
+        self.build(train_data.shape[1:])
         if test_data is not None:
             validation = (test_data,test_data)
         else:
@@ -87,18 +103,25 @@ class GumbelAE:
         except KeyboardInterrupt:
             print ("learning stopped")
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
-        print "MSE reconstruction error: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
+        print "Reconstruction MSE: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
-        print "BCE reconstruction error: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
+        print "Reconstruction BCE: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
+        self.loaded = True
+        if save:
+            self.save()
     def encode(self,data):
+        self.build(data.shape[1:])
+        self.load()
         return self.encoder.predict(data)
     def decode(self,data):
         return self.decoder.predict(data)
     def autoencode(self,data):
+        self.build(data.shape[1:])
+        self.load()
         return self.autoencoder.predict(data)
     def encode_binary(self,data):
         assert self.M == 2, "M={}, not 2".format(self.M)
-        return self.encode(data).reshape(-1, self.N, self.M)[:,:,0].reshape(-1, self.N)
+        return self.encode(data)[:,:,0].reshape(-1, self.N)
     def summary(self):
         self.autoencoder.summary()
 
@@ -110,13 +133,11 @@ if __name__ == '__main__':
         subprocess.call(shlex.split("rm -rf mnist_model/"))
     from mnist import mnist
     x_train, _, x_test, _ = mnist()
-    ae = GumbelAE(784)
+    ae = GumbelAE("mnist_model/")
     ae.train(x_train,test_data=x_test)
-    ae.save("mnist_model/")
+    ae.summary()
     del ae
-    ae = GumbelAE(784)
-    ae.load("mnist_model/")
-
+    ae = GumbelAE("mnist_model/")
     howmany=10
     y_test = ae.autoencode(x_test[:howmany])
     z_test = ae.encode_binary(x_test[:howmany])
