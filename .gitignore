@@ -9,3 +9,4 @@
 *.negative
 learn/events*
 /mnist_model/
+/old/
