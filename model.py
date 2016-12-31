@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from keras.layers import Input, Dense, Lambda
 from keras.models import Model, Sequential
@@ -83,9 +82,9 @@ class GumbelAE:
         except KeyboardInterrupt:
             print ("learning stopped")
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
-        print "MSE reconstruction error: {}".format(self.autoencoder.evaluate(data,data,verbose=0))
+        print "MSE reconstruction error: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
-        print "BCE reconstruction error: {}".format(self.autoencoder.evaluate(data,data,verbose=0))
+        print "BCE reconstruction error: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
     def encode(self,data):
         return self.encoder.predict(data)
     def decode(self,data):
@@ -93,19 +92,42 @@ class GumbelAE:
     def autoencode(self,data):
         return self.autoencoder.predict(data)
     def encode_binary(self,data):
-        assert M == 2, "M={}, not 2".format(M)
-        return self.encode(data).reshape(-1, N, M)[:,:,0].reshape(-1, N)
+        assert self.M == 2, "M={}, not 2".format(self.M)
+        return self.encode(data).reshape(-1, self.N, self.M)[:,:,0].reshape(-1, self.N)
     def summary(self):
         self.autoencoder.summary()
 
 if __name__ == '__main__':
-    import subprocess
+    import matplotlib.pyplot as plt
+    import shlex, subprocess
     import os.path as p
-    if p.exists("test/"):
-        subprocess.call("rm -rf test")
+    if p.exists("mnist_model/"):
+        subprocess.call(shlex.split("rm -rf mnist_model/"))
+    from mnist import mnist
+    x_train, _, x_test, _ = mnist()
     ae = GumbelAE(784)
-    ae.save("test/")
+    ae.train(x_train,test_data=x_test)
+    ae.save("mnist_model/")
     del ae
     ae = GumbelAE(784)
-    ae.load("test/")
-    
+    ae.load("mnist_model/")
+
+    howmany=10
+    y_test = ae.autoencode(x_test[:howmany])
+    z_test = ae.encode_binary(x_test[:howmany])
+
+    plt.figure(figsize=(30, 5))
+    for i in range(howmany):
+        plt.subplot(3,howmany,i+1)
+        plt.imshow(x_test[i].reshape(28, 28), cmap='gray')
+        plt.axis('off')
+        plt.subplot(3,howmany,i+1+1*howmany)
+        plt.imshow(z_test[i].reshape(4,4), cmap='gray',
+                   interpolation='nearest')
+        plt.axis('off')
+        plt.subplot(3,howmany,i+1+2*howmany)
+        plt.imshow(y_test[i].reshape(28, 28), cmap='gray')
+        plt.axis('off')
+    plt.savefig('mnist_model/viz.png')
+
+
