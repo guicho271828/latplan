@@ -8,6 +8,7 @@ from keras.datasets import mnist
 from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse
+from keras.callbacks import LambdaCallback
 
 class GumbelAE:
     # common options
@@ -64,6 +65,13 @@ class GumbelAE:
     def load(self,path):
         self.encoder.load_weights(p.join(path,"encoder.h5"))
         self.decoder.load_weights(p.join(path,"decoder.h5"))
+        
+    def cool(self, epoch, logs):
+        new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
+                          self.min_temperature])
+        print "Tau = {}".format(new_tau)
+        K.set_value(self.__tau, new_tau)
+        
     def train(self,train_data,epoch=200,batch_size=1000,optimizer='adam',test_data=None):
         if test_data is not None:
             validation = (test_data,test_data)
@@ -71,14 +79,11 @@ class GumbelAE:
             validation = None
         try:
             self.autoencoder.compile(optimizer=optimizer, loss=self.__loss)
-            for e in range(epoch):
-                self.autoencoder.fit(train_data, train_data,
-                                     shuffle=True, nb_epoch=1, batch_size=batch_size,
-                                     validation_data=validation)
-                new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * e),
-                                  self.min_temperature])
-                print "Tau = {} epoch = {}".format(new_tau,e)
-                K.set_value(self.__tau, new_tau)
+            self.autoencoder.fit(
+                train_data, train_data,
+                nb_epoch=epoch, batch_size=batch_size,
+                shuffle=True, validation_data=validation,
+                callbacks=[LambdaCallback(on_epoch_begin=self.cool)])
         except KeyboardInterrupt:
             print ("learning stopped")
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
