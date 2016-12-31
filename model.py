@@ -93,4 +93,13 @@ class GumbelAE:
         self.autoencoder.summary()
 
 if __name__ == '__main__':
+    import subprocess
+    import os.path as p
+    if p.exists("test/"):
+        subprocess.call("rm -rf test")
     ae = GumbelAE(784)
+    ae.save("test/")
+    del ae
+    ae = GumbelAE(784)
+    ae.load("test/")
+    
