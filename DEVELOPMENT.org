@@ -1,0 +1,7 @@
+
+
++ general learner
+  + takes any sizes of monotone image
+  + input pixel is 8-bit integer
+  + can access autoencoder, encoder, decoder
+  + can save/load from directory
