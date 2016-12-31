@@ -5,3 +5,17 @@
   + input pixel is 8-bit integer
   + can access autoencoder, encoder, decoder
   + can save/load from directory
+
++ puzzle generator
+  + 3-puzzle
+  + lights-out
+  + blocksworld
+
++ planner
+  + bridge to FastDownward
+
+
+pictures -> network
+pict pairs -> actions
+init/goal pict -> init/goal binaries
+
