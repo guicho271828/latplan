@@ -1,6 +1,6 @@
 
 
-+ general learner
++ general learner : model.py
   + takes any sizes of monotone image
   + input pixel is 8-bit integer
   + can access autoencoder, encoder, decoder
