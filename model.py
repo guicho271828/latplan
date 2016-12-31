@@ -58,6 +58,8 @@ class GumbelAE:
 
     import os.path as p
     def save(self,path):
+        import subprocess
+        subprocess.call(["mkdir",path])
         self.encoder.save_weights(p.join(path,"encoder.h5"))
         self.decoder.save_weights(p.join(path,"decoder.h5"))
     def load(self,path):
