@@ -65,11 +65,17 @@ class GumbelAE:
     def load(self,path):
         self.encoder.load_weights(p.join(path,"encoder.h5"))
         self.decoder.load_weights(p.join(path,"decoder.h5"))
-    def train(self,data,epoch=200,batch_size=1000,optimizer='adam'):
+    def train(self,train_data,epoch=200,batch_size=1000,optimizer='adam',test_data=None):
+        if test_data is not None:
+            validation = (test_data,test_data)
+        else:
+            validation = None
         try:
             self.autoencoder.compile(optimizer=optimizer, loss=self.__loss)
             for e in range(epoch):
-                self.autoencoder.fit(data,data, shuffle=True, nb_epoch=1, batch_size=batch_size)
+                self.autoencoder.fit(train_data, train_data,
+                                     shuffle=True, nb_epoch=1, batch_size=batch_size,
+                                     validation_data=validation)
                 new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * e),
                                   self.min_temperature])
                 print "Tau = {} epoch = {}".format(new_tau,e)
