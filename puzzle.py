@@ -112,10 +112,11 @@ def generate_puzzle(configs, width, height):
     dim_y = base_height*height
     def generate(config):
         figure = np.zeros((dim_y,dim_x))
-        for y in range(height):
-            for x in range(width):
-                figure[y*base_height:(y+1)*base_height,
-                       x*base_width:(x+1)*base_width] = panels[config[y*width+x]]
+        for digit,pos in enumerate(config):
+            x = pos % width
+            y = pos // width
+            figure[y*base_height:(y+1)*base_height,
+                   x*base_width:(x+1)*base_width] = panels[digit]
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
