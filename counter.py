@@ -32,3 +32,6 @@ def counter_transitions(labels = range(10), n = 10000):
             labelled_images[dest][np.random.choice(len(labelled_images[dest]),n)])
     
     return np.concatenate(orig_results,axis=0), np.concatenate(dest_results,axis=0),
+
+if __name__ == '__main__':
+    print counter_transitions(n=10)
