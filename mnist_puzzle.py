@@ -1,8 +1,5 @@
 import numpy as np
-
-def generate_configs(digit=9):
-    import itertools
-    return itertools.permutations(range(digit))
+from puzzle import generate_configs
 
 def generate_mnist_puzzle(configs, width, height):
     assert width*height <= 9
