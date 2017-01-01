@@ -5,22 +5,22 @@ def generate_mnist_puzzle(configs, width, height):
     assert width*height <= 9
     from mnist import mnist
     x_train, y_train, _, _ = mnist()
-    mnist_filters = [ np.equal(i,y_train) for i in range(10) ]
-    mnist_imgs    = [ x_train[f] for f in mnist_filters ]
-    mnist_panels  = [ imgs[0].reshape((28,28)) for imgs in mnist_imgs ]
-    dim_x = 28*width
-    dim_y = 28*height
+    filters = [ np.equal(i,y_train) for i in range(10) ]
+    imgs    = [ x_train[f] for f in filters ]
+    panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
+    base_width = 28
+    base_height = 28
+    dim_x = base_width*width
+    dim_y = base_height*height
     def generate(config):
         figure = np.zeros((dim_y,dim_x))
-        for y in range(height):
-            for x in range(width):
-                figure[y*28:(y+1)*28, x*28:(x+1)*28] = mnist_panels[config[y*width+x]]
+        for digit,pos in enumerate(config):
+            x = pos % width
+            y = pos // width
+            figure[y*base_height:(y+1)*base_height,
+                   x*base_width:(x+1)*base_width] = panels[digit]
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
-
-# def puzzle_transitions(size=2,n = 10000):
-#     configs = generate_configs(size,n)
-#     def 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
