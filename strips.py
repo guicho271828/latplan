@@ -18,6 +18,6 @@ def dump_actions(transitions,path):
 
 if __name__ == '__main__':
     from counter import counter_transitions
-    actions = dump_actions(counter_transitions(n=1000), "counter_model/")
+    actions = dump_actions(counter_transitions(n=10000), "counter_model/")
     print actions[:3]
 
