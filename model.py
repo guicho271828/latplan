@@ -122,6 +122,9 @@ class GumbelAE:
     def encode_binary(self,data):
         assert self.M == 2, "M={}, not 2".format(self.M)
         return self.encode(data)[:,:,0].reshape(-1, self.N)
+    def decode_binary(self,data):
+        assert self.M == 2, "M={}, not 2".format(self.M)
+        return self.decode(np.stack((data,1-data),axis=-1))
     def summary(self):
         self.autoencoder.summary()
 
