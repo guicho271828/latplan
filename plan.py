@@ -40,7 +40,7 @@ def latent_plan(init,goal,ae):
     import os.path as path
     
     echodo(["lisp/pddl.ros",path.join(ae.path,"actions.csv")] +
-           list(ig_b.flatten().astype('string')))
+           list(ig_b.flatten().astype('int').astype('string')))
     echodo(["planner-scripts/limit.sh","-v","--","fd-clean","problem.pddl","domain.pddl"])
     out = subprocess.check_output(["lisp/parse-plan.ros","problem.plan"])
     lines = out.split("\n")
