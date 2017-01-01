@@ -1,0 +1,67 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre function-cache) :silent t)
+  )
+
+(defpackage :ros.script.to-sas.3690427216
+  (:use :cl :cl-csv :iterate :alexandria :trivia.ppcre :function-cache))
+(in-package :ros.script.to-sas.3690427216)
+
+(defun read-as-lists (csv)
+  (with-open-file (s csv)
+    (cl-csv:read-csv s
+                     :separator #\Space
+                     :map-fn (lambda (args)
+                               (mapcar #'read-from-string args)))))
+
+(function-cache:defcached sym (&rest args)
+  (intern (format nil "~{~a~}" args))
+  ;; (apply #'symbolicate (mapcar #'princ-to-string args))
+  )
+
+(defun make-domain (data)
+  (let* ((dim (/ (length (first data)) 2))
+         (dims (iota dim)))
+    `(define (domain latent)
+         (:requirements :strips)
+       (:predicates
+        ,@(iter (for dim in dims)
+                (collect
+                 `(,(sym 'z dim) ?value))))
+       (:constants v0 v1 - object)
+       ,@(iter (for transition in data)
+               (for from = (subseq transition 0 dim))
+               (for to   = (subseq transition dim))
+               (for i from 0)
+               (collect
+                `(:action ,(sym 'a i)
+                  :parameters ()
+                  :precondition
+                  (and ,@(iter (for dim in dims)
+                               (for value in from)
+                               (collect
+                                `(,(sym 'z dim) ,(sym 'v value)))))
+                  :effect
+                  (and ,@(iter (for dim in dims)
+                               (for value in from)
+                               (collect
+                                `(not (,(sym 'z dim) ,(sym 'v value)))))
+                       ,@(iter (for dim in dims)
+                               (for value in to)
+                               (collect
+                                `(,(sym 'z dim) ,(sym 'v value)))))))))))
+
+(defun main (csv)
+  (with-output-to-file (s "domain.pddl" :if-does-not-exist :create :if-exists :supersede)
+    (prin1 (make-domain (read-as-lists csv)) s)))
+
+
+;;; vim: set ft=lisp lisp:
+
+
+
