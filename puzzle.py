@@ -120,9 +120,38 @@ def generate_puzzle(configs, width, height):
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
-# def puzzle_transitions(size=2,n = 10000):
-#     configs = generate_configs(size,n)
-#     def 
+def successors(config,width,height):
+    pos = config[0]
+    x = pos % width
+    y = pos // width
+    print x,y
+    succ = []
+    if x is not 0:
+        c = list(config)
+        other = next(i for i,_pos in enumerate(c) if _pos == pos-1)
+        c[0] -= 1
+        c[other] += 1
+        succ.append(c)
+    if x is not width-1:
+        c = list(config)
+        other = next(i for i,_pos in enumerate(c) if _pos == pos+1)
+        c[0] += 1
+        c[other] -= 1
+        succ.append(c)
+    if y is not 0:
+        c = list(config)
+        other = next(i for i,_pos in enumerate(c) if _pos == pos-width)
+        c[0] -= width
+        c[other] += width
+        succ.append(c)
+    if y is not height-1:
+        c = list(config)
+        other = next(i for i,_pos in enumerate(c) if _pos == pos+width)
+        c[0] += width
+        c[other] -= width
+        succ.append(c)
+    return succ
+    
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
