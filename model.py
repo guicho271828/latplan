@@ -71,11 +71,11 @@ class GumbelAE:
         import os.path as p
         return p.join(self.path,path)
     def save(self):
-        self.encoder.save_weights(local("encoder.h5"))
-        self.decoder.save_weights(local("decoder.h5"))
+        self.encoder.save_weights(self.local("encoder.h5"))
+        self.decoder.save_weights(self.local("decoder.h5"))
     def do_load(self):
-        self.encoder.load_weights(local("encoder.h5"))
-        self.decoder.load_weights(local("decoder.h5"))
+        self.encoder.load_weights(self.local("encoder.h5"))
+        self.decoder.load_weights(self.local("decoder.h5"))
         self.loaded = True
     def load(self):
         if not self.loaded:
