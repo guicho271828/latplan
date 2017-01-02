@@ -160,6 +160,6 @@ if __name__ == '__main__':
         plt.imshow(a,interpolation='nearest',cmap='gray',)
         plt.savefig(name)
     configs = generate_configs(6)
-    plot_image(generate_puzzle(configs, 2, 3)[10],"puzzle.png")
+    plot_image(generate_puzzle(configs, 2, 3)[10],"samples/puzzle.png")
 
     

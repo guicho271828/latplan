@@ -34,27 +34,28 @@ def latent_plan(init,goal,ae):
              ae.decode_binary(ig_z),
              ae.decode_binary(ig_b)),
             axis=0),
-        "initial_and_goal_states.png")
+        ae.local("initial_and_goal_states.png"))
 
     # start planning
-    import os.path as path
     
-    echodo(["lisp/pddl.ros",path.join(ae.path,"actions.csv")] +
+    echodo(["lisp/pddl.ros",ae.local("actions.csv")] +
            list(ig_b.flatten().astype('int').astype('string')))
-    echodo(["planner-scripts/limit.sh","-v","--","fd-clean","problem.pddl","domain.pddl"])
-    out = subprocess.check_output(["lisp/parse-plan.ros","problem.plan"])
+    echodo(["planner-scripts/limit.sh","-v","--","fd-clean",
+            ae.local("problem.pddl"),
+            ae.local("domain.pddl")])
+    out = subprocess.check_output(["lisp/parse-plan.ros",ae.local("problem.plan")])
     lines = out.split("\n")
     numbers = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     print numbers
     states = np.concatenate((numbers[0:1,0:latent_dim], numbers[:,latent_dim:latent_dim*2]))
     print states
     plan_images = ae.decode_binary(states)
-    plot_grid(plan_images,'plan.png')
+    plot_grid(plan_images,ae.local('plan.png'))
 
 if __name__ == '__main__':
 
     from model import GumbelAE
-    ae = GumbelAE("counter_model/")
+    ae = GumbelAE("samples/counter_model/")
     
     from mnist import mnist
     x_train,y_train, x_test,y_test = mnist()
