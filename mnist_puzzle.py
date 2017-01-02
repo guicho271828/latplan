@@ -29,6 +29,6 @@ if __name__ == '__main__':
         plt.imshow(a)
         plt.savefig(name)
     configs = generate_configs(6)
-    plot_image(generate_mnist_puzzle(configs, 2, 3)[10],"mnist_puzzle.png")
+    plot_image(generate_mnist_puzzle(configs, 2, 3)[10],"samples/mnist_puzzle.png")
 
     

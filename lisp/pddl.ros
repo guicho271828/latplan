@@ -75,9 +75,11 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
     (let ((init (mapcar #'read-from-string (subseq coordinates 0 (/ l 2))))
           (goal (mapcar #'read-from-string (subseq coordinates (/ l 2)))))
       (let ((data (read-as-lists csv)))
-        (with-output-to-file (s "domain.pddl" :if-does-not-exist :create :if-exists :supersede)
+        (with-output-to-file (s (merge-pathnames "domain.pddl" csv)
+                                :if-does-not-exist :create :if-exists :supersede)
           (print (make-domain data) s))
-        (with-output-to-file (s "problem.pddl" :if-does-not-exist :create :if-exists :supersede)
+        (with-output-to-file (s (merge-pathnames "problem.pddl" csv)
+                                :if-does-not-exist :create :if-exists :supersede)
           (print (make-problem data init goal) s))))))
 
 ;;; vim: set ft=lisp lisp:

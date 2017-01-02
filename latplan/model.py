@@ -131,16 +131,13 @@ class GumbelAE:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import shlex, subprocess
-    import os.path as p
-    if p.exists("mnist_model/"):
-        subprocess.call(shlex.split("rm -rf mnist_model/"))
     from mnist import mnist
     x_train, _, x_test, _ = mnist()
-    ae = GumbelAE("mnist_model/")
+    ae = GumbelAE("samples/mnist_model/")
     ae.train(x_train,test_data=x_test)
     ae.summary()
     del ae
-    ae = GumbelAE("mnist_model/")
+    ae = GumbelAE("samples/mnist_model/")
     howmany=10
     y_test = ae.autoencode(x_test[:howmany])
     z_test = ae.encode_binary(x_test[:howmany])
@@ -157,6 +154,6 @@ if __name__ == '__main__':
         plt.subplot(3,howmany,i+1+2*howmany)
         plt.imshow(y_test[i].reshape(28, 28), cmap='gray')
         plt.axis('off')
-    plt.savefig('mnist_model/viz.png')
+    plt.savefig(ae.local('viz.png'))
 
 
