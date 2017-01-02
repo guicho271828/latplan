@@ -2,8 +2,12 @@
 import numpy as np
 from model import GumbelAE
 
-def reshape_batch1D(images):
-    return np.reshape(images,(images.shape[0], -1))
+def reshape_batch1D(images,repeat=None):
+    result = np.reshape(images,(images.shape[0], -1))
+    if repeat is not None:
+        return np.repeat(result,repeat,axis=0)
+    else:
+        return result
 
 def dump_actions(transitions,path):
     # assert 2 == transitions.shape[0]
@@ -48,13 +52,13 @@ if __name__ == '__main__':
     
     from puzzle import puzzle_transitions
     transitions = puzzle_transitions(2,2)
-    puzzle_actions = dump_actions((reshape_batch1D(transitions[0]),
-                                   reshape_batch1D(transitions[1])),
+    puzzle_actions = dump_actions((reshape_batch1D(transitions[0],1000),
+                                   reshape_batch1D(transitions[1],1000)),
                                   "samples/puzzle_model/")
     print puzzle_actions[:3]
     ae = GumbelAE("samples/puzzle_model/")
-    xs = transitions[0][:18]
+    import numpy.random as random
+    xs = transitions[0][random.randint(0,transitions[0].shape[0],18)]
     ys = ae.autoencode(xs)
-    print xs.shape, ys.shape
     images = np.reshape(np.einsum('ab...->ba...',(xs,ys)),(36,6*2,5*2))
     plot_grid(images, ae.local("autoencoding.png"))
