@@ -29,6 +29,7 @@ class GumbelAE:
             print "Avoided building {} twice.".format(self)
             return
         data_dim = np.prod(input_shape)
+        print "input_shape:{}, flattened into {}".format(input_shape,data_dim)
         M, N = self.M, self.N
         tau = K.variable(self.max_temperature, name="temperature")
         def sampling(logits):
@@ -89,6 +90,7 @@ class GumbelAE:
         
     def train(self,train_data,epoch=200,batch_size=1000,optimizer='adam',test_data=None,save=True):
         self.build(train_data.shape[1:])
+        self.summary()
         if test_data is not None:
             validation = (test_data,test_data)
         else:
@@ -126,6 +128,8 @@ class GumbelAE:
         assert self.M == 2, "M={}, not 2".format(self.M)
         return self.decode(np.stack((data,1-data),axis=-1))
     def summary(self):
+        self.encoder.summary()
+        self.decoder.summary()
         self.autoencoder.summary()
 
 if __name__ == '__main__':
