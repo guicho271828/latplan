@@ -67,15 +67,15 @@ class GumbelAE:
         self.decoder     = _decoder
         self.autoencoder = Model(x, y)
         self.built = True
-
+    def local(self,path):
+        import os.path as p
+        return p.join(self.path,path)
     def save(self):
-        import os.path as p
-        self.encoder.save_weights(p.join(self.path,"encoder.h5"))
-        self.decoder.save_weights(p.join(self.path,"decoder.h5"))
+        self.encoder.save_weights(local("encoder.h5"))
+        self.decoder.save_weights(local("decoder.h5"))
     def do_load(self):
-        import os.path as p
-        self.encoder.load_weights(p.join(self.path,"encoder.h5"))
-        self.decoder.load_weights(p.join(self.path,"decoder.h5"))
+        self.encoder.load_weights(local("encoder.h5"))
+        self.decoder.load_weights(local("decoder.h5"))
         self.loaded = True
     def load(self):
         if not self.loaded:
