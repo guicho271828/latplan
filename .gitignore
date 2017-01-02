@@ -10,3 +10,5 @@
 learn/events*
 /mnist_model/
 /old/
+/samples/counter_model/
+/samples/puzzle_model/
