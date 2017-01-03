@@ -154,7 +154,7 @@ def successors(config,width,height):
 def config_transitions(configs):
     return [ (c1,c2) for c2 in successors(c1) for c1 in configs ]
 
-def puzzle_transitions(width, height):
+def transitions(width, height):
     digit = width * height
     configs = generate_configs(digit)
     transitions = np.array([ generate_puzzle([c1,c2],width,height)
@@ -185,13 +185,13 @@ if __name__ == '__main__':
     print puzzles[10]
     plot_image(puzzles[10],"samples/puzzle.png")
     plot_grid(puzzles[:36],"samples/puzzles.png")
-    transitions = puzzle_transitions(2,3)
+    _transitions = transitions(2,3)
     import numpy.random as random
-    indices = random.randint(0,transitions[0].shape[0],18)
-    transitions = transitions[:,indices]
-    print transitions.shape
+    indices = random.randint(0,_transitions[0].shape[0],18)
+    _transitions = _transitions[:,indices]
+    print _transitions.shape
     transitions_for_show = \
-        np.einsum('ba...->ab...',transitions) \
-          .reshape((-1,)+transitions.shape[2:])
+        np.einsum('ba...->ab...',_transitions) \
+          .reshape((-1,)+_transitions.shape[2:])
     print transitions_for_show.shape
     plot_grid(transitions_for_show,"samples/puzzle_transitions.png")

@@ -3,7 +3,7 @@
 from mnist import mnist
 import numpy as np
 
-def counter_transitions(labels = range(10), n = 10000):
+def transitions(labels = range(10), n = 10000):
     "return pairs of indices of images that contain adjacent digits"
 
     pairs = []
@@ -34,4 +34,4 @@ def counter_transitions(labels = range(10), n = 10000):
     return np.concatenate(orig_results,axis=0), np.concatenate(dest_results,axis=0),
 
 if __name__ == '__main__':
-    print counter_transitions(n=10)
+    print transitions(n=10)
