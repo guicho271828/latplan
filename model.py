@@ -1,6 +1,7 @@
 import numpy as np
 
-from keras.layers import Input, Dense, Lambda, Reshape
+from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, Lambda, GaussianNoise
+from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model, Sequential
 from keras import backend as K
 from keras import objectives
@@ -40,8 +41,11 @@ class GumbelAE:
             return f(arg)
         x = Input(shape=input_shape)
         _encoder = [Reshape((data_dim,)),
-                    Dense(512, activation='relu'),
-                    Dense(256, activation='relu'),
+                    GaussianNoise(0.1),
+                    Dense(1000, activation='relu'),
+                    BN(),
+                    Dense(1000, activation='relu'),
+                    BN(),
                     Dense(M*N),
                     Reshape((N,M))]
         logits = reduce(apply1, _encoder, x)
