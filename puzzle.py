@@ -186,9 +186,12 @@ if __name__ == '__main__':
     plot_image(puzzles[10],"samples/puzzle.png")
     plot_grid(puzzles[:36],"samples/puzzles.png")
     transitions = puzzle_transitions(2,3)
+    import numpy.random as random
+    indices = random.randint(0,transitions[0].shape[0],18)
+    transitions = transitions[:,indices]
     print transitions.shape
     transitions_for_show = \
         np.einsum('ba...->ab...',transitions) \
           .reshape((-1,)+transitions.shape[2:])
     print transitions_for_show.shape
-    plot_grid(transitions_for_show[:36],"samples/puzzle_transitions.png")
+    plot_grid(transitions_for_show,"samples/puzzle_transitions.png")
