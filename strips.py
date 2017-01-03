@@ -2,13 +2,6 @@
 import numpy as np
 from model import GumbelAE
 
-def reshape_batch1D(images,repeat=None):
-    result = np.reshape(images,(images.shape[0], -1))
-    if repeat is not None:
-        return np.repeat(result,repeat,axis=0)
-    else:
-        return result
-
 def dump_actions(transitions,path):
     # assert 2 == transitions.shape[0]
     ae = GumbelAE(path)
