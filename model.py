@@ -43,8 +43,10 @@ class GumbelAE:
         _encoder = [Reshape((data_dim,)),
                     GaussianNoise(0.1),
                     Dense(1000, activation='relu'),
+                    Dropout(0.4),
                     BN(),
                     Dense(1000, activation='relu'),
+                    Dropout(0.4),
                     BN(),
                     Dense(M*N),
                     Reshape((N,M))]
