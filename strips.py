@@ -30,8 +30,8 @@ if __name__ == '__main__':
     def plot_grid(images,name="plan.png"):
         import matplotlib.pyplot as plt
         l = len(images)
-        w = 6
-        h = max(l//6,1)
+        w = 10
+        h = max(l//10,1)
         plt.figure(figsize=(20, h*2))
         for i,image in enumerate(images):
             # display original
@@ -46,14 +46,23 @@ if __name__ == '__main__':
         print actions[:3]
         ae = GumbelAE(path)
         xs = transitions[0][random.randint(0,transitions[0].shape[0],12)]
-        zs = ae.encode_binary(xs).reshape((-1,4,4))
-        ys = ae.autoencode(xs).reshape(shape)
+        zs = ae.encode_binary(xs)
+        ys = ae.decode_binary(zs)
+        bs = np.round(zs)
+        bys = ae.decode_binary(bs)
+        # 
         xs = xs.reshape(shape)
+        zs = zs.reshape((-1,4,4))
+        ys = ys.reshape(shape)
+        bs = bs.reshape((-1,4,4))
+        bys = bys.reshape(shape)
         images = []
-        for x,z,y in zip(xs,zs,ys):
+        for x,z,y,b,by in zip(xs,zs,ys,bs,bys):
             images.append(x)
             images.append(z)
             images.append(y)
+            images.append(b)
+            images.append(by)
         plot_grid(images, ae.local("autoencoding.png"))
 
     from counter import counter_transitions
