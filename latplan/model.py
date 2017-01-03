@@ -60,7 +60,8 @@ class GumbelAE:
             log_q = K.log(q + 1e-20)
             kl_tmp = q * (log_q - K.log(1.0/M))
             KL = K.sum(kl_tmp, axis=(1, 2))
-            elbo = data_dim * bce(x, y) - KL
+            elbo = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                                  K.reshape(y,(K.shape(x)[0],data_dim,))) - KL
             return elbo
         
         self.__tau = tau
