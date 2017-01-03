@@ -13,7 +13,7 @@ def dump_actions(transitions,path):
     # assert 2 == transitions.shape[0]
     ae = GumbelAE(path)
     ae.train(np.concatenate(transitions,axis=0),
-             # anneal_rate=0.0001,
+             anneal_rate=0.0001,
              # epoch=400
     )
 
