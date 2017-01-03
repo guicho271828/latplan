@@ -58,17 +58,17 @@ if __name__ == '__main__':
             images.append(by)
         plot_grid(images, ae.local("autoencoding.png"))
 
-    from counter import counter_transitions
-    transitions = counter_transitions(n=1000)
+    import counter
+    transitions = counter.transitions(n=1000)
     run("samples/counter_model/", (-1,28,28), transitions)
     
-    from puzzle import puzzle_transitions
-    transitions = puzzle_transitions(2,2)
+    import puzzle
+    transitions = puzzle.transitions(2,2)
     transitions = np.repeat(transitions,100,axis=1)
     run("samples/puzzle_model/", (-1,6*2,5*2), transitions)
 
-    from mnist_puzzle import mnist_puzzle_transitions
-    transitions = mnist_puzzle_transitions(2,2)
+    import mnist_puzzle
+    transitions = mnist_puzzle.transitions(2,2)
     transitions = np.repeat(transitions,100,axis=1)
     run("samples/mnist_puzzle_model/", (-1,28*2,28*2), transitions)
 
