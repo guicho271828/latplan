@@ -36,23 +36,24 @@ class GumbelAE:
             U = K.random_uniform(K.shape(logits), 0, 1)
             z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
             return softmax( z / tau )
-        
+        def apply1(arg,f):
+            return f(arg)
         x = Input(shape=input_shape)
-        _encoder = Sequential([
-            Reshape((data_dim,),input_shape=input_shape),
-            Dense(512, activation='relu'),
-            Dense(256, activation='relu'),
-            Dense(M*N),
-            Reshape((N,M))])
-        logits = _encoder(x)
+        _encoder = [Reshape((data_dim,)),
+                    Dense(512, activation='relu'),
+                    Dense(256, activation='relu'),
+                    Dense(M*N),
+                    Reshape((N,M))]
+        logits = reduce(apply1, _encoder, x)
         z = Lambda(sampling)(logits)
-        _decoder = Sequential([
-            Reshape((N*M,),input_shape=(N,M,)),
-            Dense(256, activation='relu'),
-            Dense(512, activation='relu'),
-            Dense(data_dim, activation='sigmoid'),
-            Reshape(input_shape),])
-        y = _decoder(z)
+        _decoder = [Reshape((N*M,)),
+                    Dense(256, activation='relu'),
+                    Dense(512, activation='relu'),
+                    Dense(data_dim, activation='sigmoid'),
+                    Reshape(input_shape),]
+        y = reduce(apply1, _decoder, z)
+        z2 = Input(shape=(N,M))
+        y2 = reduce(apply1, _decoder, z2)
 
         def gumbel_loss(x, y):
             q = softmax(logits)
@@ -65,7 +66,7 @@ class GumbelAE:
         self.__tau = tau
         self.__loss = gumbel_loss
         self.encoder     = Model(x, z)
-        self.decoder     = _decoder
+        self.decoder     = Model(z2, y2)
         self.autoencoder = Model(x, y)
         self.built = True
     def local(self,path):
