@@ -114,9 +114,17 @@ class GumbelAE:
         except KeyboardInterrupt:
             print ("learning stopped")
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
-        print "Reconstruction MSE: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
+        print "Reconstruction MSE: {}".format(
+            self.autoencoder.evaluate(train_data,train_data,verbose=0))
+        if test_data is not None:
+            print "Reconstruction MSE (validation): {}".format(
+                self.autoencoder.evaluate(test_data,test_data,verbose=0))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
-        print "Reconstruction BCE: {}".format(self.autoencoder.evaluate(train_data,train_data,verbose=0))
+        print "Reconstruction BCE: {}".format(
+            self.autoencoder.evaluate(train_data,train_data,verbose=0))
+        if test_data is not None:
+            print "Reconstruction BCE (validation): {}".format(
+                self.autoencoder.evaluate(test_data,test_data,verbose=0))
         self.loaded = True
         if save:
             self.save()
