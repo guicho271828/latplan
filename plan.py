@@ -12,7 +12,7 @@ def plot_grid(images,name="plan.png"):
     for i,image in enumerate(images):
         # display original
         ax = plt.subplot(h,w,i+1)
-        plt.imshow(image.reshape(28, 28))
+        plt.imshow(image.reshape(28, 28),interpolation='nearest',cmap='gray',)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     plt.savefig(name)
