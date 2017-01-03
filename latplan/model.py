@@ -90,9 +90,12 @@ class GumbelAE:
         print "Tau = {}".format(new_tau)
         K.set_value(self.__tau, new_tau)
         
-    def train(self,train_data,epoch=200,batch_size=1000,optimizer='adam',test_data=None,save=True):
+    def train(self,train_data,
+              epoch=200,batch_size=1000,optimizer='adam',test_data=None,save=True,**kwargs):
         self.build(train_data.shape[1:])
         self.summary()
+        for k,v in kwargs.iteritems():
+            setattr(self, k, v)
         if test_data is not None:
             validation = (test_data,test_data)
         else:
