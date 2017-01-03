@@ -87,10 +87,10 @@ if __name__ == '__main__':
                 print e
     
     from model import GumbelAE
-    # import counter
-    # plan_random(GumbelAE("samples/counter_model/"),
-    #             (28,28),
-    #             counter.transitions(n=1000))
+    import counter
+    plan_random(GumbelAE("samples/counter_model/"),
+                (28,28),
+                counter.transitions(n=1000))
     import puzzle
     plan_random(GumbelAE("samples/puzzle_model/"),
                 (12,10),
@@ -99,4 +99,8 @@ if __name__ == '__main__':
     plan_random(GumbelAE("samples/mnist_puzzle_model/"),
                 (56,56),
                 mnist_puzzle.transitions(2,2))
+    import puzzle
+    plan_random(GumbelAE("samples/puzzle3_model/"),
+                (6*2,5*3),
+                puzzle.transitions(3,2))
     
