@@ -58,7 +58,12 @@ if __name__ == '__main__':
     print puzzle_actions[:3]
     ae = GumbelAE("samples/puzzle_model/")
     import numpy.random as random
-    xs = transitions[0][random.randint(0,transitions[0].shape[0],18)]
-    ys = ae.autoencode(xs)
-    images = np.reshape(np.einsum('ab...->ba...',(xs,ys)),(36,6*2,5*2))
+    xs = transitions[0][random.randint(0,transitions[0].shape[0],12)]
+    zs = ae.encode_binary(xs).reshape((-1,4,4))
+    ys = ae.autoencode(xs).reshape((-1,6*2,5*2))
+    images = []
+    for x,z,y in zip(xs,zs,ys):
+        images.append(x)
+        images.append(z)
+        images.append(y)
     plot_grid(images, ae.local("autoencoding.png"))
