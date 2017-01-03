@@ -12,9 +12,6 @@ from keras.callbacks import LambdaCallback
 
 class GumbelAE:
     # common options
-    min_temperature = 0.1
-    max_temperature = 5.0
-    anneal_rate = 0.0003
     
     def __init__(self,path,M=2,N=16):
         import subprocess
@@ -23,6 +20,9 @@ class GumbelAE:
         self.M, self.N = M, N
         self.built = False
         self.loaded = False
+        self.min_temperature = 0.1
+        self.max_temperature = 5.0
+        self.anneal_rate = 0.0003
         
     def build(self,input_shape):
         if self.built:
