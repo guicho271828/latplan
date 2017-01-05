@@ -24,10 +24,12 @@ class GumbelAE:
         self.min_temperature = 0.1
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
+        self.verbose = True
         
     def build(self,input_shape):
         if self.built:
-            print "Avoided building {} twice.".format(self)
+            if self.verbose:
+                print "Avoided building {} twice.".format(self)
             return
         data_dim = np.prod(input_shape)
         print "input_shape:{}, flattened into {}".format(input_shape,data_dim)
@@ -60,6 +62,8 @@ class GumbelAE:
         y = reduce(apply1, _decoder, z)
         z2 = Input(shape=(N,M))
         y2 = reduce(apply1, _decoder, z2)
+        z3 = Lambda(lambda z:K.round(z))(z)
+        y3 = reduce(apply1, _decoder, z3)
 
         def gumbel_loss(x, y):
             q = softmax(logits)
@@ -78,6 +82,7 @@ class GumbelAE:
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.autoencoder = Model(x, y)
+        self.autoencoder_binary = Model(x, y3)
         self.built = True
     def local(self,path):
         import os.path as p
@@ -118,24 +123,28 @@ class GumbelAE:
                 callbacks=[LambdaCallback(on_epoch_begin=self.cool)])
         except KeyboardInterrupt:
             print ("learning stopped")
-        self.autoencoder.compile(optimizer=optimizer, loss=mse)
-        print "Reconstruction MSE: {}".format(
-            self.autoencoder.evaluate(train_data,train_data,verbose=0))
-        if test_data is not None:
-            print "Reconstruction MSE: {} (validation)".format(
-                self.autoencoder.evaluate(test_data,test_data,verbose=0))
-        self.autoencoder.compile(optimizer=optimizer, loss=bce)
-        print "Reconstruction BCE: {}".format(
-            self.autoencoder.evaluate(train_data,train_data,verbose=0))
-        if test_data is not None:
-            print "Reconstruction BCE: {} (validation)".format(
-                self.autoencoder.evaluate(test_data,test_data,verbose=0))
-        print "Latent activation: {}".format(
-            self.encode_binary(train_data).mean())
-        if test_data is not None:
-            print "Latent activation: {} (validation)".format(
-                self.encode_binary(test_data).mean())
         self.loaded = True
+        v = self.verbose
+        self.verbose = False
+        def test_both(msg, fn):
+            print msg.format(fn(train_data))
+            if test_data is not None:
+                print (msg+" (validation)").format(fn(test_data))
+        self.autoencoder.compile(optimizer=optimizer, loss=mse)
+        test_both("Reconstruction MSE: {}",
+                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0))
+        self.autoencoder_binary.compile(optimizer=optimizer, loss=mse)
+        test_both("Binary Reconstruction MSE: {}",
+                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0))
+        self.autoencoder.compile(optimizer=optimizer, loss=bce)
+        test_both("Reconstruction BCE: {}",
+                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0))
+        self.autoencoder_binary.compile(optimizer=optimizer, loss=bce)
+        test_both("Binary Reconstruction BCE: {}",
+                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0))
+        test_both("Latent activation: {}",
+                  lambda (data): self.encode_binary(train_data).mean())
+        self.verbose = v
         if save:
             self.save()
     def encode(self,data):
