@@ -64,11 +64,14 @@ class GumbelAE:
         def gumbel_loss(x, y):
             q = softmax(logits)
             log_q = K.log(q + 1e-20)
-            kl_tmp = q * (log_q - K.log(1.0/M))
-            KL = K.sum(kl_tmp, axis=(1, 2))
-            elbo = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                                  K.reshape(y,(K.shape(x)[0],data_dim,))) - KL
-            return elbo
+            kl_loss = K.sum(q * (log_q - K.log(1.0/M)), axis=(1, 2))
+            reconstruction_loss = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                                                 K.reshape(y,(K.shape(x)[0],data_dim,)))
+            # l2_loss = K.sum(K.square(z[:,0]))
+            # l1_loss = K.sum(z[:,0])
+            # l2_loss = data_dim * K.mean(K.square(z[:,0]))
+            # l1_loss = data_dim * K.mean(z[:,0])
+            return reconstruction_loss - kl_loss
         
         self.__tau = tau
         self.__loss = gumbel_loss
@@ -119,14 +122,19 @@ class GumbelAE:
         print "Reconstruction MSE: {}".format(
             self.autoencoder.evaluate(train_data,train_data,verbose=0))
         if test_data is not None:
-            print "Reconstruction MSE (validation): {}".format(
+            print "Reconstruction MSE: {} (validation)".format(
                 self.autoencoder.evaluate(test_data,test_data,verbose=0))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
         print "Reconstruction BCE: {}".format(
             self.autoencoder.evaluate(train_data,train_data,verbose=0))
         if test_data is not None:
-            print "Reconstruction BCE (validation): {}".format(
+            print "Reconstruction BCE: {} (validation)".format(
                 self.autoencoder.evaluate(test_data,test_data,verbose=0))
+        print "Latent activation: {}".format(
+            self.encode_binary(train_data).mean())
+        if test_data is not None:
+            print "Latent activation: {} (validation)".format(
+                self.encode_binary(test_data).mean())
         self.loaded = True
         if save:
             self.save()
