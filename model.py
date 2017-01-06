@@ -147,22 +147,22 @@ class GumbelAE:
         self.verbose = v
         if save:
             self.save()
-    def encode(self,data):
+    def encode(self,data,**kwargs):
         self.build(data.shape[1:])
         self.load()
-        return self.encoder.predict(data)
-    def decode(self,data):
-        return self.decoder.predict(data)
+        return self.encoder.predict(data,**kwargs)
+    def decode(self,data,**kwargs):
+        return self.decoder.predict(data,**kwargs)
     def autoencode(self,data):
         self.build(data.shape[1:])
         self.load()
         return self.autoencoder.predict(data)
-    def encode_binary(self,data):
+    def encode_binary(self,data,**kwargs):
         assert self.M == 2, "M={}, not 2".format(self.M)
-        return self.encode(data)[:,:,0].reshape(-1, self.N)
-    def decode_binary(self,data):
+        return self.encode(data,**kwargs)[:,:,0].reshape(-1, self.N)
+    def decode_binary(self,data,**kwargs):
         assert self.M == 2, "M={}, not 2".format(self.M)
-        return self.decode(np.stack((data,1-data),axis=-1))
+        return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
     def summary(self):
         self.encoder.summary()
         self.decoder.summary()
