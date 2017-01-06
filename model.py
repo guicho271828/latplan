@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 
 from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, Lambda, GaussianNoise

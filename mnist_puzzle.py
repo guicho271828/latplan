@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 from puzzle import generate_configs
 
