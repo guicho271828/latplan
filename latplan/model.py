@@ -132,18 +132,18 @@ class GumbelAE:
                 print (msg+" (validation)").format(fn(test_data))
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
         test_both("Reconstruction MSE: {}",
-                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0))
+                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
         self.autoencoder_binary.compile(optimizer=optimizer, loss=mse)
         test_both("Binary Reconstruction MSE: {}",
-                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0))
+                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
         test_both("Reconstruction BCE: {}",
-                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0))
+                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
         self.autoencoder_binary.compile(optimizer=optimizer, loss=bce)
         test_both("Binary Reconstruction BCE: {}",
-                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0))
+                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
         test_both("Latent activation: {}",
-                  lambda (data): self.encode_binary(train_data).mean())
+                  lambda (data): self.encode_binary(train_data,batch_size=batch_size,).mean())
         self.verbose = v
         if save:
             self.save()
