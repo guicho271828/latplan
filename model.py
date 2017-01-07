@@ -4,7 +4,7 @@ import numpy as np
 
 from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, Lambda, GaussianNoise
 from keras.layers.normalization import BatchNormalization as BN
-from keras.models import Model, Sequential
+from keras.models import Model
 from keras import backend as K
 from keras import objectives
 from keras.datasets import mnist
@@ -12,6 +12,16 @@ from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse
 from keras.callbacks import LambdaCallback
+
+def Sequential (array):
+    def apply1(arg,f):
+        return f(arg)
+    return lambda(x): reduce(apply1, array, x)
+
+def Residual (layer):
+    def res(x):
+        return x+layer(x)
+    return Lambda(res)
 
 class GumbelAE:
     # common options
@@ -41,8 +51,6 @@ class GumbelAE:
             U = K.random_uniform(K.shape(logits), 0, 1)
             z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
             return softmax( z / tau )
-        def apply1(arg,f):
-            return f(arg)
         x = Input(shape=input_shape)
         _encoder = [Reshape((data_dim,)),
                     GaussianNoise(0.1),
@@ -54,18 +62,18 @@ class GumbelAE:
                     BN(),
                     Dense(M*N),
                     Reshape((N,M))]
-        logits = reduce(apply1, _encoder, x)
+        logits = Sequential(_encoder)(x)
         z = Lambda(sampling)(logits)
         _decoder = [Reshape((N*M,)),
                     Dense(256, activation='relu'),
                     Dense(512, activation='relu'),
                     Dense(data_dim, activation='sigmoid'),
                     Reshape(input_shape),]
-        y = reduce(apply1, _decoder, z)
+        y  = Sequential(_decoder)(z)
         z2 = Input(shape=(N,M))
-        y2 = reduce(apply1, _decoder, z2)
+        y2 = Sequential(_decoder)(z2)
         z3 = Lambda(lambda z:K.round(z))(z)
-        y3 = reduce(apply1, _decoder, z3)
+        y3 = Sequential(_decoder)(z3)
 
         def gumbel_loss(x, y):
             q = softmax(logits)
