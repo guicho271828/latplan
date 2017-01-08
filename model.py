@@ -40,7 +40,20 @@ class GumbelAE:
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
         self.verbose = True
-        
+    def build_encoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        M, N = self.M, self.N
+        # 1,826,032 trainable params
+        return [Reshape((data_dim,)),
+                GaussianNoise(0.1),
+                Dense(1000, activation='relu'),
+                BN(),
+                Dropout(0.4),
+                Dense(1000, activation='relu'),
+                BN(),
+                Dropout(0.4),
+                Dense(M*N),
+                Reshape((N,M))]
     def build(self,input_shape):
         if self.built:
             if self.verbose:
@@ -55,16 +68,7 @@ class GumbelAE:
             z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
             return softmax( z / tau )
         x = Input(shape=input_shape)
-        _encoder = [Reshape((data_dim,)),
-                    GaussianNoise(0.1),
-                    Dense(1000, activation='relu'),
-                    Dropout(0.4),
-                    BN(),
-                    Dense(1000, activation='relu'),
-                    Dropout(0.4),
-                    BN(),
-                    Dense(M*N),
-                    Reshape((N,M))]
+        _encoder = self.build_encoder(input_shape)
         logits = Sequential(_encoder)(x)
         z = Lambda(sampling)(logits)
         _decoder = [Reshape((N*M,)),
@@ -210,3 +214,22 @@ if __name__ == '__main__':
     plt.savefig(ae.local('viz.png'))
 
 
+class ConvolutionalGumbelAE(GumbelAE):
+    def build_encoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        M, N = self.M, self.N
+        # Trainable params: 1,436,320
+        return [Reshape(input_shape+(1,)),
+                GaussianNoise(0.1),
+                Convolution2D(16,3,3,activation='relu',border_mode='same'),
+                BN(),
+                MaxPooling2D((2,2)),
+                Convolution2D(16,3,3,activation='relu',border_mode='same'),
+                BN(),
+                MaxPooling2D((2,2)),
+                Convolution2D(16,3,3,activation='relu',border_mode='same'),
+                BN(),
+                MaxPooling2D((2,2)),
+                Flatten(),
+                Dense(M*N),
+                Reshape((N,M))]

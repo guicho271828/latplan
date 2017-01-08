@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import numpy as np
-from model import GumbelAE
+from model import GumbelAE, ConvolutionalGumbelAE
 
 
-def learn_model(path,train_data,test_data=None):
-    ae = GumbelAE(path)
+def learn_model(path,train_data,test_data=None,network=GumbelAE):
+    ae = network(path)
     ae.train(train_data,
-             epoch=100,
-             anneal_rate=0.00001,
+             epoch=500,
+             anneal_rate=0.00002,
              batch_size=1000,
              test_data=test_data,
              max_temperature=1.0,
@@ -51,8 +51,8 @@ if __name__ == '__main__':
     import numpy.random as random
     import trace
 
-    def run(path, train_states, test_states=None , transitions=None):
-        ae = learn_model(path, train_states, test_states)
+    def run(path, train_states, test_states=None , transitions=None, network=GumbelAE):
+        ae = learn_model(path, train_states, test_states, network=network)
         if test_states is not None:
             plot_ae(ae,test_states,"autoencoding_test.png")
         plot_ae(ae,train_states,"autoencoding_train.png")
@@ -61,27 +61,47 @@ if __name__ == '__main__':
 
     import counter
     run("samples/counter_model/",
-        counter.states(n=1000),
+        counter.states(),
         None,
         counter.transitions(n=1000))
-    
+    run("samples/counter_modelc/",
+        counter.states(),
+        None,
+        counter.transitions(n=1000),
+        network=ConvolutionalGumbelAE)
+    print "################################################################"
     import puzzle
     run("samples/puzzle22_model/",
-        puzzle.states(2,2),
+        puzzle.states(2,2).repeat(10,0),
         None,
         puzzle.transitions(2,2))
-    
+    run("samples/puzzle22_modelc/",
+        puzzle.states(2,2).repeat(10,0),
+        None,
+        puzzle.transitions(2,2),
+        network=ConvolutionalGumbelAE)
+    print "################################################################" 
     import mnist_puzzle
     run("samples/mnist_puzzle22_model/",
-        mnist_puzzle.states(2,2),
+        mnist_puzzle.states(2,2).repeat(10,0),
         None,
         mnist_puzzle.transitions(2,2))
-    
+    run("samples/mnist_puzzle22_modelc/",
+        mnist_puzzle.states(2,2).repeat(10,0),
+        None,
+        mnist_puzzle.transitions(2,2),
+        network=ConvolutionalGumbelAE) 
+    print "################################################################" 
     import puzzle
     run("samples/puzzle32_model/",
-        puzzle.states(3,2),
+        puzzle.states(3,2).repeat(10,0),
         None,
         puzzle.transitions(3,2))
+    run("samples/puzzle32_modelc/",
+        puzzle.states(3,2).repeat(10,0),
+        None,
+        puzzle.transitions(3,2),
+        network=ConvolutionalGumbelAE)
     
     # import puzzle
     # all_states = puzzle.states(3,3)
