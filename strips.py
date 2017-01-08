@@ -3,78 +3,92 @@
 import numpy as np
 from model import GumbelAE
 
-def dump_actions(transitions,path):
-    # assert 2 == transitions.shape[0]
-    ae = GumbelAE(path)
-    ae.train(np.concatenate(transitions,axis=0),
-             anneal_rate=0.0001,
-             # epoch=400
-    )
 
+def learn_model(path,train_data,test_data=None):
+    ae = GumbelAE(path)
+    ae.train(train_data,
+             epoch=100,
+             anneal_rate=0.00001,
+             batch_size=1000,
+             test_data=test_data,
+             max_temperature=1.0,
+             min_temperature=0.1,
+    )
+    return ae
+
+def dump_actions(ae,transitions):
     orig, dest = transitions[0], transitions[1]
-    orig_b, dest_b = ae.encode_binary(orig), ae.encode_binary(dest)
-    
+    orig_b = ae.encode_binary(orig,batch_size=6000)
+    dest_b = ae.encode_binary(dest,batch_size=6000)
     actions = np.concatenate((orig_b, dest_b), axis=1)
     np.savetxt(ae.local("actions.csv"),actions,"%d")
-    return actions
+
+################################################################
+
+from plot import plot_grid
+
+def plot_ae(ae,data,path):
+    xs = data[random.randint(0,data.shape[0],12)]
+    zs = ae.encode_binary(xs)
+    ys = ae.decode_binary(zs)
+    bs = np.round(zs)
+    bys = ae.decode_binary(bs)
+    import math
+    l = int(math.sqrt(ae.N))
+    zs = zs.reshape((-1,l,l))
+    bs = bs.reshape((-1,l,l))
+    images = []
+    for x,z,y,b,by in zip(xs, zs, ys, bs, bys):
+        images.append(x)
+        images.append(z)
+        images.append(y)
+        images.append(b)
+        images.append(by)
+    plot_grid(images, path=ae.local(path))
 
 
 if __name__ == '__main__':
     import numpy.random as random
-    def plot_grid(images,name="plan.png"):
-        import matplotlib.pyplot as plt
-        l = len(images)
-        w = 10
-        h = max(l//10,1)
-        plt.figure(figsize=(20, h*2))
-        for i,image in enumerate(images):
-            # display original
-            ax = plt.subplot(h,w,i+1)
-            plt.imshow(image,interpolation='nearest',cmap='gray',)
-            ax.get_xaxis().set_visible(False)
-            ax.get_yaxis().set_visible(False)
-        plt.savefig(name)
+    import trace
 
-    def run(path, shape, transitions):
-        actions = dump_actions(transitions, path)
-        print actions[:3]
-        ae = GumbelAE(path)
-        xs = transitions[0][random.randint(0,transitions[0].shape[0],12)]
-        zs = ae.encode_binary(xs)
-        ys = ae.decode_binary(zs)
-        bs = np.round(zs)
-        bys = ae.decode_binary(bs)
-        # 
-        xs = xs.reshape(shape)
-        zs = zs.reshape((-1,4,4))
-        ys = ys.reshape(shape)
-        bs = bs.reshape((-1,4,4))
-        bys = bys.reshape(shape)
-        images = []
-        for x,z,y,b,by in zip(xs,zs,ys,bs,bys):
-            images.append(x)
-            images.append(z)
-            images.append(y)
-            images.append(b)
-            images.append(by)
-        plot_grid(images, ae.local("autoencoding.png"))
+    def run(path, train_states, test_states=None , transitions=None):
+        ae = learn_model(path, train_states, test_states)
+        if test_states is not None:
+            plot_ae(ae,test_states,"autoencoding_test.png")
+        plot_ae(ae,train_states,"autoencoding_train.png")
+        if transitions is not None:
+            dump_actions(ae,transitions)
 
     import counter
-    transitions = counter.transitions(n=1000)
-    run("samples/counter_model/", (-1,28,28), transitions)
+    run("samples/counter_model/",
+        counter.states(n=1000),
+        None,
+        counter.transitions(n=1000))
     
     import puzzle
-    transitions = puzzle.transitions(2,2)
-    transitions = np.repeat(transitions,100,axis=1)
-    run("samples/puzzle_model/", (-1,6*2,5*2), transitions)
+    run("samples/puzzle22_model/",
+        puzzle.states(2,2),
+        None,
+        puzzle.transitions(2,2))
     
     import mnist_puzzle
-    transitions = mnist_puzzle.transitions(2,2)
-    transitions = np.repeat(transitions,100,axis=1)
-    run("samples/mnist_puzzle_model/", (-1,28*2,28*2), transitions)
-
+    run("samples/mnist_puzzle22_model/",
+        mnist_puzzle.states(2,2),
+        None,
+        mnist_puzzle.transitions(2,2))
+    
     import puzzle
-    transitions = puzzle.transitions(3,2)
-    transitions = np.repeat(transitions,100,axis=1)
-    run("samples/puzzle3_model/", (-1,6*2,5*3), transitions)
+    run("samples/puzzle32_model/",
+        puzzle.states(3,2),
+        None,
+        puzzle.transitions(3,2))
+    
+    # import puzzle
+    # all_states = puzzle.states(3,3)
+    # filter = random.choice([True, False, False, False, False, False, False,  False],
+    #                        all_states.shape[1])
+    # inv_filter = np.invert(filter)
+    # train_states = all_states[filter]
+    # test_states  = all_states[inv_filter]
+    # run("samples/puzzle32p_model/", train_states, test_states)
     
