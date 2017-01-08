@@ -4,6 +4,10 @@
 from mnist import mnist
 import numpy as np
 
+def states(labels = range(10)):
+    x_train, _, _,_ = mnist(labels)
+    return x_train
+
 def transitions(labels = range(10), n = 10000):
     "return pairs of indices of images that contain adjacent digits"
 

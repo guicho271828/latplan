@@ -25,6 +25,11 @@ def generate_mnist_puzzle(configs, width, height):
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
+def states(width, height):
+    digit = width * height
+    configs = generate_configs(digit)
+    return generate_mnist_puzzle(configs,width,height)
+
 def transitions(width, height):
     from puzzle import successors
     digit = width * height
