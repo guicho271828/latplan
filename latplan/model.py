@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, Lambda, GaussianNoise
+from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 from keras.optimizers import Adam
@@ -75,11 +75,14 @@ class GumbelAE:
         _encoder = self.build_encoder(input_shape)
         logits = Sequential(_encoder)(x)
         z = Lambda(sampling)(logits)
-        _decoder = [Reshape((N*M,)),
-                    Dense(256, activation='relu'),
-                    Dense(512, activation='relu'),
-                    Dense(data_dim, activation='sigmoid'),
-                    Reshape(input_shape),]
+        _decoder = [
+            SpatialDropout1D(0.2),
+            # normal dropout after reshape was also effective
+            Reshape((N*M,)),
+            Dense(256, activation='relu'),
+            Dense(512, activation='relu'),
+            Dense(data_dim, activation='sigmoid'),
+            Reshape(input_shape),]
         y  = Sequential(_decoder)(z)
         z2 = Input(shape=(N,M))
         y2 = Sequential(_decoder)(z2)
