@@ -13,6 +13,8 @@ from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse
 from keras.callbacks import LambdaCallback
+from keras.regularizers import activity_l2, activity_l1
+
 
 def Sequential (array):
     def apply1(arg,f):
