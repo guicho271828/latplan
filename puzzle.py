@@ -156,6 +156,11 @@ def successors(config,width,height):
 def config_transitions(configs):
     return [ (c1,c2) for c2 in successors(c1) for c1 in configs ]
 
+def states(width, height):
+    digit = width * height
+    configs = generate_configs(digit)
+    return generate_puzzle(configs,width,height)
+
 def transitions(width, height):
     digit = width * height
     configs = generate_configs(digit)
