@@ -26,6 +26,10 @@ def Residual (layer):
         return x+layer(x)
     return Lambda(res)
 
+def ResUnit (*layers):
+    return Residual(
+        Sequential(layers))
+
 class GumbelAE:
     # common options
     
