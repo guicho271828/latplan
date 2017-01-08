@@ -56,7 +56,7 @@ class GumbelAE:
                 Dense(1000, activation='relu'),
                 BN(),
                 Dropout(0.4),
-                Dense(M*N),
+                Dense(M*N),     # ,activity_regularizer=activity_l1(0.0000001)
                 Reshape((N,M))]
     def build(self,input_shape):
         if self.built:
