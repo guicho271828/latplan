@@ -5,6 +5,7 @@ import numpy as np
 from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, Lambda, GaussianNoise
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
+from keras.optimizers import Adam
 from keras import backend as K
 from keras import objectives
 from keras.datasets import mnist
@@ -115,7 +116,7 @@ class GumbelAE:
         K.set_value(self.__tau, new_tau)
         
     def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer='adam',test_data=None,save=True,**kwargs):
+              epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,**kwargs):
         for k,v in kwargs.iteritems():
             setattr(self, k, v)
         self.build(train_data.shape[1:])
