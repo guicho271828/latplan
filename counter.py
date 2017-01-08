@@ -6,7 +6,7 @@ import numpy as np
 
 def states(labels = range(10)):
     x_train, _, _,_ = mnist(labels)
-    return x_train
+    return x_train.reshape((-1,28,28))
 
 def transitions(labels = range(10), n = 10000):
     "return pairs of indices of images that contain adjacent digits"
@@ -35,8 +35,8 @@ def transitions(labels = range(10), n = 10000):
             labelled_images[orig][np.random.choice(len(labelled_images[orig]),n)])
         dest_results.append(
             labelled_images[dest][np.random.choice(len(labelled_images[dest]),n)])
-    
-    return np.concatenate(orig_results,axis=0), np.concatenate(dest_results,axis=0),
+    return np.array((np.concatenate(orig_results,axis=0),
+                     np.concatenate(dest_results,axis=0))).reshape((2,-1,28,28))
 
 if __name__ == '__main__':
-    print transitions(n=10)
+    print transitions(n=10).shape
