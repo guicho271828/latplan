@@ -105,15 +105,23 @@ class GumbelAE:
         import os.path as p
         return p.join(self.path,path)
     def save(self):
+        import h5py
+        with h5py.File(self.local("aux.h5"), "w") as f:
+            shape = np.array(self.encoder.input_shape[1:])
+            dset = f.create_dataset("input_shape", shape.shape, dtype='i')
+            dset[...] = shape
         self.encoder.save_weights(self.local("encoder.h5"))
         self.decoder.save_weights(self.local("decoder.h5"))
     def do_load(self):
+        import h5py
+        with h5py.File(self.local("aux.h5"), "r") as f:
+            self.build(tuple(f["input_shape"].value))
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
-        self.loaded = True
     def load(self):
         if not self.loaded:
             self.do_load()
+            self.loaded = True
         
     def cool(self, epoch, logs):
         new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
@@ -165,13 +173,12 @@ class GumbelAE:
         if save:
             self.save()
     def encode(self,data,**kwargs):
-        self.build(data.shape[1:])
         self.load()
         return self.encoder.predict(data,**kwargs)
     def decode(self,data,**kwargs):
+        self.load()
         return self.decoder.predict(data,**kwargs)
     def autoencode(self,data):
-        self.build(data.shape[1:])
         self.load()
         return self.autoencoder.predict(data)
     def encode_binary(self,data,**kwargs):
