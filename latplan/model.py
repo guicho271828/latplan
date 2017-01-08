@@ -79,8 +79,10 @@ class GumbelAE:
             SpatialDropout1D(0.2),
             # normal dropout after reshape was also effective
             Reshape((N*M,)),
-            Dense(256, activation='relu'),
-            Dense(512, activation='relu'),
+            Dense(1000, activation='relu'),
+            Dropout(0.4),
+            Dense(1000, activation='relu'),
+            Dropout(0.4),
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
         y  = Sequential(_decoder)(z)
