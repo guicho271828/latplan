@@ -7,11 +7,15 @@ from model import GumbelAE, ConvolutionalGumbelAE
 def learn_model(path,train_data,test_data=None,network=GumbelAE):
     ae = network(path)
     ae.train(train_data,
-             epoch=500,
-             anneal_rate=0.00002,
+             # epoch=500,
+             # anneal_rate=0.00002,
+             # max_temperature=1.0,
+             epoch=200,
+             anneal_rate=0.0002,
+             max_temperature=5.0,
+             # 
              batch_size=1000,
              test_data=test_data,
-             max_temperature=1.0,
              min_temperature=0.1,
     )
     return ae
