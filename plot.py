@@ -40,13 +40,13 @@ def plot_grid(images,w=10,path="plan.png"):
         ax.get_yaxis().set_visible(False)
     plt.savefig(path)
 
-def plot_grid2(images,w=10,shape=None,path="plan.png"):
+def plot_grid2(images,w=10,path="plan.png"):
     import matplotlib.pyplot as plt
-    images = fix_images(images,shape)
+    images = fix_images(images)
     l = images.shape[0]
     h = l//w
     margin = 3
-    m_shape = (margin + np.array(shape))
+    m_shape = (margin + np.array(images.shape[1:]))
     figure = np.ones(m_shape * np.array((h,w)))
     # print images.shape,h,w
     for y in range(h):
