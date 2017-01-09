@@ -23,12 +23,14 @@ def fix_image(image,dims=None):
         return image.reshape((1,)+dims)
     raise BaseException("image.shape={}, dims={}".format(image.shape,dims))
 
+import math
+
 def plot_grid(images,w=10,path="plan.png"):
     import matplotlib.pyplot as plt
     l = 0
     images = fix_images(images)
     l = len(images)
-    h = l//w+1
+    h = int(math.ceil(l/w))
     plt.figure(figsize=(w, h))
     for i,image in enumerate(images):
         ax = plt.subplot(h,w,i+1)
@@ -44,18 +46,20 @@ def plot_grid2(images,w=10,path="plan.png"):
     import matplotlib.pyplot as plt
     images = fix_images(images)
     l = images.shape[0]
-    h = l//w
+    h = int(math.ceil(l/w))
     margin = 3
     m_shape = (margin + np.array(images.shape[1:]))
-    figure = np.ones(m_shape * np.array((h,w)))
-    # print images.shape,h,w
+    all_shape = m_shape * np.array((h,w))
+    figure = np.ones(all_shape)
+    print images.shape,h,w,m_shape,figure.shape
     for y in range(h):
         for x in range(w):
             begin = m_shape * np.array((y,x))
             end   = (m_shape * (np.array((y,x))+1)) - margin
             # print begin,end,y*w+x
-            figure[begin[0]:end[0],begin[1]:end[1]] = images[y*w+x]
-    plt.figure(figsize=(h,w))
+            if y*w+x < len(images):
+                figure[begin[0]:end[0],begin[1]:end[1]] = images[y*w+x]
+    plt.figure(figsize=all_shape[::-1] * 0.01)
     plt.imshow(figure,interpolation='nearest',cmap='gray',)
     plt.savefig(path)
 
