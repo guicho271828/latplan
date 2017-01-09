@@ -71,7 +71,14 @@ if __name__ == '__main__':
     # import puzzle
     # plan_random(GumbelAE("samples/puzzle3_model/"),
     #             puzzle.transitions(3,2))
-    import puzzle
-    plan_random(GumbelAE("samples/puzzle32p_model/"),
-                puzzle.transitions(3,2))
+    # import puzzle
+    # plan_random(GumbelAE("samples/puzzle32p_model/"),
+    #             puzzle.transitions(3,2))
+    import mnist_puzzle
+    plan_random(GumbelAE("samples/mnist_puzzle32_model/"),
+                mnist_puzzle.transitions(3,2))
+    import mnist_puzzle
+    plan_random(GumbelAE("samples/mnist_puzzle32p_model/"),
+                mnist_puzzle.transitions(3,2))
+    
     
