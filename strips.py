@@ -29,27 +29,10 @@ def dump_actions(ae,transitions):
 
 ################################################################
 
-from plot import plot_grid
+from plot import plot_ae
 
-def plot_ae(ae,data,path):
-    xs = data[random.randint(0,data.shape[0],12)]
-    zs = ae.encode_binary(xs)
-    ys = ae.decode_binary(zs)
-    bs = np.round(zs)
-    bys = ae.decode_binary(bs)
-    import math
-    l = int(math.sqrt(ae.N))
-    zs = zs.reshape((-1,l,l))
-    bs = bs.reshape((-1,l,l))
-    images = []
-    for x,z,y,b,by in zip(xs, zs, ys, bs, bys):
-        images.append(x)
-        images.append(z)
-        images.append(y)
-        images.append(b)
-        images.append(by)
-    plot_grid(images, path=ae.local(path))
-
+def select(data,num):
+    return data[random.randint(0,data.shape[0],num)]
 
 if __name__ == '__main__':
     import numpy.random as random
@@ -58,8 +41,8 @@ if __name__ == '__main__':
     def run(path, train_states, test_states=None , transitions=None, network=GumbelAE):
         ae = learn_model(path, train_states, test_states, network=network)
         if test_states is not None:
-            plot_ae(ae,test_states,"autoencoding_test.png")
-        plot_ae(ae,train_states,"autoencoding_train.png")
+            plot_ae(ae,select(test_states,12),"autoencoding_test.png")
+        plot_ae(ae,select(train_states,12),"autoencoding_train.png")
         if transitions is not None:
             dump_actions(ae,transitions)
 

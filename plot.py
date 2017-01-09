@@ -58,3 +58,19 @@ def plot_grid2(images,w=10,shape=None,path="plan.png"):
     plt.figure(figsize=(h,w))
     plt.imshow(figure,interpolation='nearest',cmap='gray',)
     plt.savefig(path)
+
+def plot_ae(ae,data,path):
+    xs = data
+    zs = ae.encode_binary(xs)
+    ys = ae.decode_binary(zs)
+    bs = np.round(zs)
+    bys = ae.decode_binary(bs)
+    import math
+    l = int(math.sqrt(ae.N))
+    _zs = zs.reshape((-1,l,l))
+    _bs = bs.reshape((-1,l,l))
+    images = []
+    for seq in zip(xs, _zs, ys, _bs, bys):
+        images.extend(seq)
+    plot_grid(images, path=ae.local(path))
+    return xs,zs,ys,bs,bys
