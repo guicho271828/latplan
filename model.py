@@ -33,7 +33,7 @@ def ResUnit (*layers):
 class GumbelAE:
     # common options
     
-    def __init__(self,path,M=2,N=36):
+    def __init__(self,path,M=2,N=49):
         import subprocess
         subprocess.call(["mkdir",path])
         self.path = path
@@ -76,7 +76,7 @@ class GumbelAE:
         logits = Sequential(_encoder)(x)
         z = Lambda(sampling)(logits)
         _decoder = [
-            SpatialDropout1D(0.2),
+            SpatialDropout1D(0.4),
             # normal dropout after reshape was also effective
             Reshape((N*M,)),
             Dense(1000, activation='relu'),

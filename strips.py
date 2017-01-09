@@ -109,11 +109,11 @@ if __name__ == '__main__':
     
     import puzzle
     all_states = puzzle.states(3,2)
-    filter = random.choice([True, True, True, True, True, True, True,  False],
+    filter = random.choice([True, True, True, True, False, False, False,  False],
                            all_states.shape[0])
     print filter
     inv_filter = np.invert(filter)
     run("samples/puzzle32p_model/",
         all_states[filter].repeat(10,0),
-        all_states[inv_filter].repeat(10,0))
+        all_states[inv_filter])
     
