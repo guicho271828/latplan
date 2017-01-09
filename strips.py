@@ -98,5 +98,6 @@ if __name__ == '__main__':
     inv_filter = np.invert(filter)
     run("samples/puzzle32p_model/",
         all_states[filter].repeat(10,0),
-        all_states[inv_filter])
+        all_states[inv_filter],
+        puzzle.transitions(3,2))
     
