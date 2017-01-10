@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 from puzzle import generate_configs
@@ -59,17 +59,17 @@ if __name__ == '__main__':
         plt.savefig(name)
     configs = generate_configs(6)
     puzzles = generate_mnist_puzzle(configs, 2, 3)
-    print puzzles[10]
+    print(puzzles[10])
     plot_image(puzzles[10],"samples/mnist_puzzle.png")
     plot_grid(puzzles[:36],"samples/mnist_puzzles.png")
     _transitions = transitions(2,3)
     import numpy.random as random
     indices = random.randint(0,_transitions[0].shape[0],18)
     _transitions = _transitions[:,indices]
-    print _transitions.shape
+    print(_transitions.shape)
     transitions_for_show = \
         np.einsum('ba...->ab...',_transitions) \
           .reshape((-1,)+_transitions.shape[2:])
-    print transitions_for_show.shape
+    print(transitions_for_show.shape)
     plot_grid(transitions_for_show,"samples/mnist_puzzle_transitions.png")
 

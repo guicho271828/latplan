@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
@@ -11,7 +11,7 @@ def run(ae):
     per_image = 2**8
     for j in range((2**16) // per_image):
         path = ae.local("all-bits{}.png".format(j))
-        print path
+        print(path)
         plot_grid2(ys[j*per_image:(1+j)*per_image],w=16,path=path)
 
 run(GumbelAE("samples/mnist_puzzle32_model/"))

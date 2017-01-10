@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # from __future__ import absolute_import
 from mnist import mnist
@@ -39,4 +39,4 @@ def transitions(labels = range(10), n = 10000):
                      np.concatenate(dest_results,axis=0))).reshape((2,-1,28,28))
 
 if __name__ == '__main__':
-    print transitions(n=10).shape
+    print(transitions(n=10).shape)
