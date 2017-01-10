@@ -51,12 +51,12 @@ def plot_grid2(images,w=10,path="plan.png"):
     m_shape = (margin + np.array(images.shape[1:]))
     all_shape = m_shape * np.array((h,w))
     figure = np.ones(all_shape)
-    print images.shape,h,w,m_shape,figure.shape
+    print(images.shape,h,w,m_shape,figure.shape)
     for y in range(h):
         for x in range(w):
             begin = m_shape * np.array((y,x))
             end   = (m_shape * (np.array((y,x))+1)) - margin
-            # print begin,end,y*w+x
+            # print(begin,end,y*w+x)
             if y*w+x < len(images):
                 figure[begin[0]:end[0],begin[1]:end[1]] = images[y*w+x]
     plt.figure(figsize=all_shape[::-1] * 0.01)

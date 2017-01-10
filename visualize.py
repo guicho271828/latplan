@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
@@ -16,12 +16,12 @@ def print_conv(ae):
     for i,conv in enumerate(conv_layers):
         W = conv.get_weights()[0]
         path = ae.local("conv_filters{}.png".format(i))
-        print path
+        print(path)
         plot_grid(np.einsum("xycf->fxy",W),path=path)
 
 def print_activation(xs,shape):
     path = ae.local("activation{}.png".format(0))
-    print path, xs.shape
+    print(path, xs.shape)
     plot_grid(xs,path=path)
     x = Input(shape)
     now = x
@@ -31,7 +31,7 @@ def print_activation(xs,shape):
             m = Model(x,now)
             now_images = m.predict(xs)
             path = ae.local("activation{}.png".format(i+1))
-            print path
+            print(path)
             plot_grid(now_images,path=path)
 
 # ae = GumbelAE("samples/puzzle32_model/")

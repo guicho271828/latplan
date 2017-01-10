@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
-
+from functools import reduce
 from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
@@ -19,7 +19,7 @@ from keras.regularizers import activity_l2, activity_l1
 def Sequential (array):
     def apply1(arg,f):
         return f(arg)
-    return lambda(x): reduce(apply1, array, x)
+    return lambda x: reduce(apply1, array, x)
 
 def Residual (layer):
     def res(x):
@@ -61,10 +61,10 @@ class GumbelAE:
     def build(self,input_shape):
         if self.built:
             if self.verbose:
-                print "Avoided building {} twice.".format(self)
+                print("Avoided building {} twice.".format(self))
             return
         data_dim = np.prod(input_shape)
-        print "input_shape:{}, flattened into {}".format(input_shape,data_dim)
+        print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N = self.M, self.N
         tau = K.variable(self.max_temperature, name="temperature")
         def sampling(logits):
@@ -135,12 +135,12 @@ class GumbelAE:
     def cool(self, epoch, logs):
         new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
                           self.min_temperature])
-        print "Tau = {}".format(new_tau)
+        print("Tau = {}".format(new_tau))
         K.set_value(self.__tau, new_tau)
         
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,**kwargs):
-        for k,v in kwargs.iteritems():
+        for k,v in kwargs.items():
             setattr(self, k, v)
         self.build(train_data.shape[1:])
         self.summary()
@@ -156,28 +156,28 @@ class GumbelAE:
                 shuffle=True, validation_data=validation,
                 callbacks=[LambdaCallback(on_epoch_begin=self.cool)])
         except KeyboardInterrupt:
-            print ("learning stopped")
+            print("learning stopped")
         self.loaded = True
         v = self.verbose
         self.verbose = False
         def test_both(msg, fn):
-            print msg.format(fn(train_data))
+            print(msg.format(fn(train_data)))
             if test_data is not None:
-                print (msg+" (validation)").format(fn(test_data))
+                print((msg+" (validation)").format(fn(test_data)))
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
         test_both("Reconstruction MSE: {}",
-                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
         self.autoencoder_binary.compile(optimizer=optimizer, loss=mse)
         test_both("Binary Reconstruction MSE: {}",
-                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
         test_both("Reconstruction BCE: {}",
-                  lambda (data): self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
         self.autoencoder_binary.compile(optimizer=optimizer, loss=bce)
         test_both("Binary Reconstruction BCE: {}",
-                  lambda (data): self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
         test_both("Latent activation: {}",
-                  lambda (data): self.encode_binary(train_data,batch_size=batch_size,).mean())
+                  lambda data: self.encode_binary(train_data,batch_size=batch_size,).mean())
         self.verbose = v
         if save:
             self.save()

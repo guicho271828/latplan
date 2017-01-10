@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 
@@ -127,31 +127,47 @@ def successors(config,width,height):
     x = pos % width
     y = pos // width
     succ = []
-    if x is not 0:
-        c = list(config)
-        other = next(i for i,_pos in enumerate(c) if _pos == pos-1)
-        c[0] -= 1
-        c[other] += 1
-        succ.append(c)
-    if x is not width-1:
-        c = list(config)
-        other = next(i for i,_pos in enumerate(c) if _pos == pos+1)
-        c[0] += 1
-        c[other] -= 1
-        succ.append(c)
-    if y is not 0:
-        c = list(config)
-        other = next(i for i,_pos in enumerate(c) if _pos == pos-width)
-        c[0] -= width
-        c[other] += width
-        succ.append(c)
-    if y is not height-1:
-        c = list(config)
-        other = next(i for i,_pos in enumerate(c) if _pos == pos+width)
-        c[0] += width
-        c[other] -= width
-        succ.append(c)
-    return succ
+    try:
+        if x != 0:
+            dir=1
+            c = list(config)
+            other = next(i for i,_pos in enumerate(c) if _pos == pos-1)
+            c[0] -= 1
+            c[other] += 1
+            succ.append(c)
+        if x != width-1:
+            dir=2
+            c = list(config)
+            other = next(i for i,_pos in enumerate(c) if _pos == pos+1)
+            c[0] += 1
+            c[other] -= 1
+            succ.append(c)
+        if y != 0:
+            dir=3
+            c = list(config)
+            other = next(i for i,_pos in enumerate(c) if _pos == pos-width)
+            c[0] -= width
+            c[other] += width
+            succ.append(c)
+        if y != height-1:
+            dir=4
+            c = list(config)
+            other = next(i for i,_pos in enumerate(c) if _pos == pos+width)
+            c[0] += width
+            c[other] -= width
+            succ.append(c)
+        return succ
+    except StopIteration:
+        board = np.zeros((height,width))
+        for i in range(height*width):
+            _pos = config[i]
+            _x = _pos % width
+            _y = _pos // width
+            board[_y,_x] = i
+        print(board)
+        print(succ)
+        print(dir)
+        print((c,x,y,width,height))
 
 def config_transitions(configs):
     return [ (c1,c2) for c2 in successors(c1) for c1 in configs ]
@@ -189,16 +205,16 @@ if __name__ == '__main__':
         plt.savefig(name)
     configs = generate_configs(6)
     puzzles = generate_puzzle(configs, 2, 3)
-    print puzzles[10]
+    print(puzzles[10])
     plot_image(puzzles[10],"samples/puzzle.png")
     plot_grid(puzzles[:36],"samples/puzzles.png")
     _transitions = transitions(2,3)
     import numpy.random as random
     indices = random.randint(0,_transitions[0].shape[0],18)
     _transitions = _transitions[:,indices]
-    print _transitions.shape
+    print(_transitions.shape)
     transitions_for_show = \
         np.einsum('ba...->ab...',_transitions) \
           .reshape((-1,)+_transitions.shape[2:])
-    print transitions_for_show.shape
+    print(transitions_for_show.shape)
     plot_grid(transitions_for_show,"samples/puzzle_transitions.png")

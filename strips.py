@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     #     None,
     #     counter.transitions(n=1000),
     #     network=ConvolutionalGumbelAE)
-    # print "################################################################"
+    # print( "################################################################")
     # import puzzle
     # run("samples/puzzle22_model/",
     #     puzzle.states(2,2).repeat(10,0),
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     #     None,
     #     puzzle.transitions(2,2),
     #     network=ConvolutionalGumbelAE)
-    # print "################################################################" 
+    # print( "################################################################") 
     # import mnist_puzzle
     # run("samples/mnist_puzzle22_model/",
     #     mnist_puzzle.states(2,2).repeat(10,0),
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     #     None,
     #     mnist_puzzle.transitions(2,2),
     #     network=ConvolutionalGumbelAE) 
-    # print "################################################################" 
+    # print( "################################################################") 
     # import puzzle
     # run("samples/puzzle32_model/",
     #     puzzle.states(3,2).repeat(10,0),
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     # all_states = puzzle.states(3,2)
     # filter = random.choice([True, True, True, True, False, False, False,  False],
     #                        all_states.shape[0])
-    # print filter
+    # print(filter)
     # inv_filter = np.invert(filter)
     # run("samples/puzzle32p_model/",
     #     all_states[filter].repeat(10,0),
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     all_states = mnist_puzzle.states(3,2)
     filter = random.choice([True, True, True, True, False, False, False,  False],
                            all_states.shape[0])
-    print filter
+    print(filter)
     inv_filter = np.invert(filter)
     run("samples/mnist_puzzle32p_model/",
         all_states[filter].repeat(20,0),

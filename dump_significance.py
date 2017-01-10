@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
@@ -13,9 +13,9 @@ def run(ae,xs):
     ys = ae.decode_binary(zs)
     mod_ys = []
     correlations = []
-    print ys.shape
-    print "corrlations:"
-    print "bit \ image  {}".format(range(len(xs)))
+    print(ys.shape)
+    print("corrlations:")
+    print("bit \ image  {}".format(range(len(xs))))
     for i in range(m):
         mod_zs = np.copy(zs)
         # increase the latent value from 0 to 1 and check the difference
@@ -28,7 +28,7 @@ def run(ae,xs):
         correlation = np.mean(np.square(ae.decode_binary(zero_zs) - ae.decode_binary(one_zs)),
                               axis=(1,2))
         correlations.append(correlation)
-        print "{}            {}".format(i,correlation)
+        print("{}            {}".format(i,correlation))
     plot_grid2(np.einsum("ib...->bi...",np.array(mod_ys)).reshape((-1,)+ys.shape[1:]),
                w=11,path=ae.local("dump_significance.png"))
     return np.einsum("ib->bi",correlations)
