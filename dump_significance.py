@@ -7,6 +7,10 @@ from plot import plot_grid, plot_grid2
 import mnist_puzzle
 states = mnist_puzzle.states(3,2)
 
+import numpy.random as random
+def select(data,num):
+    return data[random.randint(0,data.shape[0],num)]
+
 def run(ae,xs):
     m = 16
     zs = ae.encode_binary(xs)
@@ -33,5 +37,5 @@ def run(ae,xs):
                w=11,path=ae.local("dump_significance.png"))
     return np.einsum("ib->bi",correlations)
 
-run(GumbelAE("samples/mnist_puzzle32_model/"),states[0:1])
-run(GumbelAE("samples/mnist_puzzle32p_model/"),states[0:1])
+# run(GumbelAE("samples/mnist_puzzle32_model/"),states[0:1])
+run(GumbelAE("samples/mnist_puzzle32p_model/"),select(states,6))
