@@ -58,6 +58,19 @@ class GumbelAE:
                 Dropout(0.4),
                 Dense(M*N),     # ,activity_regularizer=activity_l1(0.0000001)
                 Reshape((N,M))]
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        M, N = self.M, self.N
+        return [
+            SpatialDropout1D(0.4),
+            # normal dropout after reshape was also effective
+            Reshape((N*M,)),
+            Dense(1000, activation='relu'),
+            Dropout(0.4),
+            Dense(1000, activation='relu'),
+            Dropout(0.4),
+            Dense(data_dim, activation='sigmoid'),
+            Reshape(input_shape),]
     def build(self,input_shape):
         if self.built:
             if self.verbose:
@@ -72,19 +85,9 @@ class GumbelAE:
             z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
             return softmax( z / tau )
         x = Input(shape=input_shape)
-        _encoder = self.build_encoder(input_shape)
-        logits = Sequential(_encoder)(x)
+        logits = Sequential(self.build_encoder(input_shape))(x)
         z = Lambda(sampling)(logits)
-        _decoder = [
-            SpatialDropout1D(0.4),
-            # normal dropout after reshape was also effective
-            Reshape((N*M,)),
-            Dense(1000, activation='relu'),
-            Dropout(0.4),
-            Dense(1000, activation='relu'),
-            Dropout(0.4),
-            Dense(data_dim, activation='sigmoid'),
-            Reshape(input_shape),]
+        _decoder = self.build_decoder(input_shape)
         y  = Sequential(_decoder)(z)
         z2 = Input(shape=(N,M))
         y2 = Sequential(_decoder)(z2)
