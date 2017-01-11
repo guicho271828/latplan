@@ -50,12 +50,12 @@ class GumbelAE:
         # 1,826,032 trainable params
         return [Reshape((data_dim,)),
                 GaussianNoise(0.1),
-                Dense(1000, activation='relu'),
+                Dense(2000, activation='relu'),
                 BN(),
-                Dropout(0.4),
-                Dense(1000, activation='relu'),
+                Dropout(0.7),
+                Dense(2000, activation='relu'),
                 BN(),
-                Dropout(0.4),
+                Dropout(0.7),
                 Dense(M*N),     # ,activity_regularizer=activity_l1(0.0000001)
                 Reshape((N,M))]
     def build_decoder(self,input_shape):
@@ -65,10 +65,10 @@ class GumbelAE:
             SpatialDropout1D(0.4),
             # normal dropout after reshape was also effective
             Reshape((N*M,)),
-            Dense(1000, activation='relu'),
-            Dropout(0.4),
-            Dense(1000, activation='relu'),
-            Dropout(0.4),
+            Dense(2000, activation='relu'),
+            Dropout(0.7),
+            Dense(2000, activation='relu'),
+            Dropout(0.7),
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
     def build(self,input_shape):
