@@ -24,12 +24,46 @@ def learn_model(path,train_data,test_data=None,network=GumbelAE):
     )
     return ae
 
+def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE):
+    parameters = [[2000],[0.4],]
+    best_error = float('inf')
+    best_params = None
+    best_ae     = None
+    results = []
+    try:
+        import itertools
+        for params in itertools.product(*parameters):
+            print("Testing model with parameters={}".format(params))
+            ae = learn_model(path, train, test,
+                             network=curry(network,parameters=params))
+            error = ae.autoencoder.evaluate(test,test,batch_size=4000,)
+            results.append((error,)+params)
+            print("Evaluation result for {} : error = {}".format(params,error))
+            print("Current results:\n{}".format(np.array(results)),flush=True)
+            if error < best_error:
+                print("Found a better parameter {}: error:{} old-best:{}".format(
+                    params,error,best_error))
+                best_params = params
+                best_error = error
+                best_ae = ae
+        print("Best parameter {}: error:{}".format(best_params,best_error))
+    finally:
+        print(results)
+    return best_ae,best_params,best_error
+
 def dump_actions(ae,transitions):
     orig, dest = transitions[0], transitions[1]
     orig_b = ae.encode_binary(orig,batch_size=6000)
     dest_b = ae.encode_binary(dest,batch_size=6000)
     actions = np.concatenate((orig_b, dest_b), axis=1)
     np.savetxt(ae.local("actions.csv"),actions,"%d")
+
+def dump(ae, path, train=None, test=None , transitions=None, **kwargs):
+    if test is not None:
+        plot_ae(ae,select(test,12),"autoencoding_test.png")
+    plot_ae(ae,select(train,12),"autoencoding_train.png")
+    if transitions is not None:
+        dump_actions(ae,transitions)
 
 ################################################################
 
@@ -41,34 +75,10 @@ def select(data,num):
 if __name__ == '__main__':
     import numpy.random as random
     import trace
-
-    def run(path, train_states, test_states=None , transitions=None, network=GumbelAE):
-        parameters = [[2000],[0.4],
-                      # [1000, 2000],
-                      # [0.4, 0.01,]
-        ]
-        best_error = float('inf')
-        best_params = None
-        results = []
-        try:
-            import itertools
-            for params in itertools.product(*parameters):
-                print("Testing model with parameters={}".format(params))
-                ae = learn_model(path, train_states, test_states,
-                                 network=curry(network,parameters=params))
-                error = ae.autoencoder.evaluate(test_states,test_states,batch_size=4000,)
-                results.append((error,)+params)
-                print("Evaluation result for {} : error = {}".format(params,error))
-                print("Current results:\n{}".format(np.array(results)),flush=True)
-                if error < best_error:
-                    print("Found a better parameter {}: error:{} old-best:{}".format(
-                        params,error,best_error))
-                    best_params = params
-                    best_error = error
-            print("Best parameter {}: error:{}".format(best_params,best_error))
-        finally:
-            print(results)
-        return best_params,best_error,results
+    
+    def run(*args, **kwargs):
+        ae, _, _ = grid_search(*args, **kwargs)
+        dump(ae, *args, **kwargs)
     
     # import counter
     # run("samples/counter_model/",
