@@ -40,6 +40,7 @@ def plot_grid(images,w=10,path="plan.png"):
             TypeError("Invalid dimensions for image data: image={}".format(np.array(image).shape))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
+    print(path)
     plt.savefig(path)
 
 def plot_grid2(images,w=10,path="plan.png"):
@@ -61,6 +62,7 @@ def plot_grid2(images,w=10,path="plan.png"):
                 figure[begin[0]:end[0],begin[1]:end[1]] = images[y*w+x]
     plt.figure(figsize=all_shape[::-1] * 0.01)
     plt.imshow(figure,interpolation='nearest',cmap='gray',)
+    print(path)
     plt.savefig(path)
 
 def plot_ae(ae,data,path):

@@ -57,6 +57,7 @@ def dump_actions(ae,transitions):
     orig_b = ae.encode_binary(orig,batch_size=6000)
     dest_b = ae.encode_binary(dest,batch_size=6000)
     actions = np.concatenate((orig_b, dest_b), axis=1)
+    print(ae.local("actions.csv"))
     np.savetxt(ae.local("actions.csv"),actions,"%d")
 
 def dump(ae, path, train=None, test=None , transitions=None, **kwargs):
