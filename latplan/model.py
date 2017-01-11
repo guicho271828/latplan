@@ -33,7 +33,7 @@ def ResUnit (*layers):
 class GumbelAE:
     # common options
     
-    def __init__(self,path,M=2,N=16):
+    def __init__(self,path,M=2,N=36):
         import subprocess
         subprocess.call(["mkdir",path])
         self.path = path
