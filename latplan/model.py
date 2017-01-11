@@ -33,7 +33,7 @@ def ResUnit (*layers):
 class GumbelAE:
     # common options
     
-    def __init__(self,path,M=2,N=36):
+    def __init__(self,path,M=2,N=36,parameters=[]):
         import subprocess
         subprocess.call(["mkdir",path])
         self.path = path
@@ -44,31 +44,32 @@ class GumbelAE:
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
         self.verbose = True
+        self.params = parameters
     def build_encoder(self,input_shape):
         data_dim = np.prod(input_shape)
         M, N = self.M, self.N
         # 1,826,032 trainable params
         return [Reshape((data_dim,)),
                 GaussianNoise(0.1),
-                Dense(2000, activation='relu'),
+                Dense(self.params[0], activation='relu'),
                 BN(),
-                Dropout(0.7),
-                Dense(2000, activation='relu'),
+                Dropout(self.params[1]),
+                Dense(self.params[0], activation='relu'),
                 BN(),
-                Dropout(0.7),
+                Dropout(self.params[1]),
                 Dense(M*N),     # ,activity_regularizer=activity_l1(0.0000001)
                 Reshape((N,M))]
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         M, N = self.M, self.N
         return [
-            SpatialDropout1D(0.4),
+            SpatialDropout1D(self.params[1]),
             # normal dropout after reshape was also effective
             Reshape((N*M,)),
-            Dense(2000, activation='relu'),
-            Dropout(0.7),
-            Dense(2000, activation='relu'),
-            Dropout(0.7),
+            Dense(self.params[0], activation='relu'),
+            Dropout(self.params[1]),
+            Dense(self.params[0], activation='relu'),
+            Dropout(self.params[1]),
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
     def build(self,input_shape):
