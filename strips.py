@@ -3,6 +3,9 @@
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
 
+float_formatter = lambda x: "%.5f" % x
+np.set_printoptions(formatter={'float_kind':float_formatter})
+
 def curry(fn,*args1,**kwargs1):
     return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
 
@@ -41,13 +44,33 @@ if __name__ == '__main__':
     import trace
 
     def run(path, train_states, test_states=None , transitions=None, network=GumbelAE):
-        ae = learn_model(path, train_states, test_states, network=network)
-        if test_states is not None:
-            plot_ae(ae,select(test_states,12),"autoencoding_test.png")
-        plot_ae(ae,select(train_states,12),"autoencoding_train.png")
-        if transitions is not None:
-            dump_actions(ae,transitions)
-
+        parameters = [[2000],[0.4],
+                      # [1000, 2000],
+                      # [0.4, 0.01,]
+        ]
+        best_error = float('inf')
+        best_params = None
+        results = []
+        try:
+            import itertools
+            for params in itertools.product(*parameters):
+                print("Testing model with parameters={}".format(params))
+                ae = learn_model(path, train_states, test_states,
+                                 network=curry(network,parameters=params))
+                error = ae.autoencoder.evaluate(test_states,test_states,batch_size=4000,)
+                results.append((error,)+params)
+                print("Evaluation result for {} : error = {}".format(params,error))
+                print("Current results:\n{}".format(np.array(results)),flush=True)
+                if error < best_error:
+                    print("Found a better parameter {}: error:{} old-best:{}".format(
+                        params,error,best_error))
+                    best_params = params
+                    best_error = error
+            print("Best parameter {}: error:{}".format(best_params,best_error))
+        finally:
+            print(results)
+        return best_params,best_error,results
+    
     # import counter
     # run("samples/counter_model/",
     #     counter.states(),
