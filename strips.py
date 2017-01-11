@@ -13,13 +13,13 @@ def curry(fn,*args1,**kwargs1):
 def learn_model(path,train_data,test_data=None,network=GumbelAE):
     ae = network(path)
     ae.train(train_data,
-             epoch=1000,
-             anneal_rate=0.000008,
-             # epoch=200,
-             # anneal_rate=0.0002,
+             # epoch=1000,
+             # anneal_rate=0.000008,
+             epoch=200,
+             anneal_rate=0.0002,
              max_temperature=5.0,
              # 
-             batch_size=1000,
+             batch_size=4000,
              test_data=test_data,
              min_temperature=0.1,
     )
@@ -148,16 +148,26 @@ if __name__ == '__main__':
     #     mnist_puzzle.transitions(3,2),
     #     network=ConvolutionalGumbelAE) 
 
+    # import mnist_puzzle
+    # all_states = mnist_puzzle.states(3,2)
+    # filter = random.choice([True, False, False, False, False, False, False,  False],
+    #                        all_states.shape[0])
+    # inv_filter = np.invert(filter)
+    # print(len(all_states),len(all_states[filter]),len(all_states[inv_filter]))
+    # run("samples/mnist_puzzle32p_model/",
+    #     all_states[filter].repeat(40,0),
+    #     all_states[inv_filter],
+    #     mnist_puzzle.transitions(3,2))
+
     import mnist_puzzle
-    all_states = mnist_puzzle.states(3,2)
-    filter = random.choice([True, False, False, False, False, False, False,  False],
-                           all_states.shape[0])
-    inv_filter = np.invert(filter)
-    print(len(all_states),len(all_states[filter]),len(all_states[inv_filter]))
-    run("samples/mnist_puzzle32p_model/",
-        all_states[filter].repeat(40,0),
-        all_states[inv_filter],
-        mnist_puzzle.transitions(3,2))
+    configs = mnist_puzzle.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    l = len(configs)
+    train = mnist_puzzle.generate_mnist_puzzle(configs[:12000],3,3)
+    test  = mnist_puzzle.generate_mnist_puzzle(configs[12000:13000],3,3)
+    print(l,len(train),len(test))
+    run("samples/mnist_puzzle33p_model/", train, test)
 
 # Dropout is useful for avoiding the overfitting, but requires larger epochs
 # Too short epochs may result in underfitting
