@@ -4,14 +4,11 @@ import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
 from plot import plot_grid, plot_grid2
 
-import mnist_puzzle
-states = mnist_puzzle.states(3,2)
-
 import numpy.random as random
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
-float_formatter = lambda x: "%.5f" % x
+float_formatter = lambda x: "%.2f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
 def run(ae,xs):
@@ -39,5 +36,7 @@ def run(ae,xs):
                w=11,path=ae.local("dump_significance.png"))
     return np.einsum("ib->bi",correlations)
 
-# run(GumbelAE("samples/mnist_puzzle32_model/"),states[0:1])
-run(GumbelAE("samples/mnist_puzzle32p_model/"),select(states,6))
+import mnist_puzzle
+configs = select(np.array(list(mnist_puzzle.generate_configs(9))),1)
+states = mnist_puzzle.states(3,3,configs)
+run(GumbelAE("samples/mnist_puzzle33p_model/"),states)
