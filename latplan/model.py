@@ -118,20 +118,21 @@ class GumbelAE:
         import os.path as p
         return p.join(self.path,path)
     def save(self):
-        import h5py
-        with h5py.File(self.local("aux.h5"), "w") as f:
-            shape = np.array(self.encoder.input_shape[1:])
-            dset = f.create_dataset("N", (1,), dtype='i')
-            dset[0] = self.N
-            dset = f.create_dataset("input_shape", shape.shape, dtype='i')
-            dset[...] = shape
+        import json
+        with open(self.local('aux.json'), 'w') as f:
+            json.dump(
+                {"N":self.N,
+                 "params":self.params,
+                 "input_shape":self.encoder.input_shape[1:],}, f)
         self.encoder.save_weights(self.local("encoder.h5"))
         self.decoder.save_weights(self.local("decoder.h5"))
     def do_load(self):
-        import h5py
-        with h5py.File(self.local("aux.h5"), "r") as f:
-            self.N = f["N"].value[0]
-            self.build(tuple(f["input_shape"].value))
+        import json
+        with open(self.local('aux.json'), 'r') as f:
+            data = json.load(f)
+            self.N = data["N"]
+            self.params = data["params"]
+            self.build(tuple(data["input_shape"]))
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
     def load(self):
