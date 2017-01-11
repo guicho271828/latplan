@@ -11,6 +11,9 @@ import numpy.random as random
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
+float_formatter = lambda x: "%.5f" % x
+np.set_printoptions(formatter={'float_kind':float_formatter})
+
 def run(ae,xs):
     zs = ae.encode_binary(xs)
     ys = ae.decode_binary(zs)
@@ -31,7 +34,7 @@ def run(ae,xs):
         correlation = np.mean(np.square(ae.decode_binary(zero_zs) - ae.decode_binary(one_zs)),
                               axis=(1,2))
         correlations.append(correlation)
-        print("{}            {}".format(i,correlation))
+        print("{:>5} {}".format(i,correlation))
     plot_grid2(np.einsum("ib...->bi...",np.array(mod_ys)).reshape((-1,)+ys.shape[1:]),
                w=11,path=ae.local("dump_significance.png"))
     return np.einsum("ib->bi",correlations)
