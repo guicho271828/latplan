@@ -3,6 +3,8 @@
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
 
+def curry(fn,*args1,**kwargs1):
+    return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
 
 def learn_model(path,train_data,test_data=None,network=GumbelAE):
     ae = network(path)
