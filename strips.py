@@ -138,12 +138,12 @@ if __name__ == '__main__':
 
     import mnist_puzzle
     all_states = mnist_puzzle.states(3,2)
-    filter = random.choice([True, True, True, True, False, False, False,  False],
+    filter = random.choice([True, True, False, False, False, False, False,  False],
                            all_states.shape[0])
     inv_filter = np.invert(filter)
     print(len(all_states),len(all_states[filter]),len(all_states[inv_filter]))
     run("samples/mnist_puzzle32p_model/",
-        all_states[filter].repeat(20,0),
+        all_states[filter].repeat(40,0),
         all_states[inv_filter],
         mnist_puzzle.transitions(3,2))
 
