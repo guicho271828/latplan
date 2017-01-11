@@ -217,9 +217,10 @@ class GumbelAE:
     def decode_binary(self,data,**kwargs):
         assert self.M == 2, "M={}, not 2".format(self.M)
         return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
-    def summary(self):
-        self.encoder.summary()
-        self.decoder.summary()
+    def summary(self,verbose=False):
+        if verbose:
+            self.encoder.summary()
+            self.decoder.summary()
         self.autoencoder.summary()
 
 if __name__ == '__main__':
