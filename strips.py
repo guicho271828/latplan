@@ -103,11 +103,11 @@ if __name__ == '__main__':
     #     all_states[inv_filter],
     #     puzzle.transitions(3,2))
     # ################################################################
-    import mnist_puzzle
-    run("samples/mnist_puzzle32_model/",
-        mnist_puzzle.states(3,2).repeat(10,0),
-        None,
-        mnist_puzzle.transitions(3,2))
+    # import mnist_puzzle
+    # run("samples/mnist_puzzle32_model/",
+    #     mnist_puzzle.states(3,2).repeat(10,0),
+    #     None,
+    #     mnist_puzzle.transitions(3,2))
     # run("samples/mnist_puzzle32_modelc/",
     #     mnist_puzzle.states(3,2).repeat(10,0),
     #     None,
