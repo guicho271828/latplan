@@ -138,7 +138,7 @@ if __name__ == '__main__':
 
     import mnist_puzzle
     all_states = mnist_puzzle.states(3,2)
-    filter = random.choice([True, True, False, False, False, False, False,  False],
+    filter = random.choice([True, False, False, False, False, False, False,  False],
                            all_states.shape[0])
     inv_filter = np.invert(filter)
     print(len(all_states),len(all_states[filter]),len(all_states[inv_filter]))
