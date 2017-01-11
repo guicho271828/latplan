@@ -142,7 +142,8 @@ class GumbelAE:
     def cool(self, epoch, logs):
         new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
                           self.min_temperature])
-        print("Tau = {}".format(new_tau))
+        # print("Tau = {:.4f}, Epoch = {}, {}".format(new_tau,epoch,logs), flush=True)
+        self.bar.update(epoch, tau=new_tau, **logs)
         K.set_value(self.__tau, new_tau)
         
     def train(self,train_data,
@@ -151,17 +152,30 @@ class GumbelAE:
             setattr(self, k, v)
         self.build(train_data.shape[1:])
         self.summary()
+        print({"params":self.params,"train_shape":train_data.shape,"test_shape":test_data.shape})
         if test_data is not None:
             validation = (test_data,test_data)
         else:
             validation = None
         try:
+            import progressbar
+            self.bar = progressbar.ProgressBar(
+                max_value=epoch,
+                widgets=[
+                    progressbar.Timer(format='%(elapsed)s'),
+                    progressbar.Bar(),
+                    progressbar.AbsoluteETA(format='%(eta)s'), ' ',
+                    progressbar.DynamicMessage('tau'), ' ',
+                    progressbar.DynamicMessage('val_loss'), ' ',
+                    progressbar.DynamicMessage('loss')
+                ]
+            )
             self.autoencoder.compile(optimizer=optimizer, loss=self.__loss)
             self.autoencoder.fit(
                 train_data, train_data,
                 nb_epoch=epoch, batch_size=batch_size,
-                shuffle=True, validation_data=validation,
-                callbacks=[LambdaCallback(on_epoch_begin=self.cool)])
+                shuffle=True, validation_data=validation, verbose=False,
+                callbacks=[LambdaCallback(on_epoch_end=self.cool)])
         except KeyboardInterrupt:
             print("learning stopped")
         self.loaded = True
