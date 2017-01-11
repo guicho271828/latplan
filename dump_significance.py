@@ -12,7 +12,6 @@ def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
 def run(ae,xs):
-    m = 16
     zs = ae.encode_binary(xs)
     ys = ae.decode_binary(zs)
     mod_ys = []
@@ -20,7 +19,7 @@ def run(ae,xs):
     print(ys.shape)
     print("corrlations:")
     print("bit \ image  {}".format(range(len(xs))))
-    for i in range(m):
+    for i in range(ae.N):
         mod_zs = np.copy(zs)
         # increase the latent value from 0 to 1 and check the difference
         for j in range(11):

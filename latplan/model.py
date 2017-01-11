@@ -117,6 +117,8 @@ class GumbelAE:
         import h5py
         with h5py.File(self.local("aux.h5"), "w") as f:
             shape = np.array(self.encoder.input_shape[1:])
+            dset = f.create_dataset("N", (1,), dtype='i')
+            dset[0] = self.N
             dset = f.create_dataset("input_shape", shape.shape, dtype='i')
             dset[...] = shape
         self.encoder.save_weights(self.local("encoder.h5"))
@@ -124,6 +126,7 @@ class GumbelAE:
     def do_load(self):
         import h5py
         with h5py.File(self.local("aux.h5"), "r") as f:
+            self.N = f["N"].value[0]
             self.build(tuple(f["input_shape"].value))
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
