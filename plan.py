@@ -38,39 +38,23 @@ def latent_plan(init,goal,ae):
     except subprocess.CalledProcessError:
         raise PlanException("no plan found")
 
+def select(data,num):
+    return data[np.random.randint(0,data.shape[0],num)]
+
 if __name__ == '__main__':
-    def plan_random(ae,transitions):
-        while True:
-            try:
-                import random
-                latent_plan(random.choice(transitions[0]),
-                            random.choice(transitions[0]),
-                            ae)
-                break
-            except PlanException as e:
-                print(e)
-    
+    import random
     from model import GumbelAE
-    import counter
-    # plan_random(GumbelAE("samples/counter_model/"),
-    #             counter.transitions(n=1000))
-    # import puzzle
-    # plan_random(GumbelAE("samples/puzzle_model/"),
-    #             puzzle.transitions(2,2))
-    # import mnist_puzzle
-    # plan_random(GumbelAE("samples/mnist_puzzle_model/"),
-    #             mnist_puzzle.transitions(2,2))
-    # import puzzle
-    # plan_random(GumbelAE("samples/puzzle3_model/"),
-    #             puzzle.transitions(3,2))
-    # import puzzle
-    # plan_random(GumbelAE("samples/puzzle32p_model/"),
-    #             puzzle.transitions(3,2))
-    # import mnist_puzzle
-    # plan_random(GumbelAE("samples/mnist_puzzle32_model/"),
-    #             mnist_puzzle.transitions(3,2))
+    ae = GumbelAE("samples/mnist_puzzle33p_model/")
     import mnist_puzzle
-    plan_random(GumbelAE("samples/mnist_puzzle32p_model/"),
-                mnist_puzzle.transitions(3,2))
+    configs = np.array(list(mnist_puzzle.generate_configs(9)))
+    ig_c = select(configs,2)
+    ig = mnist_puzzle.states(3,3,ig_c)
+    while True:
+        try:
+            latent_plan(*ig, ae)
+            break
+        except PlanException as e:
+            print(e)
+    
     
     
