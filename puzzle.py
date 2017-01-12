@@ -172,14 +172,16 @@ def successors(config,width,height):
 def config_transitions(configs):
     return [ (c1,c2) for c2 in successors(c1) for c1 in configs ]
 
-def states(width, height):
+def states(width, height, configs=None):
     digit = width * height
-    configs = generate_configs(digit)
+    if configs is None:
+        configs = generate_configs(digit)
     return generate_puzzle(configs,width,height)
 
-def transitions(width, height):
+def transitions(width, height, configs=None):
     digit = width * height
-    configs = generate_configs(digit)
+    if configs is None:
+        configs = generate_configs(digit)
     transitions = np.array([ generate_puzzle([c1,c2],width,height)
                              for c1 in configs for c2 in successors(c1,width,height) ])
     return np.einsum('ab...->ba...',transitions)
