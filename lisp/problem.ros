@@ -1,0 +1,64 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre function-cache) :silent t)
+  )
+
+(defpackage :ros.script.to-sas.3690427216
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :function-cache))
+(in-package :ros.script.to-sas.3690427216)
+
+(function-cache:defcached sym (&rest args)
+  (intern (format nil "~{~a~}" args))
+  ;; (apply #'symbolicate (mapcar #'princ-to-string args))
+  )
+
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (list (sym 'z dim)))
+
+(defun make-problem (input)
+  (let* ((dim (/ (length input) 2))
+         (init (subseq input 0 dim))
+         (goal (subseq input dim))
+         (dims (iota dim)))
+    (assert (= (length init) (length goal)))
+    `(define (problem ,(symbolicate
+                        (format nil "PROBLEM-~{~a~^-~}"
+                                (reverse
+                                 (subseq
+                                  (multiple-value-list
+                                   (get-decoded-time)) 0 6)))))
+         (:domain latent)
+       (:objects)
+       (:init
+        ,@(iter (for d in dims)
+                (for value in init)
+                (ematch value
+                  ;; For a wildcard, it is ok to specify the arbitrary value
+                  (2 (collect (z d)))
+                  (1 (collect (z d)))
+                  (0 (collect `(not ,(z d)))))))
+       (:goal
+        (and
+         ,@(iter (for d in dims)
+                 (for value in goal)
+                 (ematch value
+                   (2 nil)  ; because either is ok
+                   (1 (collect (z d)))
+                   (0 (collect `(not ,(z d)))))))))))
+
+(defun main (&rest coordinates)
+  (let ((*print-right-margin* 70))
+    (format t "~(~:S~)~%"
+            (make-problem (mapcar #'read-from-string coordinates)))))
+
+
+;;; vim: set ft=lisp lisp:
+
+
+

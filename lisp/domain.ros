@@ -9,56 +9,69 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
   )
 
 (defpackage :ros.script.to-sas.3690427216
-  (:use :cl :cl-csv :iterate :alexandria :trivia.ppcre :function-cache))
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :function-cache))
 (in-package :ros.script.to-sas.3690427216)
 
+(defclass _nil () ())
+(defun _nil () (make-instance '_nil))
+(defmethod print-object ((object _nil) stream)
+  (write-string "()" stream))
+
 (defun read-as-lists (csv)
-  (with-open-file (s csv)
-    (cl-csv:read-csv s
-                     :separator #\Space
-                     :map-fn (lambda (args)
-                               (mapcar #'read-from-string args)))))
+  (remove nil
+          (iter (for line in-file csv using #'read-line)
+                (collect
+                    (iter (for o in-stream (make-string-input-stream line))
+                          (collect o))))))
 
 (function-cache:defcached sym (&rest args)
   (intern (format nil "~{~a~}" args))
   ;; (apply #'symbolicate (mapcar #'princ-to-string args))
   )
 
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (list (sym 'z dim)))
+
 (defun make-domain (data)
   (let* ((dim (/ (length (first data)) 2))
          (dims (iota dim)))
     `(define (domain latent)
-         (:requirements :strips)
+         (:requirements :strips :negative-preconditions)
        (:predicates
-        ,@(iter (for dim in dims)
-                (collect
-                 `(,(sym 'z dim) ?value))))
-       (:constants v0 v1 - object)
+        ,@(mapcar #'z dims))
        ,@(iter (for transition in data)
                (for from = (subseq transition 0 dim))
                (for to   = (subseq transition dim))
                (for i from 0)
                (collect
-                `(:action ,(sym 'a i)
-                  :parameters ()
-                  :precondition
-                  (and ,@(iter (for dim in dims)
-                               (for value in from)
-                               (collect
-                                `(,(sym 'z dim) ,(sym 'v value)))))
-                  :effect
-                  (and ,@(iter (for dim in dims)
-                               (for value in from)
-                               (collect
-                                `(not (,(sym 'z dim) ,(sym 'v value)))))
-                       ,@(iter (for dim in dims)
-                               (for value in to)
-                               (collect
-                                `(,(sym 'z dim) ,(sym 'v value)))))))))))
+                   `(:action ,(sym 'a (apply #'concatenate 'string
+                                             (mapcar #'princ-to-string transition)))
+                     :parameters ,(_nil) ;TODO: Is it possible to use parameters in our framework?
+                     :precondition
+                     (and ,@(iter (for d in dims)
+                                  (for value in from)
+                                  (match value
+                                    (2 nil)
+                                    (1 (collect (z d)))
+                                    (0 (collect `(not ,(z d)))))))
+                     :effect
+                     (and ,@(iter (for d in dims)
+                                  (for value1 in from)
+                                  (for value2 in to)
+                                  (ematch* (value1 value2)
+                                    ((_ 2) nil)
+                                    ((2 1) (collect (z d)))
+                                    ((2 0) (collect `(not ,(z d))))
+                                    ((0 0) nil)
+                                    ((1 1) nil)
+                                    ((0 1) (collect (z d)))
+                                    ((1 0) (collect `(not ,(z d)))))))))))))
 
 (defun main (csv)
-  (with-output-to-file (s "domain.pddl" :if-does-not-exist :create :if-exists :supersede)
-    (prin1 (make-domain (read-as-lists csv)) s)))
+  (let ((*print-right-margin* 70))
+    (format t "~(~:S~)~%"
+            (make-domain (read-as-lists csv)))))
 
 
 ;;; vim: set ft=lisp lisp:
