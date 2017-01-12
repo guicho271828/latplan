@@ -13,10 +13,12 @@ def curry(fn,*args1,**kwargs1):
 def learn_model(path,train_data,test_data=None,network=GumbelAE):
     ae = network(path)
     ae.train(train_data,
-             # epoch=1000,
-             # anneal_rate=0.000008,
-             epoch=200,
-             anneal_rate=0.0002,
+             epoch=1000,
+             anneal_rate=0.000008,
+             # epoch=500,
+             # anneal_rate=0.0001,
+             # epoch=200,
+             # anneal_rate=0.0002,
              max_temperature=5.0,
              # 
              batch_size=4000,
