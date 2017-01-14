@@ -115,16 +115,23 @@ def augment_neighbors(ae, distance, zs1, zs2, threshold=0.,max_diff=None):
     final_zs1 = zs1
     final_zs2 = zs2
     for diffbit in range(1,max_diff):
+        some = False
         for bv in flips(bitnum,diffbit):
             print(bv)
             flipped_zs = flip(zs1,[bv])
             flipped_ys = ae.decode_binary(flipped_zs,batch_size=1000)
             oks = np.less(distance(ys1,flipped_ys), threshold)
-            print(oks)
+            ok_num = np.count_nonzero(oks)
+            print("{} augmentation".format(ok_num))
+            if ok_num > 0:
+                some = True
             final_zs1 = np.concatenate((final_zs1,flipped_zs[oks]),axis=0)
             # we do not enumerate destination states.
             # because various states are applicable, single destination state is enough
             final_zs2 = np.concatenate((final_zs2,       zs2[oks]),axis=0)
+        if not some:
+            print("No more augmentation, stopped")
+            break
     return final_zs1, final_zs2
 
 import keras.backend as K
