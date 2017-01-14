@@ -4,6 +4,9 @@ import config
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
 
+import keras.backend as K
+import tensorflow as tf
+
 float_formatter = lambda x: "%.5f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
@@ -106,41 +109,58 @@ def all_flips(bitnum,diffbit):
         array[i,indices] = 1
     return array
 
-def augment_neighbors(ae, distance, zs1, zs2, threshold=0.,max_diff=None):
-    zs1 = zs1.astype(np.int8)
-    ys1 = ae.decode_binary(zs1,batch_size=6000)
-    bitnum = zs1.shape[1]
+def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
+    bs1 = bs1.astype(np.int8)
+    ys1 = ae.decode_binary(bs1,batch_size=6000)
+    bitnum = bs1.shape[1]
     if max_diff is None:
         max_diff = bitnum-1
-    final_zs1 = zs1
-    final_zs2 = zs2
+    final_bs1 = [bs1]
+    final_bs2 = [bs2]
+    failed_bv = []
+
+    K.set_learning_phase(0)
+    y_orig = K.placeholder(shape=ys1.shape)
+    b = K.placeholder(shape=bs1.shape)
+    z = tf.stack([b,1-b],axis=-1)
+    y_flip = ae.decoder(z)
+    ok = K.lesser_equal(distance(y_orig,y_flip),threshold)
+    checker = K.function([y_orig,b],[ok])
+    def check_ok(flipped_bs):
+        return checker([ys1,flipped_bs])[0]
+    
     for diffbit in range(1,max_diff):
         some = False
         for bv in flips(bitnum,diffbit):
+            if np.any([ np.all(np.greater_equal(bv,bv2)) for bv2 in failed_bv ]):
+                # print("previously seen with failure")
+                continue
             print(bv)
-            flipped_zs = flip(zs1,[bv])
-            flipped_ys = ae.decode_binary(flipped_zs,batch_size=1000)
-            oks = np.less(distance(ys1,flipped_ys), threshold)
-            ok_num = np.count_nonzero(oks)
-            print("{} augmentation".format(ok_num))
+            flipped_bs = flip(bs1,[bv])
+            oks = check_ok(flipped_bs)
+            new_bs = flipped_bs[oks]
+            ok_num = len(new_bs)
             if ok_num > 0:
                 some = True
-            final_zs1 = np.concatenate((final_zs1,flipped_zs[oks]),axis=0)
-            # we do not enumerate destination states.
-            # because various states are applicable, single destination state is enough
-            final_zs2 = np.concatenate((final_zs2,       zs2[oks]),axis=0)
+                final_bs1.append(new_bs)
+                # we do not enumerate destination states.
+                # because various states are applicable, single destination state is enough
+                final_bs2.append(bs2[oks])
+            else:
+                failed_bv.append(bv)
         if not some:
             print("No more augmentation, stopped")
             break
-    return final_zs1, final_zs2
-
-import keras.backend as K
+    return np.concatenate(final_bs1,axis=0), np.concatenate(final_bs2,axis=0)
 
 def bce(x,y):
-    x_sym = K.placeholder(shape=x.shape)
-    y_sym = K.placeholder(shape=y.shape)
-    diff_sym = K.mean(K.binary_crossentropy(x_sym,y_sym),axis=(1,2))
-    return K.function([x_sym,y_sym],[diff_sym])([x,y])[0]
+    return K.mean(K.binary_crossentropy(x,y),axis=(1,2))
+
+# def bce(x,y):
+#     x_sym = K.placeholder(shape=x.shape)
+#     y_sym = K.placeholder(shape=y.shape)
+#     diff_sym = K.mean(K.binary_crossentropy(x_sym,y_sym),axis=(1,2))
+#     return K.function([x_sym,y_sym],[diff_sym])([x,y])[0]
 
 def dump_actions(ae,transitions,threshold=0.):
     orig, dest = transitions[0], transitions[1]
