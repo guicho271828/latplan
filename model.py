@@ -214,9 +214,9 @@ class GumbelAE:
     def decode(self,data,**kwargs):
         self.load()
         return self.decoder.predict(data,**kwargs)
-    def autoencode(self,data):
+    def autoencode(self,data,**kwargs):
         self.load()
-        return self.autoencoder.predict(data)
+        return self.autoencoder.predict(data,**kwargs)
     def encode_binary(self,data,**kwargs):
         assert self.M == 2, "M={}, not 2".format(self.M)
         return self.encode(data,**kwargs)[:,:,0].reshape(-1, self.N)
