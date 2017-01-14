@@ -114,6 +114,7 @@ class GumbelAE:
         self.autoencoder = Model(x, y)
         self.autoencoder_binary = Model(x, y3)
         self.built = True
+        return self
     def local(self,path):
         import os.path as p
         return p.join(self.path,path)
@@ -126,6 +127,7 @@ class GumbelAE:
                  "input_shape":self.encoder.input_shape[1:],}, f)
         self.encoder.save_weights(self.local("encoder.h5"))
         self.decoder.save_weights(self.local("decoder.h5"))
+        return self
     def do_load(self):
         import json
         with open(self.local('aux.json'), 'r') as f:
@@ -135,10 +137,12 @@ class GumbelAE:
             self.build(tuple(data["input_shape"]))
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
+        return self
     def load(self):
         if not self.loaded:
             self.do_load()
             self.loaded = True
+        return self
         
     def cool(self, epoch, logs):
         new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
@@ -203,6 +207,7 @@ class GumbelAE:
         self.verbose = v
         if save:
             self.save()
+        return self
     def encode(self,data,**kwargs):
         self.load()
         return self.encoder.predict(data,**kwargs)
@@ -223,6 +228,7 @@ class GumbelAE:
             self.encoder.summary()
             self.decoder.summary()
         self.autoencoder.summary()
+        return self
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
