@@ -206,6 +206,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
        acc))))
 
 (defvar *g-threshold* 500)
+(setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
     ((list* (or "-g" "--threashold") (read *g-threshold*) rest)
