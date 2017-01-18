@@ -100,7 +100,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 
 ;;; node evaluation functions
 
-(ftype wickens-cooccurence-g fn fn fn fn sf)
+(ftype wickens-cooccurence-g sf sf sf sf sf)
 (defun wickens-cooccurence-g (n1 n2 n3 n4)
   "Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Sciences. Lawrence Erlbaum Associates."
   (let* ((1/all (/ (+ n1 n2 n3 n4)))
@@ -121,24 +121,24 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 
 (ftype msdd-gmax1 fn fn fn fn sf)
 (defun msdd-gmax1 (n1 n2 n3 n4)
-  (max (wickens-cooccurence-g n1 n2 0 (+ n3 n4))
-       (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))
+  (max (wickens-cooccurence-g (float n1) (float n2) 0.0 (float (+ n3 n4)))
+       (wickens-cooccurence-g 0.0 (float (+ n1 n2)) (float n3) (float n4))))
 
 (ftype msdd-gmax2 fn fn fn fn sf)
 (defun msdd-gmax2 (n1 n2 n3 n4)
   (max (let ((tmp1 (+ n2 n3 n4)))
          (if (<= n1 tmp1)
-             (wickens-cooccurence-g n1 0 0 tmp1)
-             (let ((all/2 (/ (+ n1 tmp1) 2)))
-               (wickens-cooccurence-g all/2 0 0 all/2))))
+             (wickens-cooccurence-g (float n1) 0.0 0.0 (float tmp1))
+             (let ((all/2 (/ (+ n1 tmp1) 2.0)))
+               (wickens-cooccurence-g all/2 0.0 0.0 all/2))))
        (cond
          ((>= n1 (abs (- n2 n3)))
-          (let ((tmp2 (+ n1 n2 n3)))
-            (wickens-cooccurence-g 0 tmp2 tmp2 n4)))
+          (let ((tmp2 (float (+ n1 n2 n3))))
+            (wickens-cooccurence-g 0.0 tmp2 tmp2 (float n4))))
          ((> n2 n3)
-          (wickens-cooccurence-g 0 n2 (+ n1 n3) n4))
+          (wickens-cooccurence-g 0.0 (float n2) (float (+ n1 n3)) (float n4)))
          (t
-          (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))))
+          (wickens-cooccurence-g 0.0 (float (+ n1 n2)) (float n3) (float n4))))))
 
 (ftype contingency-table node (array bit (* 2 *)) (values fn fn fn fn))
 (let ((matching  (make-array 0 :element-type 'bit))
@@ -222,6 +222,8 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
         (progn (setf count 0)
                (terpri))))))
 
+(defun float4 (a b c d)
+  (values (float a) (float b) (float c) (float d)))
 (defun bistate-msdd (array g-threashold)
   "A modification of Oates, Cohen, ICML16 on binary variables with lag fixed to 1.
 Also, instead of working on the sequence of states, it works on individual pairs of states."
@@ -242,7 +244,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
                (iter (for child in (expand top))
                      (for g = (multiple-value-call
                                   #'wickens-cooccurence-g
-                                (contingency-table child array)))
+                                (multiple-value-call
+                                    #'float4
+                                  (contingency-table child array))))
                      (push child open)
                      (when (>= g g-threashold)
                        (push (cons g child) acc)))
