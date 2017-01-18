@@ -31,10 +31,12 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
             (replace arm bv :start1 (* b 2 w) :end1 (* (1+ b) 2 w)))
       a)))
 
-;; search data structure
+;;; search data structure
+
+(deftype sf () 'single-float)
 
 (defun multitoken (width)
-  (make-array width :element-type '(integer 0 2) :initial-element 2))
+  (make-array width :initial-element 1 :element-type 'bit :adjustable nil :fill-pointer nil))
 
 (defun copy-multitoken (mt1)
   (let ((mt2 (multitoken (length mt1))))
@@ -44,52 +46,57 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 (defun required ()
   (error "missing required argument"))
 
-(deftype stream-value ()
-  `(integer 0 2))
-
 (defstruct node
-  ;; (precursor (required) :type (simple-array stream-value))
-  ;; (successor (required) :type (simple-array stream-value))
-  (data (required) :type (simple-array stream-value)))
+  ;; (precursor (required) :type (simple-array bit))
+  ;; (successor (required) :type (simple-array bit))
+  (data (required) :type simple-bit-vector)
+  (mask (required) :type simple-bit-vector))
 
 (declaim (inline node-precursor))
-(ftype node-precursor node (array stream-value))
+(ftype node-precursor node bit-vector)
 (defun node-precursor (node)
   (ematch node
     ((node data)
-     (make-array (/ (length data) 2) :element-type 'stream-value :displaced-to data))))
+     (make-array (/ (length data) 2)
+                 :element-type 'bit
+                 :displaced-to data))))
+
+(declaim (inline node-precursor-*))
+(ftype node-precursor-* node bit-vector)
+(defun node-precursor-* (node)
+  (ematch node
+    ((node data)
+     (make-array (/ (length data) 2)
+                 :element-type 'bit
+                 :displaced-to data))))
 
 
 (declaim (inline node-successor))
-(ftype node-successor node (array stream-value))
+(ftype node-successor node bit-vector)
 (defun node-successor (node)
   (match node
     ((node data)
      (let ((width (/ (length data) 2)))
        (make-array width
-                   :element-type 'stream-value :displaced-to data
+                   :element-type 'bit
+                   :displaced-to data
                    :displaced-index-offset width)))))
 
-;; MSDD algorithm
 
-(defun expand (node)
+(declaim (inline node-successor-*))
+(ftype node-successor-* node bit-vector)
+(defun node-successor-* (node)
   (match node
     ((node data)
-     (flet ((specify (multitoken index what)
-              (let ((mt2 (copy-multitoken multitoken)))
-                (setf (aref mt2 index) what)
-                mt2)))
-       ;; specify 1 bit of the precursor or the successor.
-       ;; Since the precursor and the successor are the displaced arrays to
-       ;; a single underlying data array,
-       ;; we can iterate over the underlying array.
-       (let ((rightmost (or (position 2 data :from-end t :test #'/=) -1)))
-         (iter (for i from (1+ rightmost) below (length data))
-               (collect (node (specify data i 0)))
-               (collect (node (specify data i 1)))))))))
+     (let ((width (/ (length data) 2)))
+       (make-array width
+                   :element-type 'bit
+                   :displaced-to data
+                   :displaced-index-offset width)))))
 
-;; node evaluation functions
+;;; node evaluation functions
 
+(ftype wickens-cooccurence-g sf sf sf sf sf)
 (defun wickens-cooccurence-g (n1 n2 n3 n4)
   "Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Sciences. Lawrence Erlbaum Associates."
   (let* ((1/all (/ (+ n1 n2 n3 n4)))
@@ -107,10 +114,12 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
           (* n3 (log (/ n3 n3^)))
           (* n4 (log (/ n4 n4^)))))))
 
+(ftype msdd-gmax1 sf sf sf sf sf)
 (defun msdd-gmax1 (n1 n2 n3 n4)
   (max (wickens-cooccurence-g n1 n2 1e-6 (+ n3 n4))
        (wickens-cooccurence-g 1e-6 (+ n1 n2) n3 n4)))
 
+(ftype msdd-gmax2 sf sf sf sf sf)
 (defun msdd-gmax2 (n1 n2 n3 n4)
   (max (let ((tmp1 (+ n2 n3 n4)))
          (if (<= n1 tmp1)
@@ -127,46 +136,63 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
          (t
           (wickens-cooccurence-g 1e-6 (+ n1 n2) n3 n4)))))
 
-(ftype contingency-table node (simple-array bit (* 2 *))
-       (values single-float
-               single-float
-               single-float
-               single-float))
+(ftype contingency-table node (simple-array bit (* 2 *)) (values sf sf sf sf))
 (defun contingency-table (node array)
   (ematch* (array node)
     (((array :dimensions (list batch 2 width))
-      (node precursor successor))
-     (let ((n1 1e-6) (n2 1e-6) (n3 1e-6) (n4 1e-6))
+      (node data mask))
+     (let* ((n1 1e-6) (n2 1e-6) (n3 1e-6) (n4 1e-6)
+            (width2 (* 2 width))
+            (matching (make-array width2 :element-type 'bit))
+            (prec-mask (fill (make-array width2 :element-type 'bit) 1 :start 0 :end width))
+            (succ-mask (fill (make-array width2 :element-type 'bit) 1 :start width))
+            (all-true (make-array width2 :element-type 'bit :initial-element 1)))
        (iter (for b below batch)
-             (for x = (iter (for i below width)
-                            (always
-                             (let ((v1 (aref precursor i))
-                                   (v2 (aref array b 0 i)))
-                               (or (= v1 2)        ;don't-care
-                                   (= v1 v2))))))
-             (for y = (iter (for i below width)
-                            (always
-                             (let ((v1 (aref successor i))
-                                   (v2 (aref array b 1 i)))
-                               (or (= v1 2)        ;don't-care
-                                   (= v1 v2))))))
-             (match* (x y)
+             (for window =
+                  (make-array width2
+                              :element-type 'bit
+                              :displaced-to array
+                              :displaced-index-offset (* b width2)))
+             (bit-eqv data window matching)
+             (bit-ior matching mask matching)
+             (match* ((equal all-true (bit-ior matching succ-mask))
+                      (equal all-true (bit-ior matching prec-mask)))
                ((t t)     (incf n1))
                ((t nil)   (incf n2))
                ((nil t)   (incf n3))
                ((nil nil) (incf n4))))
        (values n1 n2 n3 n4)))))
 
+(ftype fmax node (simple-array bit (* 2 *)) sf)
 (defun fmax (node array)
   (match node
-    ((node successor)
+    ((node successor-*)
      (multiple-value-call
-         (if (find 2 successor :test #'/=)
+         (if (find 0 successor-*)
              ;; non-empty successor
              #'msdd-gmax1
              ;; empty successor
              #'msdd-gmax2)
        (contingency-table node array)))))
+
+;;; MSDD algorithm
+
+(ftype expand node list)
+(defun expand (node)
+  (match node
+    ((node data mask)
+     (flet ((specify (multitoken index what)
+              (let ((mt2 (copy-multitoken multitoken)))
+                (setf (aref mt2 index) what)
+                mt2)))
+       ;; specify 1 bit of the precursor or the successor.
+       ;; Since the precursor and the successor are the displaced arrays to
+       ;; a single underlying data array,
+       ;; we can iterate over the underlying array.
+       (let ((rightmost (or (position 0 mask :from-end t) -1)))
+         (iter (for i from (1+ rightmost) below (length data))
+               (collect (node (specify data i 0) (specify mask i 0)))
+               (collect (node (specify data i 1) (specify mask i 0)))))))))
 
 (defun progress (width)
   (let ((count 0))
@@ -183,7 +209,8 @@ Also, instead of working on the sequence of states, it works on individual pairs
   (match array
     ((array :dimensions (list _ 2 width))
      (let ((acc nil)
-           (open (list (node (multitoken (* 2 width)))))
+           (open (list (node (multitoken (* 2 width))
+                             (multitoken (* 2 width)))))
            (max-open 0)
            (progress (progress 60)))
        (pprint-logical-block (*standard-output* nil)
