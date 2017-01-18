@@ -24,8 +24,8 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 (defun bvs-array (bvs)
   (let ((batch (length bvs))
         (w (/ (length (first bvs)) 2)))
-    (let* ((a (make-array (list batch 2 w) :element-type 'bit))
-           (arm (make-array (* batch 2 w)  :element-type 'bit :displaced-to a)))
+    (let* ((arm (make-array (* batch 2 w)  :element-type 'bit))
+           (a (make-array (list batch 2 w) :element-type 'bit :displaced-to arm)))
       (iter (for b below batch)
             (for bv in bvs)
             (replace arm bv :start1 (* b 2 w) :end1 (* (1+ b) 2 w)))
@@ -136,7 +136,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
          (t
           (wickens-cooccurence-g 1e-6 (+ n1 n2) n3 n4)))))
 
-(ftype contingency-table node (simple-array bit (* 2 *)) (values sf sf sf sf))
+(ftype contingency-table node simple-bit-vector (values sf sf sf sf))
 (defun contingency-table (node array)
   (ematch* (array node)
     (((array :dimensions (list batch 2 width))
@@ -163,7 +163,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
                ((nil nil) (incf n4))))
        (values n1 n2 n3 n4)))))
 
-(ftype fmax node (simple-array bit (* 2 *)) sf)
+(ftype fmax node simple-bit-vector sf)
 (defun fmax (node array)
   (match node
     ((node successor-*)
