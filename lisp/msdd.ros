@@ -238,7 +238,8 @@ Also, instead of working on the sequence of states, it works on individual pairs
            (open (list (node (multitoken (* 2 width))
                              (multitoken (* 2 width)))))
            (max-open 0)
-           (iteration 0)
+           (evaluation 0)
+           (expansion 0)
            (best-f most-negative-short-float)
            (best-g most-negative-short-float)
            (progress (progress 60)))
@@ -251,6 +252,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
                (when (> g-threashold f)
                  (next-iteration))
                (funcall progress)
+               (incf expansion)
                (iter (for child in (expand top))
                      (for g = (multiple-value-call
                                   #'wickens-cooccurence-g
@@ -259,12 +261,12 @@ Also, instead of working on the sequence of states, it works on individual pairs
                                   (contingency-table child array))))
                      (push child open)
                      (maxf best-g g)
+                     (incf evaluation)
                      (when (>= g g-threashold)
                        (push (cons g child) acc)
                        (print-variables (length acc))))
-               (incf iteration)
                (maxf max-open (length open))))
-       (print-variables iteration max-open best-g)
+         (print-variables evaluation expansion max-open best-g)
        acc))))
 
 (defvar *g-threshold* 500)
