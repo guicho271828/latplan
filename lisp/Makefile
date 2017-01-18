@@ -11,3 +11,4 @@ clean:
 
 test: all
 	python3 test.py
+	ros ./msdd.ros -t -g 256 actions2-m.csv
