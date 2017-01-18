@@ -34,6 +34,8 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 ;;; search data structure
 
 (deftype sf () 'single-float)
+(deftype fn () 'fixnum)
+(deftype half () `(unsigned-byte ,(1- (/ (floor (log most-positive-fixnum 2)) 2))))
 
 (defun multitoken (width)
   (make-array width :initial-element 1 :element-type 'bit :adjustable nil :fill-pointer nil))
@@ -96,7 +98,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 
 ;;; node evaluation functions
 
-(ftype wickens-cooccurence-g sf sf sf sf sf)
+(ftype wickens-cooccurence-g fn fn fn fn sf)
 (defun wickens-cooccurence-g (n1 n2 n3 n4)
   "Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Sciences. Lawrence Erlbaum Associates."
   (let* ((1/all (/ (+ n1 n2 n3 n4)))
@@ -109,39 +111,39 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
          (n3^ (* r2 c1 1/all))
          (n4^ (* r2 c2 1/all)))
     (* 2
-       (+ (* n1 (log (/ n1 n1^)))
-          (* n2 (log (/ n2 n2^)))
-          (* n3 (log (/ n3 n3^)))
-          (* n4 (log (/ n4 n4^)))))))
+       ;; adding 1e-6 to prevent division-by-zero
+       (+ (* n1 (log (/ (+ 1e-6 n1) (+ 1e-6 n1^))))
+          (* n2 (log (/ (+ 1e-6 n2) (+ 1e-6 n2^))))
+          (* n3 (log (/ (+ 1e-6 n3) (+ 1e-6 n3^))))
+          (* n4 (log (/ (+ 1e-6 n4) (+ 1e-6 n4^))))))))
 
-(ftype msdd-gmax1 sf sf sf sf sf)
+(ftype msdd-gmax1 fn fn fn fn sf)
 (defun msdd-gmax1 (n1 n2 n3 n4)
-  (max (wickens-cooccurence-g n1 n2 1e-6 (+ n3 n4))
-       (wickens-cooccurence-g 1e-6 (+ n1 n2) n3 n4)))
+  (max (wickens-cooccurence-g n1 n2 0 (+ n3 n4))
+       (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))
 
-(ftype msdd-gmax2 sf sf sf sf sf)
+(ftype msdd-gmax2 fn fn fn fn sf)
 (defun msdd-gmax2 (n1 n2 n3 n4)
   (max (let ((tmp1 (+ n2 n3 n4)))
          (if (<= n1 tmp1)
-             ;; using 1e-6 instead of 0 to prevent division-by-zero
-             (wickens-cooccurence-g n1 1e-6 1e-6 tmp1)
+             (wickens-cooccurence-g n1 0 0 tmp1)
              (let ((all/2 (/ (+ n1 tmp1) 2)))
-               (wickens-cooccurence-g all/2 1e-6 1e-6 all/2))))
+               (wickens-cooccurence-g all/2 0 0 all/2))))
        (cond
          ((>= n1 (abs (- n2 n3)))
           (let ((tmp2 (+ n1 n2 n3)))
-            (wickens-cooccurence-g 1e-6 tmp2 tmp2 n4)))
+            (wickens-cooccurence-g 0 tmp2 tmp2 n4)))
          ((> n2 n3)
-          (wickens-cooccurence-g 1e-6 n2 (+ n1 n3) n4))
+          (wickens-cooccurence-g 0 n2 (+ n1 n3) n4))
          (t
-          (wickens-cooccurence-g 1e-6 (+ n1 n2) n3 n4)))))
+          (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))))
 
-(ftype contingency-table node simple-bit-vector (values sf sf sf sf))
+(ftype contingency-table node simple-bit-vector (values fn fn fn fn))
 (defun contingency-table (node array)
   (ematch* (array node)
     (((array :dimensions (list batch 2 width))
       (node data mask))
-     (let* ((n1 1e-6) (n2 1e-6) (n3 1e-6) (n4 1e-6)
+     (let* ((n1 0) (n2 0) (n3 0) (n4 0)
             (width2 (* 2 width))
             (matching (make-array width2 :element-type 'bit))
             (prec-mask (fill (make-array width2 :element-type 'bit) 1 :start 0 :end width))
