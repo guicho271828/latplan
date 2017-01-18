@@ -54,13 +54,98 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
         print(results)
     return best_ae,best_params,best_error
 
-def dump_actions(ae,transitions):
+# all_bitarray = np.unpackbits(np.arange(2**8, dtype=np.uint8).reshape((2**8,1)),axis=1)
+# 
+# def binary_counter(bitnum):           # 25
+#     if bitnum > 8:              # yes
+#         nextbitnum = bitnum - 8 # 17
+#         for i in range(2**8):
+#             for lowerbits in binary_counter(nextbitnum):
+#                 yield np.concatenate((all_bitarray[i],lowerbits),axis=0)
+#     else:
+#         bitarray = all_bitarray[0:2**bitnum,8-bitnum:8]
+#         for v in bitarray:
+#             yield v
+
+def flip(bv1,bv2):
+    "bv1,bv2: integer 1D vector, whose values are 0 or 1"
+    iv1 = np.packbits(bv1,axis=-1)
+    iv2 = np.packbits(bv2,axis=-1)
+    # print(iv1,iv2)
+    # print(np.bitwise_xor(iv1,iv2))
+    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1))
+    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1).shape)
+    # print(bv1.shape)
+    return \
+        np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1)[:, :bv1.shape[-1]]
+
+def flips(bitnum,diffbit):
+    # array = np.zeros(bitnum)
+    def rec(start,diffbit,array):
+        if diffbit > 0:
+            for i in range(start,bitnum):
+                this_array = np.copy(array)
+                this_array[i] = 1
+                for result in rec(i+1,diffbit-1,this_array):
+                    yield result
+        else:
+            yield array
+    return rec(0,diffbit,np.zeros(bitnum,dtype=np.int8))
+
+def all_flips(bitnum,diffbit):
+    size=1
+    for i in range(bitnum-diffbit+1,bitnum+1):
+        size *= i
+    for i in range(1,diffbit+1):
+        size /= i
+    size = int(size)
+    # print(size)
+    array = np.zeros((size,bitnum),dtype=np.int8)
+    import itertools
+    for i,indices in enumerate(itertools.combinations(range(bitnum), diffbit)):
+        array[i,indices] = 1
+    return array
+
+def augment_neighbors(ae, distance, zs1, zs2, threshold=0.,max_diff=None):
+    zs1 = zs1.astype(np.int8)
+    ys1 = ae.decode_binary(zs1,batch_size=6000)
+    bitnum = zs1.shape[1]
+    if max_diff is None:
+        max_diff = bitnum-1
+    final_zs1 = zs1
+    final_zs2 = zs2
+    for diffbit in range(1,max_diff):
+        for bv in flips(bitnum,diffbit):
+            print(bv)
+            flipped_zs = flip(zs1,[bv])
+            flipped_ys = ae.decode_binary(flipped_zs,batch_size=1000)
+            oks = np.less(distance(ys1,flipped_ys), threshold)
+            print(oks)
+            final_zs1 = np.concatenate((final_zs1,flipped_zs[oks]),axis=0)
+            # we do not enumerate destination states.
+            # because various states are applicable, single destination state is enough
+            final_zs2 = np.concatenate((final_zs2,       zs2[oks]),axis=0)
+    return final_zs1, final_zs2
+
+import keras.backend as K
+
+def bce(x,y):
+    x_sym = K.placeholder(shape=x.shape)
+    y_sym = K.placeholder(shape=y.shape)
+    diff_sym = K.mean(K.binary_crossentropy(x_sym,y_sym),axis=(1,2))
+    return K.function([x_sym,y_sym],[diff_sym])([x,y])[0]
+
+def dump_actions(ae,transitions,threshold=0.):
     orig, dest = transitions[0], transitions[1]
-    orig_b = ae.encode_binary(orig,batch_size=6000)
-    dest_b = ae.encode_binary(dest,batch_size=6000)
-    actions = np.concatenate((orig_b, dest_b), axis=1)
+    orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
+    dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
+    actions = np.concatenate((orig_b,dest_b), axis=1)
     print(ae.local("actions.csv"))
     np.savetxt(ae.local("actions.csv"),actions,"%d")
+    actions = np.concatenate(
+        augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.09), axis=1)
+    print(ae.local("augmented.csv"))
+    np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
 def dump(ae, path, train=None, test=None , transitions=None, **kwargs):
     if test is not None:
