@@ -5,7 +5,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 |#
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct) :silent t)
+  #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank) :silent t)
   )
 
 (defpackage :msdd
@@ -208,8 +208,13 @@ Also, instead of working on the sequence of states, it works on individual pairs
 
 (defun main (csv)
   (let ((*print-right-margin* 70))
-    (format t "~(~:S~)~%"
-            (make-domain (read-as-lists csv)))))
+    (swank:profile-reset)
+    (swank:profile-package :msdd t nil)
+    (time (bistate-msdd (bvs-array (read-as-bvs csv)) 500))
+    (swank:profile-report)
+    ;; (format t "~(~:S~)~%"
+    ;;         (make-domain (read-as-lists csv)))
+    ))
 
 
 ;;; vim: set ft=lisp lisp:
