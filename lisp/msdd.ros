@@ -186,18 +186,15 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
              ((nil nil) (incf n4))))
          (values n1 n2 n3 n4))))))
 
-
-(ftype fmax node (array bit (* 2 *)) sf)
-(defun fmax (node array)
+(ftype fmax node fn fn fn fn sf)
+(defun fmax (node n1 n2 n3 n4)
   (match node
-    ((node successor-*)
-     (multiple-value-call
-         (if (find 0 successor-*)
-             ;; non-empty successor
-             #'msdd-gmax1
-             ;; empty successor
-             #'msdd-gmax2)
-       (contingency-table node array)))))
+    ((node mask)
+     (if (not (zerop (count 0 mask :start (/ (length mask) 2))))
+         ;; non-empty successor
+         (msdd-gmax1 n1 n2 n3 n4)
+         ;; empty successor
+         (msdd-gmax2 n1 n2 n3 n4)))))
 
 ;;; MSDD algorithm
 
@@ -232,8 +229,6 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
                         (collect `(quote ,arg))
                         (collect arg)))))
 
-(defun float4 (a b c d)
-  (values (float a) (float b) (float c) (float d)))
 (defun bistate-msdd (array g-threashold)
   "A modification of Oates, Cohen, ICML16 on binary variables with lag fixed to 1.
 Also, instead of working on the sequence of states, it works on individual pairs of states."
@@ -254,24 +249,21 @@ Also, instead of working on the sequence of states, it works on individual pairs
              (pprint-newline :mandatory)
              (iter (while open)
                    (for top = (pop open))
-                   (for f = (fmax top array))
-                   (maxf best-f f)
-                   (when (> g-threashold f)
-                     (next-iteration))
                    (funcall progress)
                    (incf expansion)
                    (iter (for child in (expand top))
-                         (for g = (multiple-value-call
-                                      #'wickens-cooccurence-g
-                                    (multiple-value-call
-                                        #'float4
-                                      (contingency-table child array))))
-                         (push child open)
-                         (maxf best-g g)
                          (incf evaluation)
-                         (when (>= g g-threashold)
+                         (for (values n1 n2 n3 n4) =
+                              (contingency-table child array))
+                         (for g = (wickens-cooccurence-g n1 n2 n3 n4))
+                         (maxf best-g g)
+                         (when (> g g-threashold)
                            (push (cons g child) acc)
-                           (print-variables (length acc))))
+                           (print-variables (length acc)))
+                         (for f = (fmax child n1 n2 n3 n4))
+                         (when (> g-threashold f)
+                           (next-iteration))
+                         (push child open))
                    (maxf max-open (length open))))
          (print-variables evaluation expansion max-open best-g best-f))
        acc))))
