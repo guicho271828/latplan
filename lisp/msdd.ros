@@ -159,6 +159,15 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
                ((nil nil) (incf n4))))
        (values n1 n2 n3 n4)))))
 
+(defun progress (width)
+  (let ((count 0))
+    (lambda (&optional (char #\.))
+      (princ char)
+      (incf count)
+      (when (< width count)
+        (progn (setf count 0)
+               (terpri))))))
+
 (defun bistate-msdd (array g-threashold)
   "A modification of Oates, Cohen, ICML16 on binary variables with lag fixed to 1.
 Also, instead of working on the sequence of states, it works on individual pairs of states."
@@ -166,20 +175,23 @@ Also, instead of working on the sequence of states, it works on individual pairs
     ((array :dimensions (list _ 2 width))
      (let ((acc nil)
            (open (list (node (multitoken (* 2 width)))))
-           (max-open 0))
-       (iter (while open)
-             (maxf max-open (length open))
-             (for top = (pop open))
-             (when (> g-threashold (fmax top array))
-               (format t "pruned ~a~%" top)
-               (next-iteration))
-             (iter (for child in (expand top))
-                   (for g = (multiple-value-call
-                                #'wickens-cooccurence-g
-                              (contingency-table child array)))
-                   (push child open)
-                   (when (>= g g-threashold)
-                     (push (cons g child) acc))))
+           (max-open 0)
+           (progress (progress 60)))
+       (pprint-logical-block (*standard-output* nil)
+         (pprint-newline :mandatory)
+         (iter (while open)
+               (for top = (pop open))
+               (when (> g-threashold (fmax top array))
+                 (next-iteration))
+               (funcall progress)
+               (iter (for child in (expand top))
+                     (for g = (multiple-value-call
+                                  #'wickens-cooccurence-g
+                                (contingency-table child array)))
+                     (push child open)
+                     (when (>= g g-threashold)
+                       (push (cons g child) acc)))
+               (maxf max-open (length open))))
        (print `(:max-open ,max-open))
        acc))))
 
