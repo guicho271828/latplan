@@ -205,16 +205,31 @@ Also, instead of working on the sequence of states, it works on individual pairs
        (print `(:max-open ,max-open))
        acc))))
 
+(defvar *g-threshold* 500)
+(defun main (&rest args)
+  (match args
+    ((list* (or "-g" "--threashold") (read *g-threshold*) rest)
+     (apply #'main rest))
+    ((list* (or "-p" "--profile") rest)
+     (swank:profile-reset)
+     (swank:profile-package :msdd t nil)
+     (apply #'main rest)
+     (swank:profile-report))
+    ((list* (or "-t" "--time") rest)
+     (time (apply #'main rest)))
+    ((list csv)
+     (bistate-msdd (bvs-array (read-as-bvs csv)) *g-threshold*))
+    (_
+     (format *error-output*
+             "Usage: msdd.ros ~
+                     [-g,--threashold threashold] ~
+                     [-p,--profile] ~
+                     [-t,--time] actions.csv"))))
 
-(defun main (csv)
-  (let ((*print-right-margin* 70))
-    (swank:profile-reset)
-    (swank:profile-package :msdd t nil)
-    (time (bistate-msdd (bvs-array (read-as-bvs csv)) 500))
-    (swank:profile-report)
-    ;; (format t "~(~:S~)~%"
-    ;;         (make-domain (read-as-lists csv)))
-    ))
+;; (let ((*print-right-margin* 70))
+;; (format t "~(~:S~)~%"
+;;         (make-domain (read-as-lists csv)))
+
 
 
 ;;; vim: set ft=lisp lisp:
