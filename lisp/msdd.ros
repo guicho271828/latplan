@@ -22,6 +22,8 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
           (collect bv))))
 
 (defun bvs-array (bvs)
+  "Stores the bit vectors into a single large bit vector, then
+ returns an array displaced to the underlying bitvector"
   (let ((batch (length bvs))
         (w (/ (length (first bvs)) 2)))
     (let* ((arm (make-array (* batch 2 w)  :element-type 'bit))
@@ -138,34 +140,49 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
          (t
           (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))))
 
-(ftype contingency-table node simple-bit-vector (values fn fn fn fn))
-(defun contingency-table (node array)
-  (ematch* (array node)
-    (((array :dimensions (list batch 2 width))
-      (node data mask))
-     (let* ((n1 0) (n2 0) (n3 0) (n4 0)
-            (width2 (* 2 width))
-            (matching (make-array width2 :element-type 'bit))
-            (prec-mask (fill (make-array width2 :element-type 'bit) 1 :start 0 :end width))
-            (succ-mask (fill (make-array width2 :element-type 'bit) 1 :start width))
-            (all-true (make-array width2 :element-type 'bit :initial-element 1)))
-       (iter (for b below batch)
-             (for window =
-                  (make-array width2
-                              :element-type 'bit
-                              :displaced-to array
-                              :displaced-index-offset (* b width2)))
-             (bit-eqv data window matching)
-             (bit-ior matching mask matching)
-             (ematch* ((equal all-true (bit-ior matching succ-mask))
-                       (equal all-true (bit-ior matching prec-mask)))
-               ((t t)     (incf n1))
-               ((t nil)   (incf n2))
-               ((nil t)   (incf n3))
-               ((nil nil) (incf n4))))
-       (values n1 n2 n3 n4)))))
+(ftype contingency-table node (array bit (* 2 *)) (values fn fn fn fn))
+(let ((matching  (make-array 0 :element-type 'bit))
+      (prec-mask (make-array 0 :element-type 'bit))
+      (succ-mask (make-array 0 :element-type 'bit))
+      (all-true  (make-array 0 :element-type 'bit))
+      (window    (make-array 0 :element-type 'bit)))
+  (declare (simple-bit-vector matching prec-mask succ-mask all-true))
+  (defun contingency-table (node array)
+    (declare (optimize (speed 3)))
+    (ematch* (array node)
+      (((array :dimensions (list batch 2 width)
+               :displaced-to back-array)
+        (node data mask))
+       (declare (simple-bit-vector back-array)
+                (half width batch))
+       (let* ((n1 0) (n2 0) (n3 0) (n4 0)
+              (width2 (* 2 width)))
+         (declare (fixnum n1 n2 n3 n4)
+                  (half width2))
+         (when (/= width2 (length matching))
+           (setf matching  (make-array width2 :element-type 'bit)
+                 prec-mask (make-array width2 :element-type 'bit)
+                 succ-mask (make-array width2 :element-type 'bit)
+                 all-true  (make-array width2 :element-type 'bit)
+                 window    (make-array width2 :element-type 'bit))
+           (fill prec-mask 1 :start 0 :end width)
+           (fill succ-mask 1 :start width)
+           (fill all-true  1))
+         (dotimes (b batch)
+           (let ((start (* b width2)))
+             (replace window back-array :start2 start :end2 (+ start width2)))
+           (bit-eqv data window matching)
+           (bit-ior matching mask matching)
+           (ematch* ((equal all-true (bit-ior matching succ-mask))
+                     (equal all-true (bit-ior matching prec-mask)))
+             ((t t)     (incf n1))
+             ((t nil)   (incf n2))
+             ((nil t)   (incf n3))
+             ((nil nil) (incf n4))))
+         (values n1 n2 n3 n4))))))
 
-(ftype fmax node simple-bit-vector sf)
+
+(ftype fmax node (array bit (* 2 *)) sf)
 (defun fmax (node array)
   (match node
     ((node successor-*)
@@ -262,6 +279,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
 
 
 ;;; vim: set ft=lisp lisp:
+
 
 
 
