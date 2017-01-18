@@ -53,11 +53,16 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
   ;; (successor (required) :type (simple-array stream-value))
   (data (required) :type (simple-array stream-value)))
 
+(declaim (inline node-precursor))
+(ftype node-precursor node (array stream-value))
 (defun node-precursor (node)
-  (match node
+  (ematch node
     ((node data)
      (make-array (/ (length data) 2) :element-type 'stream-value :displaced-to data))))
 
+
+(declaim (inline node-successor))
+(ftype node-successor node (array stream-value))
 (defun node-successor (node)
   (match node
     ((node data)
@@ -134,8 +139,13 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
              #'msdd-gmax2)
        (contingency-table node array)))))
 
+(ftype contingency-table node (simple-array bit (* 2 *))
+       (values single-float
+               single-float
+               single-float
+               single-float))
 (defun contingency-table (node array)
-  (match* (array node)
+  (ematch* (array node)
     (((array :dimensions (list batch 2 width))
       (node precursor successor))
      (let ((n1 1e-6) (n2 1e-6) (n3 1e-6) (n4 1e-6))
