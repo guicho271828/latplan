@@ -196,6 +196,28 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
          ;; empty successor
          (msdd-gmax2 n1 n2 n3 n4)))))
 
+;;; Pruning rule for action schema
+
+(defun valid-node (node)
+  (match node
+    ((node precursor successor
+           precursor-* successor-*)
+     (let ((tmp1 (bit-eqv precursor successor))  ; common bits
+           (tmp2 (bit-xor precursor precursor))) ; as zero
+       ;; 1. same bit should not specify the same value
+       (bit-andc2 tmp1 precursor-* tmp1) ; 1 = wild. filter non-wild
+       (bit-andc2 tmp1 successor-* tmp1)
+       (equal tmp2 tmp1)               ; all zero
+       ;; 2. actions should encode changes? I don't think this is necessary...
+       ))))
+
+(defun valid-leaf-node (node)
+  (match node
+    ((node successor-*)
+     ;; 3. there should be some effects
+     (not (equal (bit-eqv successor-* successor-*) ; as one
+                 successor-*)))))
+
 ;;; MSDD algorithm
 
 (ftype expand node list)
@@ -253,11 +275,16 @@ Also, instead of working on the sequence of states, it works on individual pairs
                    (incf expansion)
                    (iter (for child in (expand top))
                          (incf evaluation)
+                         ;; prune the child following Oates,Cohen,AAAI98
+                         (unless (valid-node child)
+                           (next-iteration))
                          (for (values n1 n2 n3 n4) =
                               (contingency-table child array))
                          (for g = (wickens-cooccurence-g n1 n2 n3 n4))
                          (maxf best-g g)
-                         (when (> g g-threashold)
+                         (when (and (> g g-threashold)
+                                    ;; FILTER in Oates,Cohen,AAAI98
+                                    (valid-leaf-node child))
                            (push (cons g child) acc)
                            (print-variables (length acc)))
                          (for f = (fmax child n1 n2 n3 n4))
