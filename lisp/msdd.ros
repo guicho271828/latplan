@@ -12,8 +12,8 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
   (:use :cl :iterate :alexandria :trivia :trivia.ppcre)
   (:shadowing-import-from :immutable-struct :ftype :defstruct))
 (in-package :msdd)
-
-;; set up the learning data
+(SETF *ARITY-CHECK-BY-TEST-CALL* NIL)
+;;; set up the learning data
 
 (defun read-as-bvs (csv)
   (iter (for line in-file csv using #'read-line)
