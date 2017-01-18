@@ -78,10 +78,13 @@ def select(data,num):
 
 if __name__ == '__main__':
     import numpy.random as random
-    import trace
-    
-    def run(*args, **kwargs):
-        ae, _, _ = grid_search(*args, **kwargs)
+    from trace import trace
+    def run(learn,*args, **kwargs):
+        if learn:
+            ae, _, _ = grid_search(*args, **kwargs)
+        else:
+            ae = (lambda network=GumbelAE,**kwargs:network)(**kwargs)(args[0]).load()
+            # ==network(path)
         dump(ae, *args, **kwargs)
     
     # import counter
@@ -165,11 +168,13 @@ if __name__ == '__main__':
     configs = mnist_puzzle.generate_configs(9)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
-    l = len(configs)
-    train = mnist_puzzle.generate_mnist_puzzle(configs[:12000],3,3)
-    test  = mnist_puzzle.generate_mnist_puzzle(configs[12000:13000],3,3)
-    print(l,len(train),len(test))
-    run("samples/mnist_puzzle33p_model/", train, test)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = mnist_puzzle.states(3,3,train_c)
+    test        = mnist_puzzle.states(3,3,test_c)
+    transitions = mnist_puzzle.transitions(3,3,train_c)
+    print(len(configs),len(train),len(test))
+    run(True,"samples/mnist_puzzle33p_model/", train, test, transitions)
 
 # Dropout is useful for avoiding the overfitting, but requires larger epochs
 # Too short epochs may result in underfitting
