@@ -16,14 +16,18 @@ def echodo(cmd,file=None):
 class PlanException(BaseException):
     pass
 
-def latent_plan(init,goal,ae):
+def latent_plan(init,goal,ae,use_augmented=False):
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal.png")
 
     # start planning
     
     echodo(["make","-C","lisp","-j","1"])
-    echodo(["lisp/domain.bin",ae.local("actions.csv")],
-           ae.local("domain.pddl"))
+    if use_augmented:
+        echodo(["lisp/domain.bin",ae.local("augmented.csv")],
+               ae.local("domain.pddl"))
+    else:
+        echodo(["lisp/domain.bin",ae.local("actions.csv")],
+               ae.local("domain.pddl"))
     echodo(["lisp/problem.bin",
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
@@ -60,7 +64,7 @@ if __name__ == '__main__':
     ig = mnist_puzzle.states(3,3,ig_c)
     while True:
         try:
-            latent_plan(*ig, ae)
+            latent_plan(*ig, ae, use_augmented=True)
             break
         except PlanException as e:
             print(e)
