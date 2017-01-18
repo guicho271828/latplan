@@ -4,6 +4,9 @@ import config
 import numpy as np
 from model import GumbelAE, ConvolutionalGumbelAE
 
+import keras.backend as K
+import tensorflow as tf
+
 float_formatter = lambda x: "%.5f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
@@ -54,13 +57,122 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
         print(results)
     return best_ae,best_params,best_error
 
-def dump_actions(ae,transitions):
+# all_bitarray = np.unpackbits(np.arange(2**8, dtype=np.uint8).reshape((2**8,1)),axis=1)
+# 
+# def binary_counter(bitnum):           # 25
+#     if bitnum > 8:              # yes
+#         nextbitnum = bitnum - 8 # 17
+#         for i in range(2**8):
+#             for lowerbits in binary_counter(nextbitnum):
+#                 yield np.concatenate((all_bitarray[i],lowerbits),axis=0)
+#     else:
+#         bitarray = all_bitarray[0:2**bitnum,8-bitnum:8]
+#         for v in bitarray:
+#             yield v
+
+def flip(bv1,bv2):
+    "bv1,bv2: integer 1D vector, whose values are 0 or 1"
+    iv1 = np.packbits(bv1,axis=-1)
+    iv2 = np.packbits(bv2,axis=-1)
+    # print(iv1,iv2)
+    # print(np.bitwise_xor(iv1,iv2))
+    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1))
+    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1).shape)
+    # print(bv1.shape)
+    return \
+        np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1)[:, :bv1.shape[-1]]
+
+def flips(bitnum,diffbit):
+    # array = np.zeros(bitnum)
+    def rec(start,diffbit,array):
+        if diffbit > 0:
+            for i in range(start,bitnum):
+                this_array = np.copy(array)
+                this_array[i] = 1
+                for result in rec(i+1,diffbit-1,this_array):
+                    yield result
+        else:
+            yield array
+    return rec(0,diffbit,np.zeros(bitnum,dtype=np.int8))
+
+def all_flips(bitnum,diffbit):
+    size=1
+    for i in range(bitnum-diffbit+1,bitnum+1):
+        size *= i
+    for i in range(1,diffbit+1):
+        size /= i
+    size = int(size)
+    # print(size)
+    array = np.zeros((size,bitnum),dtype=np.int8)
+    import itertools
+    for i,indices in enumerate(itertools.combinations(range(bitnum), diffbit)):
+        array[i,indices] = 1
+    return array
+
+def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
+    bs1 = bs1.astype(np.int8)
+    ys1 = ae.decode_binary(bs1,batch_size=6000)
+    bitnum = bs1.shape[1]
+    if max_diff is None:
+        max_diff = bitnum-1
+    final_bs1 = [bs1]
+    final_bs2 = [bs2]
+    failed_bv = []
+
+    K.set_learning_phase(0)
+    y_orig = K.placeholder(shape=ys1.shape)
+    b = K.placeholder(shape=bs1.shape)
+    z = tf.stack([b,1-b],axis=-1)
+    y_flip = ae.decoder(z)
+    ok = K.lesser_equal(distance(y_orig,y_flip),threshold)
+    checker = K.function([y_orig,b],[ok])
+    def check_ok(flipped_bs):
+        return checker([ys1,flipped_bs])[0]
+    
+    for diffbit in range(1,max_diff):
+        some = False
+        for bv in flips(bitnum,diffbit):
+            if np.any([ np.all(np.greater_equal(bv,bv2)) for bv2 in failed_bv ]):
+                # print("previously seen with failure")
+                continue
+            print(bv)
+            flipped_bs = flip(bs1,[bv])
+            oks = check_ok(flipped_bs)
+            new_bs = flipped_bs[oks]
+            ok_num = len(new_bs)
+            if ok_num > 0:
+                some = True
+                final_bs1.append(new_bs)
+                # we do not enumerate destination states.
+                # because various states are applicable, single destination state is enough
+                final_bs2.append(bs2[oks])
+            else:
+                failed_bv.append(bv)
+        if not some:
+            print("No more augmentation, stopped")
+            break
+    return np.concatenate(final_bs1,axis=0), np.concatenate(final_bs2,axis=0)
+
+def bce(x,y):
+    return K.mean(K.binary_crossentropy(x,y),axis=(1,2))
+
+# def bce(x,y):
+#     x_sym = K.placeholder(shape=x.shape)
+#     y_sym = K.placeholder(shape=y.shape)
+#     diff_sym = K.mean(K.binary_crossentropy(x_sym,y_sym),axis=(1,2))
+#     return K.function([x_sym,y_sym],[diff_sym])([x,y])[0]
+
+def dump_actions(ae,transitions,threshold=0.):
     orig, dest = transitions[0], transitions[1]
-    orig_b = ae.encode_binary(orig,batch_size=6000)
-    dest_b = ae.encode_binary(dest,batch_size=6000)
-    actions = np.concatenate((orig_b, dest_b), axis=1)
+    orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
+    dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
+    actions = np.concatenate((orig_b,dest_b), axis=1)
     print(ae.local("actions.csv"))
     np.savetxt(ae.local("actions.csv"),actions,"%d")
+    actions = np.concatenate(
+        augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.09), axis=1)
+    print(ae.local("augmented.csv"))
+    np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
 def dump(ae, path, train=None, test=None , transitions=None, **kwargs):
     if test is not None:
@@ -78,10 +190,13 @@ def select(data,num):
 
 if __name__ == '__main__':
     import numpy.random as random
-    import trace
-    
-    def run(*args, **kwargs):
-        ae, _, _ = grid_search(*args, **kwargs)
+    from trace import trace
+    def run(learn,*args, **kwargs):
+        if learn:
+            ae, _, _ = grid_search(*args, **kwargs)
+        else:
+            ae = (lambda network=GumbelAE,**kwargs:network)(**kwargs)(args[0]).load()
+            # ==network(path)
         dump(ae, *args, **kwargs)
     
     # import counter
@@ -165,11 +280,13 @@ if __name__ == '__main__':
     configs = mnist_puzzle.generate_configs(9)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
-    l = len(configs)
-    train = mnist_puzzle.generate_mnist_puzzle(configs[:12000],3,3)
-    test  = mnist_puzzle.generate_mnist_puzzle(configs[12000:13000],3,3)
-    print(l,len(train),len(test))
-    run("samples/mnist_puzzle33p_model/", train, test)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = mnist_puzzle.states(3,3,train_c)
+    test        = mnist_puzzle.states(3,3,test_c)
+    transitions = mnist_puzzle.transitions(3,3,train_c)
+    print(len(configs),len(train),len(test))
+    run(True,"samples/mnist_puzzle33p_model/", train, test, transitions)
 
 # Dropout is useful for avoiding the overfitting, but requires larger epochs
 # Too short epochs may result in underfitting
