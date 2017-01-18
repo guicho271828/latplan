@@ -4,7 +4,6 @@
 exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 |#
 (progn ;;init forms
-  (ros:ensure-asdf)
   #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank) :silent t)
   )
 
