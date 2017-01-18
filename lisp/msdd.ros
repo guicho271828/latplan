@@ -268,7 +268,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
                            (push (cons g child) acc)
                            (print-variables (length acc))))
                    (maxf max-open (length open))))
-         (print-variables evaluation expansion max-open best-g)) 
+         (print-variables evaluation expansion max-open best-g best-f))
        acc))))
 
 (defvar *g-threshold* 500)
