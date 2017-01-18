@@ -128,17 +128,6 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
          (t
           (wickens-cooccurence-g 1e-6 (+ n1 n2) n3 n4)))))
 
-(defun fmax (node array)
-  (match node
-    ((node successor)
-     (multiple-value-call
-         (if (find 2 successor :test #'/=)
-             ;; non-empty successor
-             #'msdd-gmax1
-             ;; empty successor
-             #'msdd-gmax2)
-       (contingency-table node array)))))
-
 (ftype contingency-table node (simple-array bit (* 2 *))
        (values single-float
                single-float
@@ -168,6 +157,17 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
                ((nil t)   (incf n3))
                ((nil nil) (incf n4))))
        (values n1 n2 n3 n4)))))
+
+(defun fmax (node array)
+  (match node
+    ((node successor)
+     (multiple-value-call
+         (if (find 2 successor :test #'/=)
+             ;; non-empty successor
+             #'msdd-gmax1
+             ;; empty successor
+             #'msdd-gmax2)
+       (contingency-table node array)))))
 
 (defun progress (width)
   (let ((count 0))
