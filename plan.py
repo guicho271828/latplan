@@ -21,7 +21,7 @@ def latent_plan(init,goal,ae):
 
     # start planning
     
-    echodo(["make","-C","lisp"])
+    echodo(["make","-C","lisp","-j","1"])
     echodo(["lisp/domain.bin",ae.local("actions.csv")],
            ae.local("domain.pddl"))
     echodo(["lisp/problem.bin",
