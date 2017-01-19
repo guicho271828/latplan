@@ -1,0 +1,330 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
+|#
+(progn ;;init forms
+  #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank) :silent t)
+  )
+
+(defpackage :msdd
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre)
+  (:shadowing-import-from :immutable-struct :ftype :defstruct))
+(in-package :msdd)
+(SETF *ARITY-CHECK-BY-TEST-CALL* NIL)
+;;; set up the learning data
+
+(defun read-as-bvs (csv)
+  (iter (for line in-file csv using #'read-line)
+        (for bv = (iter (for o in-stream (make-string-input-stream line))
+                        (collect o result-type bit-vector)))
+        (when (plusp (length bv))
+          (collect bv))))
+
+(defun bvs-array (bvs)
+  "Stores the bit vectors into a single large bit vector, then
+ returns an array displaced to the underlying bitvector"
+  (let ((batch (length bvs))
+        (w (/ (length (first bvs)) 2)))
+    (let* ((arm (make-array (* batch 2 w)  :element-type 'bit))
+           (a (make-array (list batch 2 w) :element-type 'bit :displaced-to arm)))
+      (iter (for b below batch)
+            (for bv in bvs)
+            (replace arm bv :start1 (* b 2 w) :end1 (* (1+ b) 2 w)))
+      a)))
+
+;;; search data structure
+
+(deftype sf () 'single-float)
+(deftype fn () 'fixnum)
+(deftype half () `(unsigned-byte ,(1- (/ (floor (log most-positive-fixnum 2)) 2))))
+
+(defun multitoken (width)
+  (make-array width :initial-element 1 :element-type 'bit :adjustable nil :fill-pointer nil))
+
+(defun copy-multitoken (mt1)
+  (let ((mt2 (multitoken (length mt1))))
+    (replace mt2 mt1)
+    mt2))
+
+(defun required ()
+  (error "missing required argument"))
+
+(defstruct node
+  ;; (precursor (required) :type (simple-array bit))
+  ;; (successor (required) :type (simple-array bit))
+  (data (required) :type simple-bit-vector)
+  (mask (required) :type simple-bit-vector))
+
+(declaim (inline node-precursor))
+(ftype node-precursor node bit-vector)
+(defun node-precursor (node)
+  (ematch node
+    ((node data)
+     (make-array (/ (length data) 2)
+                 :element-type 'bit
+                 :displaced-to data))))
+
+(declaim (inline node-precursor-*))
+(ftype node-precursor-* node bit-vector)
+(defun node-precursor-* (node)
+  (ematch node
+    ((node data)
+     (make-array (/ (length data) 2)
+                 :element-type 'bit
+                 :displaced-to data))))
+
+
+(declaim (inline node-successor))
+(ftype node-successor node bit-vector)
+(defun node-successor (node)
+  (match node
+    ((node data)
+     (let ((width (/ (length data) 2)))
+       (make-array width
+                   :element-type 'bit
+                   :displaced-to data
+                   :displaced-index-offset width)))))
+
+
+(declaim (inline node-successor-*))
+(ftype node-successor-* node bit-vector)
+(defun node-successor-* (node)
+  (match node
+    ((node data)
+     (let ((width (/ (length data) 2)))
+       (make-array width
+                   :element-type 'bit
+                   :displaced-to data
+                   :displaced-index-offset width)))))
+
+;;; node evaluation functions
+
+(declaim (inline wickens-cooccurence-g))
+(ftype wickens-cooccurence-g real real real real sf)
+(defun wickens-cooccurence-g (n1 n2 n3 n4)
+  "Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Sciences. Lawrence Erlbaum Associates."
+  (let* ((n1 (float n1))
+         (n2 (float n2))
+         (n3 (float n3))
+         (n4 (float n4))
+         (1/all (/ (+ n1 n2 n3 n4)))
+         (r1 (+ n1 n2))
+         (c1 (+ n1 n3))
+         (r2 (+ n3 n4))
+         (c2 (+ n2 n4))
+         (n1^ (* r1 c1 1/all))
+         (n2^ (* r1 c2 1/all))
+         (n3^ (* r2 c1 1/all))
+         (n4^ (* r2 c2 1/all)))
+    (* 2
+       ;; adding 1e-6 to prevent division-by-zero
+       (+ (* n1 (log (/ (+ 1e-6 n1) (+ 1e-6 n1^))))
+          (* n2 (log (/ (+ 1e-6 n2) (+ 1e-6 n2^))))
+          (* n3 (log (/ (+ 1e-6 n3) (+ 1e-6 n3^))))
+          (* n4 (log (/ (+ 1e-6 n4) (+ 1e-6 n4^))))))))
+
+(ftype msdd-gmax1 fn fn fn fn sf)
+(defun msdd-gmax1 (n1 n2 n3 n4)
+  (max (wickens-cooccurence-g n1 n2 0 (+ n3 n4))
+       (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))
+
+(ftype msdd-gmax2 fn fn fn fn sf)
+(defun msdd-gmax2 (n1 n2 n3 n4)
+  (max (let ((tmp1 (+ n2 n3 n4)))
+         (if (<= n1 tmp1)
+             (wickens-cooccurence-g n1 0 0 tmp1)
+             (let ((all/2 (/ (+ n1 tmp1) 2)))
+               (wickens-cooccurence-g all/2 0 0 all/2))))
+       (cond
+         ((>= n1 (abs (- n2 n3)))
+          (let ((tmp2 (+ n1 n2 n3)))
+            (wickens-cooccurence-g 0 tmp2 tmp2 n4)))
+         ((> n2 n3)
+          (wickens-cooccurence-g 0 n2 (+ n1 n3) n4))
+         (t
+          (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))))
+
+(ftype contingency-table node (array bit (* 2 *)) (values fn fn fn fn))
+(let ((matching  (make-array 0 :element-type 'bit))
+      (prec-mask (make-array 0 :element-type 'bit))
+      (succ-mask (make-array 0 :element-type 'bit))
+      (all-true  (make-array 0 :element-type 'bit))
+      (tmp1    (make-array 0 :element-type 'bit)))
+  (declare (simple-bit-vector matching prec-mask succ-mask all-true))
+  (defun contingency-table (node array)
+    (declare (optimize (speed 3)))
+    (ematch* (array node)
+      (((array :dimensions (list batch 2 width)
+               :displaced-to back-array)
+        (node data mask))
+       (declare (simple-bit-vector back-array)
+                (half width batch))
+       (let* ((n1 0) (n2 0) (n3 0) (n4 0)
+              (width2 (* 2 width)))
+         (declare (fixnum n1 n2 n3 n4)
+                  (half width2))
+         (when (/= width2 (length matching))
+           (setf matching  (make-array width2 :element-type 'bit)
+                 prec-mask (make-array width2 :element-type 'bit)
+                 succ-mask (make-array width2 :element-type 'bit)
+                 all-true  (make-array width2 :element-type 'bit)
+                 tmp1      (make-array width2 :element-type 'bit))
+           (fill prec-mask 1 :start 0 :end width)
+           (fill succ-mask 1 :start width)
+           (fill all-true  1))
+         (dotimes (b batch)
+           (let ((start (* b width2)))
+             (replace tmp1 back-array :start2 start :end2 (+ start width2)))
+           (bit-eqv data tmp1 matching)
+           (bit-ior matching mask matching)
+           (ematch* ((equal all-true (bit-ior matching succ-mask tmp1))
+                     (equal all-true (bit-ior matching prec-mask tmp1)))
+             ((t t)     (incf n1))
+             ((t nil)   (incf n2))
+             ((nil t)   (incf n3))
+             ((nil nil) (incf n4))))
+         (values n1 n2 n3 n4))))))
+
+(ftype fmax node fn fn fn fn sf)
+(defun fmax (node n1 n2 n3 n4)
+  (match node
+    ((node mask)
+     (if (not (zerop (count 0 mask :start (/ (length mask) 2))))
+         ;; non-empty successor
+         (msdd-gmax1 n1 n2 n3 n4)
+         ;; empty successor
+         (msdd-gmax2 n1 n2 n3 n4)))))
+
+;;; Pruning rule for action schema
+
+(defun valid-node (node)
+  (match node
+    ((node precursor successor
+           precursor-* successor-*)
+     (let ((tmp1 (bit-eqv precursor successor))  ; common bits
+           (tmp2 (bit-xor precursor precursor))) ; as zero
+       ;; 1. same bit should not specify the same value
+       (bit-andc2 tmp1 precursor-* tmp1) ; 1 = wild. filter non-wild
+       (bit-andc2 tmp1 successor-* tmp1)
+       (equal tmp2 tmp1)               ; all zero
+       ;; 2. actions should encode changes? I don't think this is necessary...
+       ))))
+
+(defun valid-leaf-node (node)
+  (match node
+    ((node successor-*)
+     ;; 3. there should be some effects
+     (not (equal (bit-eqv successor-* successor-*) ; as one
+                 successor-*)))))
+
+;;; MSDD algorithm
+
+(ftype expand node list)
+(defun expand (node)
+  (match node
+    ((node data mask)
+     (flet ((specify (multitoken index what)
+              (let ((mt2 (copy-multitoken multitoken)))
+                (setf (aref mt2 index) what)
+                mt2)))
+       ;; specify 1 bit of the precursor or the successor.
+       ;; Since the precursor and the successor are the displaced arrays to
+       ;; a single underlying data array,
+       ;; we can iterate over the underlying array.
+       (let ((rightmost (or (position 0 mask :from-end t) -1)))
+         (iter (for i from (1+ rightmost) below (length data))
+               (collect (node (specify data i 0) (specify mask i 0)))
+               (collect (node (specify data i 1) (specify mask i 0)))))))))
+
+(defun progress (width)
+  (let ((count 0))
+    (lambda (&optional (char #\.))
+      (princ char)
+      (incf count)
+      (when (< width count)
+        (progn (setf count 0)
+               (terpri))))))
+
+(defmacro print-variables (&rest args)
+  `(print (list ,@(iter (for arg in args)
+                        (collect `(quote ,arg))
+                        (collect arg)))))
+
+(defun bistate-msdd (array g-threashold)
+  "A modification of Oates, Cohen, ICML16 on binary variables with lag fixed to 1.
+Also, instead of working on the sequence of states, it works on individual pairs of states."
+  (match array
+    ((array :dimensions (list batch 2 width))
+     (format t "number of samples: ~a~%encoding length: ~a~%" batch width)
+     (let ((acc nil)
+           (open (list (node (multitoken (* 2 width))
+                             (multitoken (* 2 width)))))
+           (max-open 0)
+           (evaluation 0)
+           (expansion 0)
+           (best-f most-negative-short-float)
+           (best-g most-negative-short-float)
+           (progress (progress 60)))
+       (unwind-protect
+           (pprint-logical-block (*standard-output* nil)
+             (pprint-newline :mandatory)
+             (iter (while open)
+                   (for top = (pop open))
+                   (funcall progress)
+                   (incf expansion)
+                   (iter (for child in (expand top))
+                         (incf evaluation)
+                         ;; prune the child following Oates,Cohen,AAAI98
+                         (unless (valid-node child)
+                           (next-iteration))
+                         (for (values n1 n2 n3 n4) =
+                              (contingency-table child array))
+                         (for g = (wickens-cooccurence-g n1 n2 n3 n4))
+                         (maxf best-g g)
+                         (when (and (> g g-threashold)
+                                    ;; FILTER in Oates,Cohen,AAAI98
+                                    (valid-leaf-node child))
+                           (push (cons g child) acc)
+                           (print-variables (length acc)))
+                         (for f = (fmax child n1 n2 n3 n4))
+                         (when (> g-threashold f)
+                           (next-iteration))
+                         (push child open))
+                   (maxf max-open (length open))))
+         (print-variables evaluation expansion max-open best-g best-f))
+       acc))))
+
+(defvar *g-threshold* 500)
+;; (setf *print-pretty* nil)
+(defun main (&rest args)
+  (match args
+    ((list* (or "-g" "--threashold") (read *g-threshold*) rest)
+     (apply #'main rest))
+    ((list* (or "-p" "--profile") rest)
+     (swank:profile-reset)
+     (swank:profile-package :msdd t nil)
+     (apply #'main rest)
+     (swank:profile-report))
+    ((list* (or "-t" "--time") rest)
+     (time (apply #'main rest)))
+    ((list csv)
+     (print (bistate-msdd (bvs-array (read-as-bvs csv)) *g-threshold*)))
+    (_
+     (format *error-output*
+             "Usage: msdd.ros ~
+                     [-g,--threashold threashold] ~
+                     [-p,--profile] ~
+                     [-t,--time] actions.csv"))))
+
+;; (let ((*print-right-margin* 70))
+;; (format t "~(~:S~)~%"
+;;         (make-domain (read-as-lists csv)))
+
+
+
+;;; vim: set ft=lisp lisp:
+
+
+
+

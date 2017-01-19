@@ -12,15 +12,36 @@ exec ros -Q -- $0 "$@"
   (:use :cl :cl-csv :iterate :alexandria :trivia :trivia.ppcre))
 (in-package :ros.script.to-sas.3690427216)
 
+(defun apply-action (action state)
+  (iter (with dim = (/ (length action) 2))
+        (for value1 in (subseq action 0 dim))
+        (for value2 in (subseq action dim))
+        (for z in state)
+        (match value1
+          (2 nil)
+          (0 (assert (= value1 z)))
+          (1 (assert (= value1 z))))
+        (collect
+            (ematch value2
+              (2 z)
+              (1  1)
+              (0  0)))))
 
-(defun main (planfile &rest args)
-  (declare (ignorable args))
-  (iter (for action in-file planfile)
-        ;; (move ?FROM-Z0 ?FROM-Z1 ?TO-Z0 ?TO-Z1)
-        (ematch action
-          ((list* 'move args)
-           (format t "~&~{~a ~}"
-                   (mapcar (lambda-ematch
-                             ((symbol :name (ppcre "V([0-9]*)" (read n)))
-                              n))
-                           args))))))
+(defun simulate (state actions)
+  (cons state
+        (ematch actions
+          (nil nil)
+          ((cons action rest)
+           (simulate (apply-action action state)
+                     rest)))))
+
+(defun main (planfile &rest init)
+  (format t "~{~{~a ~}~%~}"
+          (simulate
+           (mapcar #'read-from-string init)
+           (iter (for action in-file planfile)
+                 (collect
+                     (ematch action
+                       ((list (symbol :name (and name (string* #\A))))
+                        (map 'list (compose #'read-from-string #'string)
+                             (subseq name 1)))))))))
