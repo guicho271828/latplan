@@ -78,6 +78,9 @@ if __name__ == '__main__':
             break
         except PlanException as e:
             print(e)
+    print("The problem was solvable. Trying the original formulation")
+    latent_plan(*ig, ae, use_augmented=False)
+    print("Original formulation is also solvable.")
     
     
     
