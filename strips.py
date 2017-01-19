@@ -135,7 +135,7 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
             if np.any([ np.all(np.greater_equal(bv,bv2)) for bv2 in failed_bv ]):
                 # print("previously seen with failure")
                 continue
-            print(bv)
+            print(bv, "blacklist: {} entries".format(len(failed_bv)))
             flipped_bs = flip(bs1,[bv])
             oks = check_ok(flipped_bs)
             new_bs = flipped_bs[oks]
