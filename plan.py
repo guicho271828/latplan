@@ -60,9 +60,9 @@ if __name__ == '__main__':
     ae = GumbelAE("samples/mnist_puzzle33p_model/")
     import mnist_puzzle
     configs = np.array(list(mnist_puzzle.generate_configs(9)))
-    ig_c = select(configs,2)
-    ig = mnist_puzzle.states(3,3,ig_c)
     while True:
+        ig_c = select(configs,2)
+        ig = mnist_puzzle.states(3,3,ig_c)
         try:
             latent_plan(*ig, ae, use_augmented=True)
             break
