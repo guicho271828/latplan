@@ -2,7 +2,7 @@
 
 import numpy as np
 import subprocess
-
+import os
 from plot import plot_grid, plot_grid2, plot_ae
 
 def echodo(cmd,file=None):
@@ -23,11 +23,21 @@ def latent_plan(init,goal,ae,use_augmented=False):
     
     echodo(["make","-C","lisp","-j","1"])
     if use_augmented:
-        echodo(["lisp/domain.bin",ae.local("augmented.csv")],
-               ae.local("domain.pddl"))
+        if not os.path.exists(ae.local("domain.pddl")) or \
+           os.path.getmtime(ae.local("augmented.csv")) > \
+           os.path.getmtime(ae.local("domain.pddl")):
+            echodo(["lisp/domain.bin",ae.local("augmented.csv")],
+                   ae.local("domain.pddl"))
+        else:
+            print("skipped generating domain.pddl")
     else:
-        echodo(["lisp/domain.bin",ae.local("actions.csv")],
-               ae.local("domain.pddl"))
+        if not os.path.exists(ae.local("domain.pddl")) or \
+           os.path.getmtime(ae.local("actions.csv")) > \
+           os.path.getmtime(ae.local("domain.pddl")):
+            echodo(["lisp/domain.bin",ae.local("actions.csv")],
+                   ae.local("domain.pddl"))
+        else:
+            print("skipped generating domain.pddl")
     echodo(["lisp/problem.bin",
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
