@@ -129,13 +129,16 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
     def check_ok(flipped_bs):
         return checker([ys1,flipped_bs])[0]
     
+    last_skips = 0
     for diffbit in range(1,max_diff):
         some = False
         for bv in flips(bitnum,diffbit):
             if np.any([ np.all(np.greater_equal(bv,bv2)) for bv2 in failed_bv ]):
                 # print("previously seen with failure")
+                last_skips += 1
                 continue
-            print(bv, "blacklist: {} entries".format(len(failed_bv)))
+            print(bv, {"blk": len(failed_bv), "lskips":last_skips})
+            last_skips = 0
             flipped_bs = flip(bs1,[bv])
             oks = check_ok(flipped_bs)
             new_bs = flipped_bs[oks]
