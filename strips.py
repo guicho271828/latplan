@@ -112,6 +112,8 @@ def all_flips(bitnum,diffbit):
 def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
     bs1 = bs1.astype(np.int8)
     ys1 = ae.decode_binary(bs1,batch_size=6000)
+    data_dim = np.prod(ys1.shape[1:])
+    print("threshold {} corresponds to val_loss {}".format(threshold,threshold*data_dim))
     bitnum = bs1.shape[1]
     if max_diff is None:
         max_diff = bitnum-1
