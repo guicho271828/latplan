@@ -5,9 +5,13 @@ import subprocess
 
 from plot import plot_grid, plot_grid2, plot_ae
 
-def echodo(cmd):
+def echodo(cmd,file=None):
     subprocess.call(["echo"]+cmd)
-    subprocess.call(cmd)
+    if file is None:
+        subprocess.call(cmd)
+    else:
+        with open(file,"w") as f:
+            subprocess.call(cmd,stdout=f)
 
 class PlanException(BaseException):
     pass
@@ -17,13 +21,18 @@ def latent_plan(init,goal,ae):
 
     # start planning
     
-    echodo(["lisp/pddl.ros",ae.local("actions.csv")] +
-           list(ig_b.flatten().astype('int').astype('str')))
+    echodo(["make","-C","lisp"])
+    echodo(["lisp/domain.bin",ae.local("actions.csv")],
+           ae.local("domain.pddl"))
+    echodo(["lisp/problem.bin",
+            *list(ig_b.flatten().astype('int').astype('str'))],
+           ae.local("problem.pddl"))
     echodo(["planner-scripts/limit.sh","-v","--","fd-clean",
             ae.local("problem.pddl"),
             ae.local("domain.pddl")])
     try:
-        out = subprocess.check_output(["lisp/parse-plan.ros",ae.local("problem.plan")])
+        out = subprocess.check_output(["lisp/parse-plan.bin",ae.local("problem.plan"),
+                                       *list(ig_b[0].flatten().astype('int').astype('str'))])
         lines = out.splitlines()
         if len(lines) is 2:
             raise PlanException("not an interesting problem")
