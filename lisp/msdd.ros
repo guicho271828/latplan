@@ -374,8 +374,7 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
       (incf count)
       (when (< width count)
         (progn (setf count 0)
-               (princ args)
-               (terpri)))
+               (format t " ~{~a~^ ~}~%" args)))
       (finish-output))))
 
 (defmacro print-variables (&rest args)
@@ -415,7 +414,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
                    (while (or (< (pqueue-length acc) max-schema)
                               (< (pqueue-front-key acc)
                                  (pqueue-front-key open)))) ;lb and ub meets
-                   (funcall progress #\. (pqueue-front-key open))
+                   (funcall progress #\. (if (pqueue-empty-p acc)
+                                             most-negative-short-float
+                                             (pqueue-front-key acc)) '< (pqueue-front-key open))
                    (for (values top f) = (pqueue-pop open))
                    (incf expansion)
                    (iter (for child in (expand top))
