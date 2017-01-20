@@ -5,11 +5,11 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 |#
 (progn ;;init forms
   #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank
-                              priority-queue simpsamp) :silent t)
+                              priority-queue simpsamp lparallel) :silent t)
   )
 
 (defpackage :msdd
-  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :priority-queue)
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :priority-queue :lparallel)
   (:shadowing-import-from :immutable-struct :ftype :defstruct))
 (in-package :msdd)
 (SETF *ARITY-CHECK-BY-TEST-CALL* NIL)
