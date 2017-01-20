@@ -408,49 +408,46 @@ Also, instead of working on the sequence of states, it works on individual pairs
                           (contingency-table init array))
                       open))
        (unwind-protect
-           (pprint-logical-block (*standard-output* nil)
-             (iter outer
-                   (until (pqueue-empty-p open))
-                   (while (or (< (pqueue-length acc) max-schema)
-                              (< (pqueue-front-key acc)
-                                 (pqueue-front-key open)))) ;lb and ub meets
-                   (funcall progress #\. (if (pqueue-empty-p acc)
-                                             most-negative-short-float
-                                             (pqueue-front-key acc)) '< (pqueue-front-key open))
-                   (for (values top f) = (pqueue-pop open))
-                   (incf expansion)
-                   (iter (for child in (expand top))
-                         (incf evaluation)
-                         ;; prune the child following Oates,Cohen,AAAI98
-                         (unless (valid-node child)
-                           (next-iteration))
-                         (for (values n1 n2 n3 n4) =
-                              (contingency-table child array))
-                         (for g = (cross-entropy n1 n2 n3 n4))
-                         (maxf maxg g) (minf ming g)
-                         (when (and (< g-threashold g)
-                                    (or (< (pqueue-length acc) max-schema)
-                                        (< (pqueue-front-key acc) g))
-                                    ;; FILTER in Oates,Cohen,AAAI98
-                                    (valid-leaf-node child))
-                           (pqueue-push child g acc))
-                         (when (< max-schema (pqueue-length acc))
-                           ;; discard the worst
-                           (pqueue-pop acc)
-                           (let ((lb (pqueue-front-key acc))
-                                 (ub (pqueue-front-key open))
-                                 (len (pqueue-length open)))
-                             (print-variables g lb ub len)))
-                         ;; f is always greater than g: f > g
-                         (for f = (msdd-gmax3 child n1 n2 n3 n4))
-                         (maxf maxf f) (minf minf f)
-                         (assert (>= f g))
-                         (when (and (< g-threashold f)
-                                    (or (< (pqueue-length acc) max-schema)
-                                        (< (pqueue-front-key acc) f)))
-                           (pqueue-push child f open)))
-                   (maxf max-open (pqueue-length open))))
-         (print-variables evaluation expansion max-open maxg ming maxf minf acc))
+           (iter outer
+                 (until (pqueue-empty-p open))
+                 (while (or (< (pqueue-length acc) max-schema)
+                            (< (pqueue-front-key acc)
+                               (pqueue-front-key open)))) ;lb and ub meets
+                 (funcall progress #\. (if (pqueue-empty-p acc)
+                                           most-negative-short-float
+                                           (pqueue-front-key acc)) '< (pqueue-front-key open))
+                 (for (values top f) = (pqueue-pop open))
+                 (iter (for child in (expand top))
+                       ;; prune the child following Oates,Cohen,AAAI98
+                       (unless (valid-node child)
+                         (next-iteration))
+                       (for (values n1 n2 n3 n4) =
+                            (contingency-table child array))
+                       (for g = (cross-entropy n1 n2 n3 n4))
+                       (when (and (< g-threashold g)
+                                  (or (< (pqueue-length acc) max-schema)
+                                      (< (pqueue-front-key acc) g))
+                                  ;; FILTER in Oates,Cohen,AAAI98
+                                  (valid-leaf-node child))
+                         (pqueue-push child g acc))
+                       (when (< max-schema (pqueue-length acc))
+                         ;; discard the worst
+                         (pqueue-pop acc)
+                         (let ((lb (pqueue-front-key acc))
+                               (ub (pqueue-front-key open))
+                               (len (pqueue-length open)))
+                           (print-variables g lb ub len)))
+                       ;; f is always greater than g: f > g
+                       (for f = (msdd-gmax3 child n1 n2 n3 n4))
+                       (assert (>= f g))
+                       (when (and (< g-threashold f)
+                                  (or (< (pqueue-length acc) max-schema)
+                                      (< (pqueue-front-key acc) f)))
+                         (pqueue-push child f open)
+                         ;; (print-variables f (pqueue-front-key open) (pqueue-length open))
+                         ))
+                 (maxf max-open (pqueue-length open)))
+         (print-variables max-open maxg ming maxf minf acc))
        (iter (until (pqueue-empty-p acc))
              (for (values node g) = (pqueue-pop acc))
              (print-variables g node)
