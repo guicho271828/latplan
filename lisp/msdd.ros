@@ -435,42 +435,48 @@ Also, instead of working on the sequence of states, it works on individual pairs
            (lopen (bt:make-lock "open"))
            (lacc (bt:make-lock "acc"))
            threads)
-       (labels ((task (top)
-                  (iter (for child in (expand top))
-                        ;; prune the child following Oates,Cohen,AAAI98
-                        (unless (valid-node child)
-                          (next-iteration))
-                        (for (values n1 n2 n3 n4) =
-                             (contingency-table child array)) ;this section takes most of the time
-                        (for g = (cross-entropy n1 n2 n3 n4))
+       (labels ((task (node)
+                  (block nil
+                    ;; prune the child following Oates,Cohen,AAAI98
+                    (unless (valid-node node) (return))
+                    (multiple-value-bind (n1 n2 n3 n4)
+                        (contingency-table node array)
+                      (let ((g (cross-entropy n1 n2 n3 n4)))
                         (when (and (< g-threashold g)
-                                   (valid-leaf-node child))
+                                   (valid-leaf-node node))
                           (bt:with-lock-held (lacc)
                             (when (or (< (pqueue-length acc) max-schema)
                                       (< (pqueue-front-key acc) g))
-                              (pqueue-push child g acc))
+                              (pqueue-push node g acc))
                             (when (< max-schema (pqueue-length acc))
-                              ;; discard the worst
-                              (pqueue-pop acc))))
-                        ;; f is always greater than g: f > g
-                        (for f = (msdd-gmax3 child n1 n2 n3 n4))
-                        (assert (>= f g))
+                              (pqueue-pop acc)))))
+                      (let ((f (msdd-gmax3 node n1 n2 n3 n4)))
                         (when (and (< g-threashold f)
                                    (bt:with-lock-held (lacc)
                                      (or (< (pqueue-length acc) max-schema)
                                          (< (pqueue-front-key acc) f))))
                           (bt:with-lock-held (lopen)
-                            (pqueue-push child f open)))))
+                            (iter (for child in (expand node))
+                                  (pqueue-push child f open))))))))
                 (worker ()
-                  (iter (task
-                         (bt:with-lock-held (lacc)
-                           (bt:with-lock-held (lopen)
-                             (if (and (not (pqueue-empty-p open))
-                                      (or (< (pqueue-length acc) max-schema)
-                                          (< (pqueue-front-key acc)
-                                             (pqueue-front-key open))))
-                                 (pqueue-pop open)
-                                 (leave))))))))
+                  (block nil
+                    (tagbody
+                      :start
+                      (task
+                       (bt:with-lock-held (lacc)
+                         (bt:with-lock-held (lopen)
+                           (if (or (< (pqueue-length acc) max-schema)
+                                   (< (pqueue-front-key acc)
+                                      (pqueue-front-key open)))
+                               (if (pqueue-empty-p open)
+                                   (go :retry)
+                                   (pqueue-pop open))
+                               (go :end)))))
+                      (go :start)
+                      :retry
+                      (sleep 0.1)
+                      (go :start)
+                      :end))))
          (let ((init (node (multitoken (* 2 width))
                            (multitoken (* 2 width)))))
            (pqueue-push init
