@@ -535,7 +535,10 @@ Also, instead of working on the sequence of states, it works on individual pairs
                       (bvs-array
                        (if *num-samples*
                            (simpsamp:list-sample
-                            *num-samples* (read-as-bvs csv))
+                            *num-samples*
+                            (let ((list (read-as-bvs csv)))
+                              (format t "number of original samples: ~a~%" (length list))
+                              list))
                            (read-as-bvs csv)))
                       *g-threshold* *max-schema*)))))
        (SB-SYS:INTERACTIVE-INTERRUPT ())))
