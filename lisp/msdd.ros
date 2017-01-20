@@ -452,7 +452,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
                    (maxf max-open (pqueue-length open))))
          (print-variables evaluation expansion max-open maxg ming maxf minf acc))
        (iter (until (pqueue-empty-p acc))
-             (collect (pqueue-pop acc)))))))
+             (for (values node g) = (pqueue-pop acc))
+             (print-variables g node)
+             (collect node))))))
 
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
