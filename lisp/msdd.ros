@@ -444,7 +444,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
 
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
-(defvar *num-samples* most-positive-fixnum)
+(defvar *num-samples* nil)
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
@@ -477,8 +477,10 @@ Also, instead of working on the sequence of states, it works on individual pairs
              (mapcar #'as-012
                      (bistate-msdd
                       (bvs-array
-                       (simpsamp:list-sample
-                        *num-samples* (read-as-bvs csv)))
+                       (if *num-samples*
+                           (simpsamp:list-sample
+                            *num-samples* (read-as-bvs csv))
+                           (read-as-bvs csv)))
                       *g-threshold* *max-schema*)))))
        (SB-SYS:INTERACTIVE-INTERRUPT ())))
     (_
