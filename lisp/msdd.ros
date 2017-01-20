@@ -359,7 +359,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
     ((list* (or "-t" "--time") rest)
      (time (apply #'main rest)))
     ((list csv)
-     (print (bistate-msdd (bvs-array (read-as-bvs csv)) *g-threshold* *max-schema*)))
+     (handler-case
+         (print (bistate-msdd (bvs-array (read-as-bvs csv)) *g-threshold* *max-schema*))
+       (SB-SYS:INTERACTIVE-INTERRUPT ())))
     (_
      (format *error-output*
              "Usage: msdd.ros ~
