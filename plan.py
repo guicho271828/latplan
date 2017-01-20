@@ -44,9 +44,14 @@ def latent_plan(init,goal,ae,use_augmented=False):
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
     echodo(["planner-scripts/limit.sh","-v","-t","30",
-            "-o","--alias lama-first","--","fd-alias-clean",
+            "--","ff-clean",
             ae.local("problem.pddl"),
             ae.local("domain.pddl")])
+    if not os.path.exists(ae.local("problem.plan")):
+        echodo(["planner-scripts/limit.sh","-v","-t","30",
+                "-o","--alias lama-first","--","fd-alias-clean",
+                ae.local("problem.pddl"),
+                ae.local("domain.pddl")])
     if not os.path.exists(ae.local("problem.plan")):
         raise PlanException("no plan found")
     subprocess.call(["echo"]+["lisp/parse-plan.bin",ae.local("problem.plan"),
