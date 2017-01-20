@@ -184,6 +184,47 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
          ;; empty successor
          (msdd-gmax2 n1 n2 n3 n4)))))
 
+
+
+(defmacro dotimes-inline ((var count &optional result-form) &body body &environment env)
+  (check-type var symbol)
+  (let ((count (macroexpand count env)))
+    (assert (and (constantp count) (numberp count)))
+    (iter (for c to count)
+          (when (first-iteration-p)
+            (collect 'progn))
+          (collect
+              (if (< c count)
+                  `(symbol-macrolet ((,var ,c))
+                     ,@body)
+                  result-form)))))
+
+(defmacro dotimes-unroll4 ((base offset
+                            count unroll
+                            &optional result)
+                           &body body
+                           &environment env)
+  (with-gensyms (quat mod nth-loop)
+    (let ((unroll (macroexpand unroll env))
+          (delta (gensym "D")))
+      `(let ((,base 0))
+         (declare (fixnum ,base))
+         (multiple-value-bind (,quat ,mod) (floor ,count ,unroll)
+           (declare (fixnum ,quat)
+                    ((mod ,unroll) ,mod))
+           (symbol-macrolet ((,delta ,unroll))
+             (dotimes (,nth-loop ,quat)
+               (declare (ignorable ,nth-loop))
+               (dotimes-inline (,offset ,unroll)
+                 ,@body)
+               (incf ,base ,delta)))
+           (symbol-macrolet ((,delta 1)
+                             (,offset 0))
+             (dotimes (,nth-loop ,mod)
+               ,@body
+               (incf ,base ,delta)))
+           ,result)))))
+
 (ftype contingency-table node (array bit (* 2 *)) (values fn fn fn fn))
 (let ((matching  (make-array 0 :element-type 'bit))
       (prec-mask (make-array 0 :element-type 'bit))
@@ -192,7 +233,7 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
       (tmp1    (make-array 0 :element-type 'bit)))
   (declare (simple-bit-vector matching prec-mask succ-mask all-true))
   (defun contingency-table (node array)
-    (declare (optimize (speed 3)))
+    (declare (optimize (speed 3) (safety 0)))
     (ematch* (array node)
       (((array :dimensions (list batch 2 width)
                :displaced-to back-array)
@@ -212,9 +253,12 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
            (fill prec-mask 1 :start 0 :end width)
            (fill succ-mask 1 :start width)
            (fill all-true  1))
-         (dotimes (b batch)
-           (let ((start (* b width2)))
-             (replace tmp1 back-array :start2 start :end2 (+ start width2)))
+         (dotimes-unroll4 (b offset batch 2)
+           (let ((start (the fixnum (* (the fixnum (+ b offset)) width2))))
+             (replace tmp1 back-array :start2 start :end2 (the fixnum (+ start width2))))
+         ;; (dotimes (b batch)
+         ;;   (let ((start (* b width2)))
+         ;;     (replace tmp1 back-array :start2 start :end2 (+ start width2)))
            (bit-eqv data tmp1 matching)
            (bit-ior matching mask matching)
            (ematch* ((equal all-true (bit-ior matching succ-mask tmp1))
