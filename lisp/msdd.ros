@@ -61,19 +61,19 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
                (for i from 0)
                (collect
                    `(:action ,(sym 'a (apply #'concatenate 'string
-                                             (mapcar #'princ-to-string transition)))
+                                             (map 'list #'princ-to-string transition)))
                      :parameters ,(_nil) ;TODO: Is it possible to use parameters in our framework?
                      :precondition
                      (and ,@(iter (for d in dims)
-                                  (for value in from)
+                                  (for value in-vector from)
                                   (match value
                                     (2 nil)
                                     (1 (collect (z d)))
                                     (0 (collect `(not ,(z d)))))))
                      :effect
                      (and ,@(iter (for d in dims)
-                                  (for value1 in from)
-                                  (for value2 in to)
+                                  (for value1 in-vector from)
+                                  (for value2 in-vector to)
                                   (ematch* (value1 value2)
                                     ((_ 2) nil)
                                     ((2 1) (collect (z d)))
@@ -151,7 +151,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 (defun as-012 (node)
   (ematch node
     ((node data mask)
-     (map 'vector (lambda-match
+     (map 'vector (lambda-match*
                     ((_ 1) 2)
                     ((d 0) d)) data mask))))
 
@@ -453,7 +453,8 @@ Also, instead of working on the sequence of states, it works on individual pairs
                            ))
                    (maxf max-open (pqueue-length open))))
          (print-variables evaluation expansion max-open maxg ming maxf minf acc))
-       acc))))
+       (iter (until (pqueue-empty-p acc))
+             (collect (pqueue-pop acc)))))))
 
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
@@ -481,7 +482,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
      (handler-case
          (let ((*print-right-margin* 70))
            (format
-            t "~(~:S~)~%"
+            t "~&~(~:S~)~%"
             (make-domain
              (mapcar #'as-012
                      (bistate-msdd
