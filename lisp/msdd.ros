@@ -455,9 +455,10 @@ Also, instead of working on the sequence of states, it works on individual pairs
                                    (bt:with-lock-held (lacc)
                                      (or (< (pqueue-length acc) max-schema)
                                          (< (pqueue-front-key acc) f))))
-                          (bt:with-lock-held (lopen)
-                            (iter (for child in (expand node))
-                                  (pqueue-push child f open))))))))
+                          (let ((children (expand node)))
+                            (bt:with-lock-held (lopen)
+                              (iter (for child in children)
+                                    (pqueue-push child f open)))))))))
                 (worker ()
                   (block nil
                     (tagbody
