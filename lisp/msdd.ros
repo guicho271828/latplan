@@ -5,7 +5,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 |#
 (progn ;;init forms
   #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank
-                              priority-queue) :silent t)
+                              priority-queue simpsamp) :silent t)
   )
 
 (defpackage :msdd
@@ -457,6 +457,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
 
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
+(defvar *num-samples* most-positive-fixnum)
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
@@ -465,6 +466,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
      (apply #'main rest))
     ((list* (or "-k" "--max-schema") (read *max-schema*) rest)
      (check-type *max-schema* integer)
+     (apply #'main rest))
+    ((list* (or "-n" "--num-samples") (read *num-samples*) rest)
+     (check-type *num-samples* integer)
      (apply #'main rest))
     ((list* (or "-p" "--profile") rest)
      (swank:profile-reset)
@@ -480,7 +484,11 @@ Also, instead of working on the sequence of states, it works on individual pairs
             t "~(~:S~)~%"
             (make-domain
              (mapcar #'as-012
-                     (bistate-msdd (bvs-array (read-as-bvs csv)) *g-threshold* *max-schema*)))))
+                     (bistate-msdd
+                      (bvs-array
+                       (simpsamp:list-sample
+                        *num-samples* (read-as-bvs csv)))
+                      *g-threshold* *max-schema*)))))
        (SB-SYS:INTERACTIVE-INTERRUPT ())))
     (_
      (format *error-output*
