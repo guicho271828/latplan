@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import config
 import numpy as np
 import subprocess
 import os
