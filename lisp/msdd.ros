@@ -420,7 +420,8 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 (defmacro print-variables (&rest args)
   `(print (list ,@(iter (for arg in args)
                         (collect `(quote ,arg))
-                        (collect arg)))))
+                        (collect arg)))
+          *error-output*))
 
 ;; it seems there are still some magic happening here... 
 
@@ -429,7 +430,7 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 Also, instead of working on the sequence of states, it works on individual pairs of states."
   (match array
     ((array :dimensions (list batch 2 width))
-     (format t "number of samples: ~a~%encoding length: ~a~%" batch width)
+     (format *error-output* "number of samples: ~a~%encoding length: ~a~%" batch width)
      (let ((open (make-pqueue #'> :key-type 'sf :value-type 'node))
            (acc (make-pqueue #'< :key-type 'sf :value-type 'node))
            (lopen (bt:make-lock "open"))
@@ -524,7 +525,8 @@ Also, instead of working on the sequence of states, it works on individual pairs
      (apply #'main rest)
      (swank:profile-report))
     ((list* (or "-t" "--time") rest)
-     (time (apply #'main rest)))
+     (let ((*trace-output* *error-output*))
+       (time (apply #'main rest))))
     ((list csv)
      (handler-case
          (let ((*print-right-margin* 70))
@@ -538,7 +540,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
                            (simpsamp:list-sample
                             *num-samples*
                             (let ((list (read-as-bvs csv)))
-                              (format t "number of original samples: ~a~%" (length list))
+                              (format *error-output*
+                                      "number of original samples: ~a~%"
+                                      (length list))
                               list))
                            (read-as-bvs csv)))
                       *g-threshold* *max-schema*)))))
