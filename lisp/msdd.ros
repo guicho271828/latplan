@@ -4,11 +4,12 @@
 exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 |#
 (progn ;;init forms
-  #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank) :silent t)
+  #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank
+                              priority-queue) :silent t)
   )
 
 (defpackage :msdd
-  (:use :cl :iterate :alexandria :trivia :trivia.ppcre)
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :priority-queue)
   (:shadowing-import-from :immutable-struct :ftype :defstruct))
 (in-package :msdd)
 (SETF *ARITY-CHECK-BY-TEST-CALL* NIL)
@@ -230,9 +231,9 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
   (match node
     ((node precursor successor
            precursor-* successor-*)
+     ;; 1. same bit should not specify the same value (p4,left,par3)
      (let ((tmp1 (bit-eqv precursor successor))  ; common bits
            (tmp2 (bit-xor precursor precursor))) ; as zero
-       ;; 1. same bit should not specify the same value
        (bit-andc2 tmp1 precursor-* tmp1) ; 1 = wild. filter non-wild
        (bit-andc2 tmp1 successor-* tmp1)
        (equal tmp2 tmp1)               ; all zero
@@ -242,7 +243,7 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 (defun valid-leaf-node (node)
   (match node
     ((node successor-*)
-     ;; 3. there should be some effects
+     ;; 3. there should be some effects (p4,right,line3-4)
      (not (equal (bit-eqv successor-* successor-*) ; as one
                  successor-*)))))
 
@@ -279,15 +280,16 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
                         (collect `(quote ,arg))
                         (collect arg)))))
 
+;; it seems there are still some magic happening here... 
+
 (defun bistate-msdd (array g-threashold max-schema)
   "A modification of Oates, Cohen, ICML16 on binary variables with lag fixed to 1.
 Also, instead of working on the sequence of states, it works on individual pairs of states."
   (match array
     ((array :dimensions (list batch 2 width))
      (format t "number of samples: ~a~%encoding length: ~a~%" batch width)
-     (let ((acc nil)
-           (open (list (node (multitoken (* 2 width))
-                             (multitoken (* 2 width)))))
+     (let ((open (make-pqueue #'> :key-type 'sf :value-type 'node))
+           (acc (make-pqueue #'< :key-type 'sf :value-type 'node)) ;worst-one out
            (max-open 0)
            (evaluation 0)
            (expansion 0)
@@ -296,12 +298,18 @@ Also, instead of working on the sequence of states, it works on individual pairs
            (maxf most-negative-short-float)
            (minf most-positive-short-float)
            (progress (progress 60)))
+       (let ((init (node (multitoken (* 2 width))
+                         (multitoken (* 2 width)))))
+         (pqueue-push init
+                      (multiple-value-call
+                          #'fmax init
+                          (contingency-table child array))
+                      open))
        (unwind-protect
            (pprint-logical-block (*standard-output* nil)
-             (pprint-newline :mandatory)
              (iter outer
-                   (while open)
-                   (for top = (pop open))
+                   (until (pqueue-empty-p open))
+                   (for top = (pqueue-pop open))
                    (funcall progress)
                    (incf expansion)
                    (iter (for child in (expand top))
@@ -316,11 +324,10 @@ Also, instead of working on the sequence of states, it works on individual pairs
                          (when (and (> g g-threashold)
                                     ;; FILTER in Oates,Cohen,AAAI98
                                     (valid-leaf-node child))
-                           (push (cons g child) acc)
-                           (when (= (length acc) max-schema)
+                           (pqueue-push child g acc)
+                           (when (= (pqueue-length acc) max-schema)
                              (format t "~&Reached the limit of ~a" max-schema)
-                             (return-from outer))
-                           (print-variables (length acc)))
+                             (return-from outer)))
                          (for f = (fmax child n1 n2 n3 n4))
                          (maxf maxf f) (minf minf f)
                          (when (> g-threashold f)
