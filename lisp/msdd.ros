@@ -13,6 +13,11 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
   (:shadowing-import-from :immutable-struct :ftype :defstruct))
 (in-package :msdd)
 (SETF *ARITY-CHECK-BY-TEST-CALL* NIL)
+(defvar *proc-num*
+    (read-from-string
+     (uiop:run-program "cat /proc/cpuinfo | grep -c processor" :output :string)))
+(setf *kernel* (make-kernel *proc-num*))
+
 ;;; set up the learning data
 
 (defun read-as-bvs (csv)
@@ -437,10 +442,6 @@ Also, instead of working on the sequence of states, it works on individual pairs
              (print-variables g node)
              (collect node))))))
 
-
-(setf *kernel* (make-kernel
-                (read-from-string
-                 (uiop:run-program "cat /proc/cpuinfo | grep -c processor" :output :string))))
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
 (defvar *num-samples* most-positive-fixnum)
