@@ -460,6 +460,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
                               (iter (for child in children)
                                     (pqueue-push child f open)))))))))
                 (worker ()
+                  (sleep (random 1.0))
                   (block nil
                     (tagbody
                       :start
