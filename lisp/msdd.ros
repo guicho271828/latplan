@@ -303,13 +303,16 @@ Also, instead of working on the sequence of states, it works on individual pairs
          (pqueue-push init
                       (multiple-value-call
                           #'fmax init
-                          (contingency-table child array))
+                          (contingency-table init array))
                       open))
        (unwind-protect
            (pprint-logical-block (*standard-output* nil)
              (iter outer
                    (until (pqueue-empty-p open))
-                   (for top = (pqueue-pop open))
+                   (for (values top f) = (pqueue-pop open))
+                   (unless (or (< (pqueue-length acc) max-schema)
+                               (< (pqueue-front-key acc) f))
+                     (next-iteration))
                    (funcall progress)
                    (incf expansion)
                    (iter (for child in (expand top))
@@ -326,6 +329,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
                                         (< (pqueue-front-key acc) g))
                                     ;; FILTER in Oates,Cohen,AAAI98
                                     (valid-leaf-node child))
+                           (print-variables child g)
                            (pqueue-push child g acc))
                          (when (< max-schema (pqueue-length acc))
                            ;; discard the worst
@@ -336,11 +340,11 @@ Also, instead of working on the sequence of states, it works on individual pairs
                                     (or (< (pqueue-length acc) max-schema)
                                         (< (pqueue-front-key acc) f)))
                            (pqueue-push child f open)))
-                   (maxf max-open (length open))))
+                   (maxf max-open (pqueue-length open))))
          (print-variables evaluation expansion max-open maxg ming maxf minf))
        acc))))
 
-(defvar *g-threshold* 1)
+(defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
