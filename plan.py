@@ -23,6 +23,7 @@ def latent_plan(init,goal,ae,use_augmented=False):
     # start planning
     
     echodo(["make","-C","lisp","-j","1"])
+    echodo(["rm",ae.local("problem.plan")])
     if use_augmented:
         if not os.path.exists(ae.local("domain.pddl")) or \
            os.path.getmtime(ae.local("augmented.csv")) > \
