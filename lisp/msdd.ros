@@ -103,7 +103,10 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 (declaim (inline wickens-cooccurence-g))
 (ftype wickens-cooccurence-g real real real real sf)
 (defun wickens-cooccurence-g (n1 n2 n3 n4)
-  "Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Sciences. Lawrence Erlbaum Associates."
+  "
+Following the definition in Oates,Cohen,ICML96. See also:
+Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Sciences. Lawrence Erlbaum Associates.
+"
   (let* ((n1 (float n1))
          (n2 (float n2))
          (n3 (float n3))
@@ -124,26 +127,51 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
           (* n3 (log (/ (+ 1e-6 n3) (+ 1e-6 n3^))))
           (* n4 (log (/ (+ 1e-6 n4) (+ 1e-6 n4^))))))))
 
+(declaim (inline cross-entropy))
+(ftype cross-entropy real real real real sf)
+(defun cross-entropy (n1 n2 n3 n4)
+  "Using this instead of wickens-cooccurence-g because
+ this value is normalized against the total sample size."
+  (let* ((n1 (float n1))
+         (n2 (float n2))
+         (n3 (float n3))
+         (n4 (float n4))
+         (1/all (/ (+ n1 n2 n3 n4)))
+         (r1 (+ n1 n2))
+         (c1 (+ n1 n3))
+         (r2 (+ n3 n4))
+         (c2 (+ n2 n4))
+         (n1^ (* r1 c1 1/all))
+         (n2^ (* r1 c2 1/all))
+         (n3^ (* r2 c1 1/all))
+         (n4^ (* r2 c2 1/all)))
+    (* 1/all
+       ;; adding 1e-6 to prevent division-by-zero
+       (+ (* n1 (log (/ (+ 1e-6 n1) (+ 1e-6 n1^))))
+          (* n2 (log (/ (+ 1e-6 n2) (+ 1e-6 n2^))))
+          (* n3 (log (/ (+ 1e-6 n3) (+ 1e-6 n3^))))
+          (* n4 (log (/ (+ 1e-6 n4) (+ 1e-6 n4^))))))))
+
 (ftype msdd-gmax1 fn fn fn fn sf)
 (defun msdd-gmax1 (n1 n2 n3 n4)
-  (max (wickens-cooccurence-g n1 n2 0 (+ n3 n4))
-       (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))
+  (max (cross-entropy n1 n2 0 (+ n3 n4))
+       (cross-entropy 0 (+ n1 n2) n3 n4)))
 
 (ftype msdd-gmax2 fn fn fn fn sf)
 (defun msdd-gmax2 (n1 n2 n3 n4)
   (max (let ((tmp1 (+ n2 n3 n4)))
          (if (<= n1 tmp1)
-             (wickens-cooccurence-g n1 0 0 tmp1)
+             (cross-entropy n1 0 0 tmp1)
              (let ((all/2 (/ (+ n1 tmp1) 2)))
-               (wickens-cooccurence-g all/2 0 0 all/2))))
+               (cross-entropy all/2 0 0 all/2))))
        (cond
          ((>= n1 (abs (- n2 n3)))
           (let ((tmp2 (+ n1 n2 n3)))
-            (wickens-cooccurence-g 0 tmp2 tmp2 n4)))
+            (cross-entropy 0 tmp2 tmp2 n4)))
          ((> n2 n3)
-          (wickens-cooccurence-g 0 n2 (+ n1 n3) n4))
+          (cross-entropy 0 n2 (+ n1 n3) n4))
          (t
-          (wickens-cooccurence-g 0 (+ n1 n2) n3 n4)))))
+          (cross-entropy 0 (+ n1 n2) n3 n4)))))
 
 (ftype contingency-table node (array bit (* 2 *)) (values fn fn fn fn))
 (let ((matching  (make-array 0 :element-type 'bit))
@@ -280,7 +308,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
                            (next-iteration))
                          (for (values n1 n2 n3 n4) =
                               (contingency-table child array))
-                         (for g = (wickens-cooccurence-g n1 n2 n3 n4))
+                         (for g = (cross-entropy n1 n2 n3 n4))
                          (maxf best-g g)
                          (when (and (> g g-threashold)
                                     ;; FILTER in Oates,Cohen,AAAI98
@@ -295,11 +323,12 @@ Also, instead of working on the sequence of states, it works on individual pairs
          (print-variables evaluation expansion max-open best-g best-f))
        acc))))
 
-(defvar *g-threshold* 500)
+(defvar *g-threshold* 1)
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
     ((list* (or "-g" "--threashold") (read *g-threshold*) rest)
+     (check-type *g-threshold* real)
      (apply #'main rest))
     ((list* (or "-p" "--profile") rest)
      (swank:profile-reset)
