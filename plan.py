@@ -42,25 +42,23 @@ def latent_plan(init,goal,ae,use_augmented=False):
     echodo(["lisp/problem.bin",
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
-    echodo(["planner-scripts/limit.sh","-v","-o","--alias lama-first","--","fd-alias-clean",
+    echodo(["planner-scripts/limit.sh","-v","-t","30",
+            "-o","--alias lama-first","--","fd-alias-clean",
             ae.local("problem.pddl"),
             ae.local("domain.pddl")])
-    try:
-        out = subprocess.check_output(["lisp/parse-plan.bin",ae.local("problem.plan"),
-                                       *list(ig_b[0].flatten().astype('int').astype('str'))])
-        lines = out.splitlines()
-        if len(lines) is 2:
-            raise PlanException("not an interesting problem")
-        numbers = np.array([ [ int(s) for s in l.split() ] for l in lines ])
-        print(numbers)
-        latent_dim = numbers.shape[1]/2
-        states = np.concatenate((numbers[0:1,0:latent_dim],
-                                 numbers[:,latent_dim:]))
-        print(states)
-        plan_images = ae.decode_binary(states)
-        plot_grid(plan_images,path=ae.local('plan.png'))
-    except subprocess.CalledProcessError:
+    if not os.path.exists(ae.local("problem.plan")):
         raise PlanException("no plan found")
+    subprocess.call(["echo"]+["lisp/parse-plan.bin",ae.local("problem.plan"),
+                              *list(ig_b[0].flatten().astype('int').astype('str'))])
+    out = subprocess.check_output(["lisp/parse-plan.bin",ae.local("problem.plan"),
+                                   *list(ig_b[0].flatten().astype('int').astype('str'))])
+    lines = out.splitlines()
+    if len(lines) is 2:
+        raise PlanException("not an interesting problem")
+    numbers = np.array([ [ int(s) for s in l.split() ] for l in lines ])
+    print(numbers)
+    plan_images = ae.decode_binary(numbers)
+    plot_grid(plan_images,path=ae.local('plan.png'))
 
 def select(data,num):
     return data[np.random.randint(0,data.shape[0],num)]
