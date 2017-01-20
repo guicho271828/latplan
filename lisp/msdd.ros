@@ -309,10 +309,10 @@ Also, instead of working on the sequence of states, it works on individual pairs
            (pprint-logical-block (*standard-output* nil)
              (iter outer
                    (until (pqueue-empty-p open))
+                   (while (or (< (pqueue-length acc) max-schema)
+                              (< (pqueue-front-key acc)
+                                 (pqueue-front-key open)))) ;lb and ub meets
                    (for (values top f) = (pqueue-pop open))
-                   (unless (or (< (pqueue-length acc) max-schema)
-                               (< (pqueue-front-key acc) f))
-                     (next-iteration))
                    (funcall progress)
                    (incf expansion)
                    (iter (for child in (expand top))
