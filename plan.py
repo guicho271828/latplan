@@ -41,7 +41,7 @@ def latent_plan(init,goal,ae,use_augmented=False):
     echodo(["lisp/problem.bin",
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
-    echodo(["planner-scripts/limit.sh","-v","--","fd-clean",
+    echodo(["planner-scripts/limit.sh","-v","-o","--alias lama-first","--","fd-alias-clean",
             ae.local("problem.pddl"),
             ae.local("domain.pddl")])
     try:
