@@ -279,7 +279,7 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
                         (collect `(quote ,arg))
                         (collect arg)))))
 
-(defun bistate-msdd (array g-threashold)
+(defun bistate-msdd (array g-threashold max-schema)
   "A modification of Oates, Cohen, ICML16 on binary variables with lag fixed to 1.
 Also, instead of working on the sequence of states, it works on individual pairs of states."
   (match array
@@ -299,7 +299,8 @@ Also, instead of working on the sequence of states, it works on individual pairs
        (unwind-protect
            (pprint-logical-block (*standard-output* nil)
              (pprint-newline :mandatory)
-             (iter (while open)
+             (iter outer
+                   (while open)
                    (for top = (pop open))
                    (funcall progress)
                    (incf expansion)
@@ -316,6 +317,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
                                     ;; FILTER in Oates,Cohen,AAAI98
                                     (valid-leaf-node child))
                            (push (cons g child) acc)
+                           (when (= (length acc) max-schema)
+                             (format t "~&Reached the limit of ~a" max-schema)
+                             (return-from outer))
                            (print-variables (length acc)))
                          (for f = (fmax child n1 n2 n3 n4))
                          (maxf maxf f) (minf minf f)
@@ -327,11 +331,15 @@ Also, instead of working on the sequence of states, it works on individual pairs
        acc))))
 
 (defvar *g-threshold* 1)
+(defvar *max-schema* most-positive-fixnum)
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
     ((list* (or "-g" "--threashold") (read *g-threshold*) rest)
      (check-type *g-threshold* real)
+     (apply #'main rest))
+    ((list* (or "-k" "--max-schema") (read *max-schema*) rest)
+     (check-type *max-schema* integer)
      (apply #'main rest))
     ((list* (or "-p" "--profile") rest)
      (swank:profile-reset)
@@ -341,7 +349,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
     ((list* (or "-t" "--time") rest)
      (time (apply #'main rest)))
     ((list csv)
-     (print (bistate-msdd (bvs-array (read-as-bvs csv)) *g-threshold*)))
+     (print (bistate-msdd (bvs-array (read-as-bvs csv)) *g-threshold* *max-schema*)))
     (_
      (format *error-output*
              "Usage: msdd.ros ~
