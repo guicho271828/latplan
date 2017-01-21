@@ -32,12 +32,11 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
  returns an array displaced to the underlying bitvector"
   (let ((batch (length bvs))
         (w (/ (length (first bvs)) 2)))
-    (let* ((arm (make-array (* batch 2 w)  :element-type 'bit))
-           (a (make-array (list batch 2 w) :element-type 'bit :displaced-to arm)))
+    (let* ((arm (make-array (* batch 2 w)  :element-type 'bit)))
       (iter (for b below batch)
             (for bv in bvs)
             (replace arm bv :start1 (* b 2 w) :end1 (* (1+ b) 2 w)))
-      a)))
+      arm)))
 
 ;;; print the pddl domain
 
@@ -287,59 +286,11 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
                (incf ,base ,delta)))
            ,result)))))
 
-(ftype contingency-table node (array bit (* 2 *)) (values fn fn fn fn))
-#+nil
-(let ((matching  (make-array 0 :element-type 'bit))
-      (prec-mask (make-array 0 :element-type 'bit))
-      (succ-mask (make-array 0 :element-type 'bit))
-      (all-true  (make-array 0 :element-type 'bit))
-      (tmp1    (make-array 0 :element-type 'bit)))
-  (declare (simple-bit-vector matching prec-mask succ-mask all-true))
-  (defun contingency-table (node array)
-    (declare (optimize (speed 3) (safety 0)))
-    (ematch* (array node)
-      (((array :dimensions (list batch 2 width)
-               :displaced-to back-array)
-        (node data mask))
-       (declare (simple-bit-vector back-array)
-                (half width batch))
-       (let* ((n1 0) (n2 0) (n3 0) (n4 0)
-              (width2 (* 2 width)))
-         (declare (fixnum n1 n2 n3 n4)
-                  (half width2))
-         (when (/= width2 (length matching))
-           (setf matching  (make-array width2 :element-type 'bit)
-                 prec-mask (make-array width2 :element-type 'bit)
-                 succ-mask (make-array width2 :element-type 'bit)
-                 all-true  (make-array width2 :element-type 'bit)
-                 tmp1      (make-array width2 :element-type 'bit))
-           (fill prec-mask 1 :start 0 :end width)
-           (fill succ-mask 1 :start width)
-           (fill all-true  1))
-         (dotimes-unroll4 (b offset batch 2)
-           (let ((start (the fixnum (* (the fixnum (+ b offset)) width2))))
-             (replace tmp1 back-array :start2 start :end2 (the fixnum (+ start width2))))
-         ;; (dotimes (b batch)
-         ;;   (let ((start (* b width2)))
-         ;;     (replace tmp1 back-array :start2 start :end2 (+ start width2)))
-           (bit-eqv data tmp1 matching)
-           (bit-ior matching mask matching)
-           (ematch* ((equal all-true (bit-ior matching succ-mask tmp1))
-                     (equal all-true (bit-ior matching prec-mask tmp1)))
-             ((t t)     (incf n1))
-             ((t nil)   (incf n2))
-             ((nil t)   (incf n3))
-             ((nil nil) (incf n4))))
-         (values n1 n2 n3 n4))))))
-
-(defun contingency-table (node array)
+(ftype contingency-table half half node simple-bit-vector (values fn fn fn fn))
+(defun contingency-table (batch width node array)
   (declare (optimize (speed 3) (safety 0)))
-  (ematch* (array node)
-    (((array :dimensions (list batch 2 width)
-             :displaced-to back-array)
-      (node data mask))
-     (declare (simple-bit-vector back-array)
-              (half width batch))
+  (ematch* (node)
+    (((node data mask))
      (let* ((n1 0) (n2 0) (n3 0) (n4 0)
             (width2 (* 2 width))
             (matching  (make-array width2 :element-type 'bit))
@@ -347,15 +298,16 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
             (succ-mask (make-array width2 :element-type 'bit))
             (all-true  (make-array width2 :element-type 'bit))
             (tmp1      (make-array width2 :element-type 'bit)))
-       (declare (simple-bit-vector matching prec-mask succ-mask all-true)
+       (declare (simple-bit-vector matching prec-mask succ-mask all-true tmp1)
                 (fixnum n1 n2 n3 n4)
                 (half width2))
+       (declare (dynamic-extent matching prec-mask succ-mask all-true tmp1))
        (fill prec-mask 1 :start 0 :end width)
        (fill succ-mask 1 :start width)
        (fill all-true  1)
        (dotimes-unroll4 (b offset batch 2)
          (let ((start (the fixnum (* (the fixnum (+ b offset)) width2))))
-           (replace tmp1 back-array :start2 start :end2 (the fixnum (+ start width2))))
+           (replace tmp1 array :start2 start :end2 (the fixnum (+ start width2))))
          (bit-eqv data tmp1 matching)
          (bit-ior matching mask matching)
          (ematch* ((equal all-true (bit-ior matching succ-mask tmp1))
@@ -425,83 +377,83 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 
 ;; it seems there are still some magic happening here... 
 
-(defun bistate-msdd (array g-threashold max-schema)
+(defun bistate-msdd (batch width array g-threashold max-schema)
   "A modification of Oates, Cohen, ICML16 on binary variables with lag fixed to 1.
 Also, instead of working on the sequence of states, it works on individual pairs of states."
-  (match array
-    ((array :dimensions (list batch 2 width))
-     (format *error-output* "number of samples: ~a~%encoding length: ~a~%" batch width)
-     (let ((open (make-pqueue #'> :key-type 'sf :value-type 'node))
-           (acc (make-pqueue #'< :key-type 'sf :value-type 'node))
-           (lopen (bt:make-lock "open"))
-           (lacc (bt:make-lock "acc"))
-           threads)
-       (labels ((task (node)
-                  (block nil
-                    ;; prune the child following Oates,Cohen,AAAI98
-                    (unless (valid-node node) (return))
-                    (multiple-value-bind (n1 n2 n3 n4)
-                        (contingency-table node array)
-                      (let ((g (cross-entropy n1 n2 n3 n4)))
-                        (when (and (< g-threashold g)
-                                   (valid-leaf-node node))
-                          (bt:with-lock-held (lacc)
-                            (when (or (< (pqueue-length acc) max-schema)
-                                      (< (pqueue-front-key acc) g))
-                              (pqueue-push node g acc))
-                            (when (< max-schema (pqueue-length acc))
-                              (pqueue-pop acc)))))
-                      (let ((f (msdd-gmax3 node n1 n2 n3 n4)))
-                        (when (and (< g-threashold f)
-                                   (bt:with-lock-held (lacc)
-                                     (or (< (pqueue-length acc) max-schema)
-                                         (< (pqueue-front-key acc) f))))
-                          (let ((children (expand node)))
-                            (bt:with-lock-held (lopen)
-                              (iter (for child in children)
-                                    (pqueue-push child f open)))))))))
-                (worker ()
-                  (sleep (random 1.0))
-                  (block nil
-                    (tagbody
-                      :start
-                      (task
+  (let ((open (make-pqueue #'> :key-type 'sf :value-type 'node))
+        (acc (make-pqueue #'< :key-type 'sf :value-type 'node))
+        (lopen (bt:make-lock "open"))
+        (lacc (bt:make-lock "acc"))
+        threads)
+    (labels ((task (node)
+               (block nil
+                 ;; prune the child following Oates,Cohen,AAAI98
+                 (unless (valid-node node) (return))
+                 (multiple-value-bind (n1 n2 n3 n4)
+                     (contingency-table batch width node array)
+                   (let ((g (cross-entropy n1 n2 n3 n4)))
+                     (when (and (< g-threashold g)
+                                (valid-leaf-node node))
                        (bt:with-lock-held (lacc)
+                         (when (or (< (pqueue-length acc) max-schema)
+                                   (< (pqueue-front-key acc) g))
+                           (pqueue-push node g acc))
+                         (when (< max-schema (pqueue-length acc))
+                           (pqueue-pop acc)))))
+                   (let ((f (msdd-gmax3 node n1 n2 n3 n4)))
+                     (when (and (< g-threashold f)
+                                (bt:with-lock-held (lacc)
+                                  (or (< (pqueue-length acc) max-schema)
+                                      (< (pqueue-front-key acc) f))))
+                       (let ((children (expand node)))
                          (bt:with-lock-held (lopen)
-                           (if (or (< (pqueue-length acc) max-schema)
-                                   (< (pqueue-front-key acc)
-                                      (pqueue-front-key open)))
-                               (if (pqueue-empty-p open)
-                                   (go :retry)
-                                   (pqueue-pop open))
-                               (go :end)))))
-                      (go :start)
-                      :retry
-                      (sleep 0.1)
-                      (go :start)
-                      :end))))
-         (let ((init (node (multitoken (* 2 width))
-                           (multitoken (* 2 width)))))
-           (pqueue-push init
-                        (multiple-value-call
-                            #'cross-entropy
-                          (contingency-table init array))
-                        open))
-         (if (plusp *num-processes*)
-             (progn
-               (dotimes (i *num-processes*)
-                 (push (bt:make-thread #'worker) threads))
-               (unwind-protect
-                   (handler-case
-                       (map nil #'bt:join-thread threads)
-                     (SB-SYS:INTERACTIVE-INTERRUPT ()
-                       (map nil #'bt:destroy-thread threads)))
-                 (print-variables acc)))
-             (worker)))
-       (iter (until (pqueue-empty-p acc))
-             (for (values node g) = (pqueue-pop acc))
-             (print-variables g node)
-             (collect node))))))
+                           (iter (for child in children)
+                                 (pqueue-push child f open)))))))))
+             (worker ()
+               (sleep (random 1.0))
+               (block nil
+                 (tagbody
+                   :start
+                   (task
+                    (bt:with-lock-held (lacc)
+                      (bt:with-lock-held (lopen)
+                        (if (or (< (pqueue-length acc) max-schema)
+                                (< (pqueue-front-key acc)
+                                   (pqueue-front-key open)))
+                            (if (pqueue-empty-p open)
+                                (go :retry)
+                                (pqueue-pop open))
+                            (go :end)))))
+                   (go :start)
+                   :retry
+                   (sleep 0.1)
+                   (go :start)
+                   :end))))
+      (let ((init (node (multitoken (* 2 width))
+                        (multitoken (* 2 width)))))
+        (pqueue-push init
+                     (multiple-value-call
+                         #'cross-entropy
+                       (contingency-table batch width init array))
+                     open))
+      (if (plusp *num-processes*)
+          (progn
+            (dotimes (i *num-processes*)
+              (push (bt:make-thread #'worker) threads))
+            (unwind-protect
+                (handler-case
+                    (map nil #'bt:join-thread threads)
+                  (SB-SYS:INTERACTIVE-INTERRUPT ()
+                    (map nil #'bt:destroy-thread threads)))
+              (print-variables acc)))
+          (worker)))
+    (iter (until (pqueue-empty-p acc))
+          (for (values node g) = (pqueue-pop acc))
+          (print-variables g node)
+          (collect node))))
+
+
+
 
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
@@ -536,22 +488,25 @@ Also, instead of working on the sequence of states, it works on individual pairs
        (time (apply #'main rest))))
     ((list csv)
      (format *error-output* "number of threads: ~a~%" *num-processes*)
-     (format
-      t "~&~(~:S~)~%"
-      (make-domain
-       (mapcar #'as-012
-               (bistate-msdd
-                (bvs-array
-                 (if *num-samples*
-                     (simpsamp:list-sample
-                      *num-samples*
-                      (let ((list (read-as-bvs csv)))
-                        (format *error-output*
-                                "number of original samples: ~a~%"
-                                (length list))
-                        list))
-                     (read-as-bvs csv)))
-                *g-threshold* *max-schema*)))))
+     (let* ((list (read-as-bvs csv))
+            (batch (length list))
+            (width (/ (length (first list)) 2)))
+       (format *error-output* "number of original samples: ~a~%" batch)
+       (format *error-output* "encoding length: ~a~%" width)
+       (let ((batch (or *num-samples* batch))
+             (array (bvs-array
+                     (if *num-samples*
+                         (simpsamp:list-sample
+                          *num-samples*
+                          list)
+                         list))))
+         (format *error-output* "number of samples: ~a~%" batch)
+         (format
+          t "~&~(~:S~)~%"
+          (make-domain
+           (mapcar #'as-012
+                   (bistate-msdd batch width array
+                                 *g-threshold* *max-schema*)))))))
     (_
      (format *error-output*
              "Usage: msdd.ros ~
