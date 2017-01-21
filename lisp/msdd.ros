@@ -110,54 +110,13 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
   (data (required) :type simple-bit-vector)
   (mask (required) :type simple-bit-vector))
 
-(declaim (inline node-precursor))
-(ftype node-precursor node bit-vector)
-(defun node-precursor (node)
-  (ematch node
-    ((node data)
-     (make-array (/ (length data) 2)
-                 :element-type 'bit
-                 :displaced-to data))))
-
-(declaim (inline node-precursor-*))
-(ftype node-precursor-* node bit-vector)
-(defun node-precursor-* (node)
-  (ematch node
-    ((node mask)
-     (make-array (/ (length mask) 2)
-                 :element-type 'bit
-                 :displaced-to mask))))
-
-
-(declaim (inline node-successor))
-(ftype node-successor node bit-vector)
-(defun node-successor (node)
-  (match node
-    ((node data)
-     (let ((width (/ (length data) 2)))
-       (make-array width
-                   :element-type 'bit
-                   :displaced-to data
-                   :displaced-index-offset width)))))
-
-
-(declaim (inline node-successor-*))
-(ftype node-successor-* node bit-vector)
-(defun node-successor-* (node)
-  (match node
-    ((node mask)
-     (let ((width (/ (length mask) 2)))
-       (make-array width
-                   :element-type 'bit
-                   :displaced-to mask
-                   :displaced-index-offset width)))))
-
 (defun as-012 (node)
   (ematch node
     ((node data mask)
      (map 'vector (lambda-match*
                     ((_ 1) 2)
                     ((d 0) d)) data mask))))
+
 
 
 ;;; node evaluation functions
@@ -237,13 +196,21 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 
 (ftype msdd-gmax3 node fn fn fn fn sf)
 (defun msdd-gmax3 (node n1 n2 n3 n4)
+  (declare (optimize (speed 3) (safety 0)))
   (match node
     ((node mask)
-     (if (not (zerop (count 0 mask :start (/ (length mask) 2))))
-         ;; non-empty successor
-         (msdd-gmax1 n1 n2 n3 n4)
-         ;; empty successor
-         (msdd-gmax2 n1 n2 n3 n4)))))
+     (let* ((width2 (length mask))
+            (width (/ width2 2))
+            (successor-* (make-array width :element-type 'bit)))
+       (declare (half width2)
+                (dynamic-extent    successor-*)
+                (simple-bit-vector successor-*))
+       (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
+       (if (not (zerop (count 0 successor-*)))
+           ;; non-empty successor
+           (msdd-gmax1 n1 n2 n3 n4)
+           ;; empty successor
+           (msdd-gmax2 n1 n2 n3 n4))))))
 
 
 
@@ -320,25 +287,48 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 
 ;;; Pruning rule for action schema
 
-(defun valid-node (node)
+(ftype valid-node node half boolean)
+(defun valid-node (node width)
+  (declare (optimize (speed 3) (safety 0)))
   (match node
-    ((node precursor successor
-           precursor-* successor-*)
-     ;; 1. same bit should not specify the same value (p4,left,par3)
-     (let ((tmp1 (bit-eqv precursor successor))  ; common bits
-           (tmp2 (bit-xor precursor precursor))) ; as zero
+    ((node data mask)
+     (let* ((width2 (* 2 width))
+            (precursor   (make-array width :element-type 'bit))
+            (successor   (make-array width :element-type 'bit))
+            (precursor-* (make-array width :element-type 'bit))
+            (successor-* (make-array width :element-type 'bit))
+            (tmp1 (make-array width :element-type 'bit))
+            (tmp2 (make-array width :element-type 'bit)))
+       (declare (half width2)
+                (dynamic-extent    tmp1 tmp2 precursor successor precursor-* successor-*)
+                (simple-bit-vector tmp1 tmp2 precursor successor precursor-* successor-*))
+       (replace precursor data :start1 0 :end1 width :start2 0 :end2 width)
+       (replace successor data :start1 0 :end1 width :start2 width :end2 width2)
+       (replace precursor-* mask :start1 0 :end1 width :start2 0 :end2 width)
+       (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
+       ;; 1. same bit should not specify the same value (p4,left,par3)
+       (bit-eqv precursor successor tmp1)
+       (bit-xor precursor precursor tmp2)
        (bit-andc2 tmp1 precursor-* tmp1) ; 1 = wild. filter non-wild
        (bit-andc2 tmp1 successor-* tmp1)
        (equal tmp2 tmp1)               ; all zero
-       ;; 2. actions should encode changes? I don't think this is necessary...
+        ;; 2. actions should encode changes? I don't think this is necessary...
        ))))
 
-(defun valid-leaf-node (node)
+(ftype valid-leaf-node node half boolean)
+(defun valid-leaf-node (node width)
+  (declare (optimize (speed 3) (safety 0)))
   (match node
-    ((node successor-*)
-     ;; 3. there should be some effects (p4,right,line3-4)
-     (not (equal (bit-eqv successor-* successor-*) ; as one
-                 successor-*)))))
+    ((node mask)
+     (let* ((width2 (* 2 width))
+            (successor-* (make-array width :element-type 'bit))
+            (tmp1 (make-array width :element-type 'bit)))
+       (declare (half width2)
+                (dynamic-extent    tmp1 successor-*)
+                (simple-bit-vector tmp1 successor-*))
+       (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
+       (fill tmp1 1)
+       (not (equal tmp1 successor-*))))))
 
 ;;; MSDD algorithm
 
@@ -388,12 +378,12 @@ Also, instead of working on the sequence of states, it works on individual pairs
     (labels ((task (node)
                (block nil
                  ;; prune the child following Oates,Cohen,AAAI98
-                 (unless (valid-node node) (return))
+                 (unless (valid-node node width) (return))
                  (multiple-value-bind (n1 n2 n3 n4)
                      (contingency-table batch width node array)
                    (let ((g (cross-entropy n1 n2 n3 n4)))
                      (when (and (< g-threashold g)
-                                (valid-leaf-node node))
+                                (valid-leaf-node node width))
                        (bt:with-lock-held (lacc)
                          (when (or (< (pqueue-length acc) max-schema)
                                    (< (pqueue-front-key acc) g))
