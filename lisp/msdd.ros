@@ -196,13 +196,21 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 
 (ftype msdd-gmax3 node fn fn fn fn sf)
 (defun msdd-gmax3 (node n1 n2 n3 n4)
+  (declare (optimize (speed 3) (safety 0)))
   (match node
     ((node mask)
-     (if (not (zerop (count 0 mask :start (/ (length mask) 2))))
-         ;; non-empty successor
-         (msdd-gmax1 n1 n2 n3 n4)
-         ;; empty successor
-         (msdd-gmax2 n1 n2 n3 n4)))))
+     (let* ((width2 (length mask))
+            (width (/ width2 2))
+            (successor-* (make-array width :element-type 'bit)))
+       (declare (half width2)
+                (dynamic-extent    successor-*)
+                (simple-bit-vector successor-*))
+       (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
+       (if (not (zerop (count 0 successor-*)))
+           ;; non-empty successor
+           (msdd-gmax1 n1 n2 n3 n4)
+           ;; empty successor
+           (msdd-gmax2 n1 n2 n3 n4))))))
 
 
 
