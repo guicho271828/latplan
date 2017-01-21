@@ -490,7 +490,10 @@ Also, instead of working on the sequence of states, it works on individual pairs
          (dotimes (i *num-processes*)
            (push (bt:make-thread #'worker) threads))
          (unwind-protect
-             (map nil #'bt:join-thread threads)
+          (handler-case
+              (map nil #'bt:join-thread threads)
+            (SB-SYS:INTERACTIVE-INTERRUPT ()
+              (map nil #'bt:destroy-thread threads)))
            (print-variables acc)))
        (iter (until (pqueue-empty-p acc))
              (for (values node g) = (pqueue-pop acc))
@@ -529,25 +532,23 @@ Also, instead of working on the sequence of states, it works on individual pairs
        (time (apply #'main rest))))
     ((list csv)
      (format *error-output* "number of threads: ~a~%" *num-processes*)
-     (handler-case
-         (let ((*print-right-margin* 70))
-           (format
-            t "~&~(~:S~)~%"
-            (make-domain
-             (mapcar #'as-012
-                     (bistate-msdd
-                      (bvs-array
-                       (if *num-samples*
-                           (simpsamp:list-sample
-                            *num-samples*
-                            (let ((list (read-as-bvs csv)))
-                              (format *error-output*
-                                      "number of original samples: ~a~%"
-                                      (length list))
-                              list))
-                           (read-as-bvs csv)))
-                      *g-threshold* *max-schema*)))))
-       (SB-SYS:INTERACTIVE-INTERRUPT ())))
+     (let ((*print-right-margin* 70))
+       (format
+        t "~&~(~:S~)~%"
+        (make-domain
+         (mapcar #'as-012
+                 (bistate-msdd
+                  (bvs-array
+                   (if *num-samples*
+                       (simpsamp:list-sample
+                        *num-samples*
+                        (let ((list (read-as-bvs csv)))
+                          (format *error-output*
+                                  "number of original samples: ~a~%"
+                                  (length list))
+                          list))
+                       (read-as-bvs csv)))
+                  *g-threshold* *max-schema*))))))
     (_
      (format *error-output*
              "Usage: msdd.ros ~
