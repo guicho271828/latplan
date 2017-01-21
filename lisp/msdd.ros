@@ -503,6 +503,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
 (defvar *num-samples* nil)
+(setf *print-right-margin* 70)
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
@@ -532,23 +533,22 @@ Also, instead of working on the sequence of states, it works on individual pairs
        (time (apply #'main rest))))
     ((list csv)
      (format *error-output* "number of threads: ~a~%" *num-processes*)
-     (let ((*print-right-margin* 70))
-       (format
-        t "~&~(~:S~)~%"
-        (make-domain
-         (mapcar #'as-012
-                 (bistate-msdd
-                  (bvs-array
-                   (if *num-samples*
-                       (simpsamp:list-sample
-                        *num-samples*
-                        (let ((list (read-as-bvs csv)))
-                          (format *error-output*
-                                  "number of original samples: ~a~%"
-                                  (length list))
-                          list))
-                       (read-as-bvs csv)))
-                  *g-threshold* *max-schema*))))))
+     (format
+      t "~&~(~:S~)~%"
+      (make-domain
+       (mapcar #'as-012
+               (bistate-msdd
+                (bvs-array
+                 (if *num-samples*
+                     (simpsamp:list-sample
+                      *num-samples*
+                      (let ((list (read-as-bvs csv)))
+                        (format *error-output*
+                                "number of original samples: ~a~%"
+                                (length list))
+                        list))
+                     (read-as-bvs csv)))
+                *g-threshold* *max-schema*)))))
     (_
      (format *error-output*
              "Usage: msdd.ros ~
