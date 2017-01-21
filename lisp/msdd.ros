@@ -477,6 +477,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
      (let ((*trace-output* *error-output*))
        (time (apply #'main rest))))
     ((list csv)
+     (format *error-output* "dynamic space: ~aGB~%" (/ (sb-ext:dynamic-space-size) 1e9))
      (format *error-output* "number of threads: ~a~%" *num-processes*)
      (let* ((list (read-as-bvs csv))
             (batch (length list))
