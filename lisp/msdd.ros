@@ -5,14 +5,19 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 |#
 (progn ;;init forms
   #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank
-                              priority-queue simpsamp) :silent t)
+                              priority-queue simpsamp lparallel) :silent t)
   )
 
 (defpackage :msdd
-  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :priority-queue)
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :priority-queue :lparallel)
   (:shadowing-import-from :immutable-struct :ftype :defstruct))
 (in-package :msdd)
 (SETF *ARITY-CHECK-BY-TEST-CALL* NIL)
+(defvar *num-processes*
+    (read-from-string
+     (uiop:run-program "cat /proc/cpuinfo | grep -c processor" :output :string)))
+;; (setf *kernel* (make-kernel *num-processes*))
+
 ;;; set up the learning data
 
 (defun read-as-bvs (csv)
@@ -283,6 +288,7 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
            ,result)))))
 
 (ftype contingency-table node (array bit (* 2 *)) (values fn fn fn fn))
+#+nil
 (let ((matching  (make-array 0 :element-type 'bit))
       (prec-mask (make-array 0 :element-type 'bit))
       (succ-mask (make-array 0 :element-type 'bit))
@@ -325,6 +331,40 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
              ((nil t)   (incf n3))
              ((nil nil) (incf n4))))
          (values n1 n2 n3 n4))))))
+
+(defun contingency-table (node array)
+  (declare (optimize (speed 3) (safety 0)))
+  (ematch* (array node)
+    (((array :dimensions (list batch 2 width)
+             :displaced-to back-array)
+      (node data mask))
+     (declare (simple-bit-vector back-array)
+              (half width batch))
+     (let* ((n1 0) (n2 0) (n3 0) (n4 0)
+            (width2 (* 2 width))
+            (matching  (make-array width2 :element-type 'bit))
+            (prec-mask (make-array width2 :element-type 'bit))
+            (succ-mask (make-array width2 :element-type 'bit))
+            (all-true  (make-array width2 :element-type 'bit))
+            (tmp1      (make-array width2 :element-type 'bit)))
+       (declare (simple-bit-vector matching prec-mask succ-mask all-true)
+                (fixnum n1 n2 n3 n4)
+                (half width2))
+       (fill prec-mask 1 :start 0 :end width)
+       (fill succ-mask 1 :start width)
+       (fill all-true  1)
+       (dotimes-unroll4 (b offset batch 2)
+         (let ((start (the fixnum (* (the fixnum (+ b offset)) width2))))
+           (replace tmp1 back-array :start2 start :end2 (the fixnum (+ start width2))))
+         (bit-eqv data tmp1 matching)
+         (bit-ior matching mask matching)
+         (ematch* ((equal all-true (bit-ior matching succ-mask tmp1))
+                   (equal all-true (bit-ior matching prec-mask tmp1)))
+           ((t t)     (incf n1))
+           ((t nil)   (incf n2))
+           ((nil t)   (incf n3))
+           ((nil nil) (incf n4))))
+       (values n1 n2 n3 n4)))))
 
 ;;; Pruning rule for action schema
 
@@ -380,7 +420,8 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 (defmacro print-variables (&rest args)
   `(print (list ,@(iter (for arg in args)
                         (collect `(quote ,arg))
-                        (collect arg)))))
+                        (collect arg)))
+          *error-output*))
 
 ;; it seems there are still some magic happening here... 
 
@@ -389,68 +430,68 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 Also, instead of working on the sequence of states, it works on individual pairs of states."
   (match array
     ((array :dimensions (list batch 2 width))
-     (format t "number of samples: ~a~%encoding length: ~a~%" batch width)
+     (format *error-output* "number of samples: ~a~%encoding length: ~a~%" batch width)
      (let ((open (make-pqueue #'> :key-type 'sf :value-type 'node))
-           (acc (make-pqueue #'< :key-type 'sf :value-type 'node)) ;worst-one out
-           (max-open 0)
-           (evaluation 0)
-           (expansion 0)
-           (maxg most-negative-short-float)
-           (ming most-positive-short-float)
-           (maxf most-negative-short-float)
-           (minf most-positive-short-float)
-           (progress (progress 60)))
-       (let ((init (node (multitoken (* 2 width))
-                         (multitoken (* 2 width)))))
-         (pqueue-push init
-                      (multiple-value-call
-                          #'msdd-gmax3 init
+           (acc (make-pqueue #'< :key-type 'sf :value-type 'node))
+           (lopen (bt:make-lock "open"))
+           (lacc (bt:make-lock "acc"))
+           threads)
+       (labels ((task (node)
+                  (block nil
+                    ;; prune the child following Oates,Cohen,AAAI98
+                    (unless (valid-node node) (return))
+                    (multiple-value-bind (n1 n2 n3 n4)
+                        (contingency-table node array)
+                      (let ((g (cross-entropy n1 n2 n3 n4)))
+                        (when (and (< g-threashold g)
+                                   (valid-leaf-node node))
+                          (bt:with-lock-held (lacc)
+                            (when (or (< (pqueue-length acc) max-schema)
+                                      (< (pqueue-front-key acc) g))
+                              (pqueue-push node g acc))
+                            (when (< max-schema (pqueue-length acc))
+                              (pqueue-pop acc)))))
+                      (let ((f (msdd-gmax3 node n1 n2 n3 n4)))
+                        (when (and (< g-threashold f)
+                                   (bt:with-lock-held (lacc)
+                                     (or (< (pqueue-length acc) max-schema)
+                                         (< (pqueue-front-key acc) f))))
+                          (let ((children (expand node)))
+                            (bt:with-lock-held (lopen)
+                              (iter (for child in children)
+                                    (pqueue-push child f open)))))))))
+                (worker ()
+                  (sleep (random 1.0))
+                  (block nil
+                    (tagbody
+                      :start
+                      (task
+                       (bt:with-lock-held (lacc)
+                         (bt:with-lock-held (lopen)
+                           (if (or (< (pqueue-length acc) max-schema)
+                                   (< (pqueue-front-key acc)
+                                      (pqueue-front-key open)))
+                               (if (pqueue-empty-p open)
+                                   (go :retry)
+                                   (pqueue-pop open))
+                               (go :end)))))
+                      (go :start)
+                      :retry
+                      (sleep 0.1)
+                      (go :start)
+                      :end))))
+         (let ((init (node (multitoken (* 2 width))
+                           (multitoken (* 2 width)))))
+           (pqueue-push init
+                        (multiple-value-call
+                            #'cross-entropy
                           (contingency-table init array))
-                      open))
-       (unwind-protect
-           (pprint-logical-block (*standard-output* nil)
-             (iter outer
-                   (until (pqueue-empty-p open))
-                   (while (or (< (pqueue-length acc) max-schema)
-                              (< (pqueue-front-key acc)
-                                 (pqueue-front-key open)))) ;lb and ub meets
-                   (funcall progress #\. (if (pqueue-empty-p acc)
-                                             most-negative-short-float
-                                             (pqueue-front-key acc)) '< (pqueue-front-key open))
-                   (for (values top f) = (pqueue-pop open))
-                   (incf expansion)
-                   (iter (for child in (expand top))
-                         (incf evaluation)
-                         ;; prune the child following Oates,Cohen,AAAI98
-                         (unless (valid-node child)
-                           (next-iteration))
-                         (for (values n1 n2 n3 n4) =
-                              (contingency-table child array))
-                         (for g = (cross-entropy n1 n2 n3 n4))
-                         (maxf maxg g) (minf ming g)
-                         (when (and (< g-threashold g)
-                                    (or (< (pqueue-length acc) max-schema)
-                                        (< (pqueue-front-key acc) g))
-                                    ;; FILTER in Oates,Cohen,AAAI98
-                                    (valid-leaf-node child))
-                           (pqueue-push child g acc))
-                         (when (< max-schema (pqueue-length acc))
-                           ;; discard the worst
-                           (pqueue-pop acc)
-                           (let ((lb (pqueue-front-key acc))
-                                 (ub (pqueue-front-key open))
-                                 (len (pqueue-length open)))
-                             (print-variables g lb ub len)))
-                         ;; f is always greater than g: f > g
-                         (for f = (msdd-gmax3 child n1 n2 n3 n4))
-                         (maxf maxf f) (minf minf f)
-                         (assert (>= f g))
-                         (when (and (< g-threashold f)
-                                    (or (< (pqueue-length acc) max-schema)
-                                        (< (pqueue-front-key acc) f)))
-                           (pqueue-push child f open)))
-                   (maxf max-open (pqueue-length open))))
-         (print-variables evaluation expansion max-open maxg ming maxf minf acc))
+                        open))
+         (dotimes (i *num-processes*)
+           (push (bt:make-thread #'worker) threads))
+         (unwind-protect
+             (map nil #'bt:join-thread threads)
+           (print-variables acc)))
        (iter (until (pqueue-empty-p acc))
              (for (values node g) = (pqueue-pop acc))
              (print-variables g node)
@@ -458,7 +499,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
 
 (defvar *g-threshold* most-negative-short-float)
 (defvar *max-schema* most-positive-fixnum)
-(defvar *num-samples* most-positive-fixnum)
+(defvar *num-samples* nil)
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
@@ -475,14 +516,19 @@ Also, instead of working on the sequence of states, it works on individual pairs
     ((list* (or "-n" "--num-samples") (read *num-samples*) rest)
      (check-type *num-samples* integer)
      (apply #'main rest))
+    ((list* (or "-P" "--num-processes") (read *num-processes*) rest)
+     (check-type *num-processes* integer)
+     (apply #'main rest))
     ((list* (or "-p" "--profile") rest)
      (swank:profile-reset)
      (swank:profile-package :msdd t nil)
      (apply #'main rest)
      (swank:profile-report))
     ((list* (or "-t" "--time") rest)
-     (time (apply #'main rest)))
+     (let ((*trace-output* *error-output*))
+       (time (apply #'main rest))))
     ((list csv)
+     (format *error-output* "number of threads: ~a~%" *num-processes*)
      (handler-case
          (let ((*print-right-margin* 70))
            (format
@@ -491,8 +537,15 @@ Also, instead of working on the sequence of states, it works on individual pairs
              (mapcar #'as-012
                      (bistate-msdd
                       (bvs-array
-                       (simpsamp:list-sample
-                        *num-samples* (read-as-bvs csv)))
+                       (if *num-samples*
+                           (simpsamp:list-sample
+                            *num-samples*
+                            (let ((list (read-as-bvs csv)))
+                              (format *error-output*
+                                      "number of original samples: ~a~%"
+                                      (length list))
+                              list))
+                           (read-as-bvs csv)))
                       *g-threshold* *max-schema*)))))
        (SB-SYS:INTERACTIVE-INTERRUPT ())))
     (_
