@@ -115,18 +115,18 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 (defun node-precursor (node)
   (ematch node
     ((node data)
-     (make-array (/ (length data) 2)
-                 :element-type 'bit
-                 :displaced-to data))))
+     (let* ((width (/ (length data) 2))
+            (a (make-array width :element-type 'bit)))
+       (replace a data)))))
 
 (declaim (inline node-precursor-*))
 (ftype node-precursor-* node bit-vector)
 (defun node-precursor-* (node)
   (ematch node
     ((node mask)
-     (make-array (/ (length mask) 2)
-                 :element-type 'bit
-                 :displaced-to mask))))
+     (let* ((width (/ (length mask) 2))
+            (a (make-array width :element-type 'bit)))
+       (replace a mask)))))
 
 
 (declaim (inline node-successor))
@@ -134,11 +134,9 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 (defun node-successor (node)
   (match node
     ((node data)
-     (let ((width (/ (length data) 2)))
-       (make-array width
-                   :element-type 'bit
-                   :displaced-to data
-                   :displaced-index-offset width)))))
+     (let* ((width (/ (length data) 2))
+            (a (make-array width :element-type 'bit)))
+       (replace a data :start2 width)))))
 
 
 (declaim (inline node-successor-*))
@@ -146,11 +144,9 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 (defun node-successor-* (node)
   (match node
     ((node mask)
-     (let ((width (/ (length mask) 2)))
-       (make-array width
-                   :element-type 'bit
-                   :displaced-to mask
-                   :displaced-index-offset width)))))
+     (let* ((width (/ (length mask) 2))
+            (a (make-array width :element-type 'bit)))
+       (replace a mask :start2 width)))))
 
 (defun as-012 (node)
   (ematch node
