@@ -487,14 +487,17 @@ Also, instead of working on the sequence of states, it works on individual pairs
                             #'cross-entropy
                           (contingency-table init array))
                         open))
-         (dotimes (i *num-processes*)
-           (push (bt:make-thread #'worker) threads))
-         (unwind-protect
-          (handler-case
-              (map nil #'bt:join-thread threads)
-            (SB-SYS:INTERACTIVE-INTERRUPT ()
-              (map nil #'bt:destroy-thread threads)))
-           (print-variables acc)))
+         (if (plusp *num-processes*)
+             (progn
+               (dotimes (i *num-processes*)
+                 (push (bt:make-thread #'worker) threads))
+               (unwind-protect
+                   (handler-case
+                       (map nil #'bt:join-thread threads)
+                     (SB-SYS:INTERACTIVE-INTERRUPT ()
+                       (map nil #'bt:destroy-thread threads)))
+                 (print-variables acc)))
+             (worker)))
        (iter (until (pqueue-empty-p acc))
              (for (values node g) = (pqueue-pop acc))
              (print-variables g node)
