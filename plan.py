@@ -2,7 +2,7 @@
 
 import numpy as np
 import subprocess
-
+import os
 from plot import plot_grid, plot_grid2, plot_ae
 
 def echodo(cmd,file=None):
@@ -23,11 +23,21 @@ def latent_plan(init,goal,ae,use_augmented=False):
     
     echodo(["make","-C","lisp","-j","1"])
     if use_augmented:
-        echodo(["lisp/domain.bin",ae.local("augmented.csv")],
-               ae.local("domain.pddl"))
+        if not os.path.exists(ae.local("domain.pddl")) or \
+           os.path.getmtime(ae.local("augmented.csv")) > \
+           os.path.getmtime(ae.local("domain.pddl")):
+            echodo(["lisp/domain.bin",ae.local("augmented.csv")],
+                   ae.local("domain.pddl"))
+        else:
+            print("skipped generating domain.pddl")
     else:
-        echodo(["lisp/domain.bin",ae.local("actions.csv")],
-               ae.local("domain.pddl"))
+        if not os.path.exists(ae.local("domain.pddl")) or \
+           os.path.getmtime(ae.local("actions.csv")) > \
+           os.path.getmtime(ae.local("domain.pddl")):
+            echodo(["lisp/domain.bin",ae.local("actions.csv")],
+                   ae.local("domain.pddl"))
+        else:
+            print("skipped generating domain.pddl")
     echodo(["lisp/problem.bin",
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
@@ -60,14 +70,17 @@ if __name__ == '__main__':
     ae = GumbelAE("samples/mnist_puzzle33p_model/")
     import mnist_puzzle
     configs = np.array(list(mnist_puzzle.generate_configs(9)))
-    ig_c = select(configs,2)
-    ig = mnist_puzzle.states(3,3,ig_c)
     while True:
+        ig_c = select(configs,2)
+        ig = mnist_puzzle.states(3,3,ig_c)
         try:
             latent_plan(*ig, ae, use_augmented=True)
             break
         except PlanException as e:
             print(e)
+    print("The problem was solvable. Trying the original formulation")
+    latent_plan(*ig, ae, use_augmented=False)
+    print("Original formulation is also solvable.")
     
     
     

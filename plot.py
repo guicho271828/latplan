@@ -72,9 +72,16 @@ def plot_ae(ae,data,path):
     bs = np.round(zs)
     bys = ae.decode_binary(bs)
     import math
-    l = int(math.sqrt(ae.N))
-    _zs = zs.reshape((-1,l,l))
-    _bs = bs.reshape((-1,l,l))
+    root = math.sqrt(ae.N)
+    l1 = math.floor(root)
+    if l1*l1 == ae.N:
+        _zs = zs.reshape((-1,l1,l1))
+        _bs = bs.reshape((-1,l1,l1))
+    else:
+        l2 = math.ceil(root)
+        size = l1*l2
+        _zs = np.concatenate((zs,np.ones((zs.shape[0],size-ae.N))),axis=1).reshape((-1,l1,l2))
+        _bs = np.concatenate((bs,np.ones((bs.shape[0],size-ae.N))),axis=1).reshape((-1,l1,l2))
     images = []
     for seq in zip(xs, _zs, ys, _bs, bys):
         images.extend(seq)
