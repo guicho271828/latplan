@@ -112,6 +112,8 @@ def all_flips(bitnum,diffbit):
 def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
     bs1 = bs1.astype(np.int8)
     ys1 = ae.decode_binary(bs1,batch_size=6000)
+    data_dim = np.prod(ys1.shape[1:])
+    print("threshold {} corresponds to val_loss {}".format(threshold,threshold*data_dim))
     bitnum = bs1.shape[1]
     if max_diff is None:
         max_diff = bitnum-1
@@ -128,7 +130,7 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
     checker = K.function([y_orig,b],[ok])
     def check_ok(flipped_bs):
         return checker([ys1,flipped_bs])[0]
-    
+
     last_skips = 0
     for diffbit in range(1,max_diff):
         some = False
@@ -137,7 +139,7 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
                 # print("previously seen with failure")
                 last_skips += 1
                 continue
-            print(bv, {"blk": len(failed_bv), "lskips":last_skips})
+            print(bv, {"blk": len(failed_bv), "skip":last_skips, "acc":len(final_bs1)})
             last_skips = 0
             flipped_bs = flip(bs1,[bv])
             oks = check_ok(flipped_bs)
