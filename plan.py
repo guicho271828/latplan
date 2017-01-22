@@ -17,41 +17,54 @@ def echodo(cmd,file=None):
 class PlanException(BaseException):
     pass
 
-def latent_plan(init,goal,ae,use_augmented=False):
+def latent_plan(init,goal,ae,mode='original'):
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal.png")
 
-    # start planning
+    def original():
+        d = ae.local("domain.pddl")
+        a = ae.local("actions.csv")
+        if not os.path.exists(d) or os.path.getmtime(a) > os.path.getmtime(d):
+            echodo(["lisp/domain.bin",a], d)
+        else:
+            print("skipped generating {}".format(d))
+        return d
+    def augmented():
+        d = ae.local("augmented.pddl")
+        a = ae.local("augmented.csv")
+        if not os.path.exists(d) or os.path.getmtime(a) > os.path.getmtime(d):
+            echodo(["lisp/domain.bin",a], d)
+        else:
+            print("skipped generating {}".format(d))
+        return d
+    def msdd():
+        d = ae.local("msdd.pddl")
+        a = ae.local("augmented.csv")
+        if not os.path.exists(d) or os.path.getmtime(a) > os.path.getmtime(d):
+            echodo(["lisp/msdd.ros", "-t", "-k", "200", "-n", "1000", a], d)
+        else:
+            print("skipped generating {}".format(d))
+        return d
     
+    mode_dict = {'original':original, 'augmented':augmented, 'msdd':msdd}
+    
+    # start planning
+
     echodo(["make","-C","lisp","-j","1"])
     echodo(["rm",ae.local("problem.plan")])
-    if use_augmented:
-        if not os.path.exists(ae.local("domain.pddl")) or \
-           os.path.getmtime(ae.local("augmented.csv")) > \
-           os.path.getmtime(ae.local("domain.pddl")):
-            echodo(["lisp/domain.bin",ae.local("augmented.csv")],
-                   ae.local("domain.pddl"))
-        else:
-            print("skipped generating domain.pddl")
-    else:
-        if not os.path.exists(ae.local("domain.pddl")) or \
-           os.path.getmtime(ae.local("actions.csv")) > \
-           os.path.getmtime(ae.local("domain.pddl")):
-            echodo(["lisp/domain.bin",ae.local("actions.csv")],
-                   ae.local("domain.pddl"))
-        else:
-            print("skipped generating domain.pddl")
+    
+    domain = mode_dict[mode]()
     echodo(["lisp/problem.bin",
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
     echodo(["planner-scripts/limit.sh","-v","-t","30",
             "--","ff-clean",
             ae.local("problem.pddl"),
-            ae.local("domain.pddl")])
+            domain])
     if not os.path.exists(ae.local("problem.plan")):
         echodo(["planner-scripts/limit.sh","-v","-t","30",
                 "-o","--alias lama-first","--","fd-alias-clean",
                 ae.local("problem.pddl"),
-                ae.local("domain.pddl")])
+                domain])
     if not os.path.exists(ae.local("problem.plan")):
         raise PlanException("no plan found")
     subprocess.call(["echo"]+["lisp/parse-plan.bin",ae.local("problem.plan"),
@@ -79,13 +92,13 @@ if __name__ == '__main__':
         ig_c = select(configs,2)
         ig = mnist_puzzle.states(3,3,ig_c)
         try:
-            latent_plan(*ig, ae, use_augmented=True)
+            latent_plan(*ig, ae)
             break
         except PlanException as e:
             print(e)
-    print("The problem was solvable. Trying the original formulation")
-    latent_plan(*ig, ae, use_augmented=False)
-    print("Original formulation is also solvable.")
+    # print("The problem was solvable. Trying the original formulation")
+    # latent_plan(*ig, ae)
+    # print("Original formulation is also solvable.")
     
     
     
