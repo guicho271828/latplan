@@ -288,6 +288,14 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 
 ;;; Pruning rule for action schema
 
+(declaim (inline bit-implies))
+(ftype bit-implies bit-vector bit-vector &optional bit-vector bit-vector)
+(defun bit-implies (bv1 bv2 &optional (bv3 (make-array (length bv1) :element-type 'bit)))
+  "a => b :- not a or b"
+  (bit-not bv1 bv3)
+  (bit-ior bv2 bv3 bv3)
+  bv3)
+
 (ftype valid-node node half boolean)
 (defun valid-node (node width)
   (declare (optimize (speed 3) (safety 0)))
@@ -298,38 +306,67 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
             (successor   (make-array width :element-type 'bit))
             (precursor-* (make-array width :element-type 'bit))
             (successor-* (make-array width :element-type 'bit))
-            (tmp1 (make-array width :element-type 'bit))
-            (tmp2 (make-array width :element-type 'bit)))
+            (zero (make-array width :element-type 'bit))
+            (one  (make-array width :element-type 'bit)))
        (declare (half width2)
-                (dynamic-extent    tmp1 tmp2 precursor successor precursor-* successor-*)
-                (simple-bit-vector tmp1 tmp2 precursor successor precursor-* successor-*))
+                (dynamic-extent    zero one precursor successor precursor-* successor-*)
+                (simple-bit-vector zero one precursor successor precursor-* successor-*))
        (replace precursor data :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor data :start1 0 :end1 width :start2 width :end2 width2)
        (replace precursor-* mask :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
-       ;; 1. same bit should not specify the same value (p4,left,par3)
-       (bit-eqv precursor successor tmp1)
-       (bit-xor precursor precursor tmp2)
-       (bit-andc2 tmp1 precursor-* tmp1) ; 1 = wild. filter non-wild
-       (bit-andc2 tmp1 successor-* tmp1)
-       (equal tmp2 tmp1)               ; all zero
-        ;; 2. actions should encode changes? I don't think this is necessary...
-       ))))
+       (fill zero 0)
+       (fill one 1)
+       (and
+        (let ((tmp (make-array width :element-type 'bit)))
+          ;; 1. same bit should not specify the same value (p4,left,par3)
+          (declare (dynamic-extent    tmp)
+                   (simple-bit-vector tmp))
+          (bit-eqv precursor successor tmp) ; same bits get 1; all bits should be 0
+          (bit-andc2 tmp precursor-* tmp)   ; however, masked bits are ok
+          (bit-andc2 tmp successor-* tmp)   ; same for successors
+          ;; all zero
+          (equal zero tmp)))))))
 
 (ftype valid-leaf-node node half boolean)
 (defun valid-leaf-node (node width)
   (declare (optimize (speed 3) (safety 0)))
   (match node
-    ((node mask)
+    ((node data mask)
      (let* ((width2 (* 2 width))
+            (precursor   (make-array width :element-type 'bit))
+            (successor   (make-array width :element-type 'bit))
+            (precursor-* (make-array width :element-type 'bit))
             (successor-* (make-array width :element-type 'bit))
-            (tmp1 (make-array width :element-type 'bit)))
+            (zero (make-array width :element-type 'bit))
+            (one  (make-array width :element-type 'bit)))
        (declare (half width2)
-                (dynamic-extent    tmp1 successor-*)
-                (simple-bit-vector tmp1 successor-*))
+                (dynamic-extent    zero one precursor successor precursor-* successor-*)
+                (simple-bit-vector zero one precursor successor precursor-* successor-*))
+       (replace precursor data :start1 0 :end1 width :start2 0 :end2 width)
+       (replace successor data :start1 0 :end1 width :start2 width :end2 width2)
+       (replace precursor-* mask :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
-       (fill tmp1 1)
-       (not (equal tmp1 successor-*))))))
+       (fill zero 0)
+       (fill one 1)
+       (and
+        ;; successor should specify at least one bit
+        (let ()
+          (declare (dynamic-extent   )
+                   (simple-bit-vector))
+          (not (equal one successor-*)))
+        (let ((tmp1 (make-array width :element-type 'bit))
+              (tmp2 (make-array width :element-type 'bit))
+              (tmp3 (make-array width :element-type 'bit)))
+          (declare (dynamic-extent    tmp1 tmp2 tmp3)
+                   (simple-bit-vector tmp1 tmp2 tmp3))
+          ;; 2. actions should encode changes
+          ;; == when the effect specifies something (0), then the precursor should be specified (0)
+          ;; and it should be different
+          (bit-not precursor-* tmp1)
+          (bit-not successor-* tmp2)
+          (bit-implies tmp2 tmp1 tmp3)
+          (equal one tmp3)))))))
 
 ;;; MSDD algorithm
 
