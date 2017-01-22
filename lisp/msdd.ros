@@ -112,8 +112,10 @@ exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
   (error "missing required argument"))
 
 (defstruct node
-  ;; (precursor (required) :type (simple-array bit))
-  ;; (successor (required) :type (simple-array bit))
+  ;; (precursor (required) :type simple-bit-vector)
+  ;; (successor (required) :type simple-bit-vector)
+  ;; (precursor* (required) :type simple-bit-vector)
+  ;; (successor* (required) :type simple-bit-vector)
   (data (required) :type simple-bit-vector)
   (mask (required) :type simple-bit-vector))
 
