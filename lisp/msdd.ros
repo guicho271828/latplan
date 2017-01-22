@@ -361,10 +361,12 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
       (finish-output))))
 
 (defmacro print-variables (&rest args)
-  `(print (list ,@(iter (for arg in args)
-                        (collect `(quote ,arg))
-                        (collect arg)))
-          *error-output*))
+  `(progn
+     (print (list ,@(iter (for arg in args)
+                          (collect `(quote ,arg))
+                          (collect arg)))
+            *error-output*)
+     (finish-output *error-output*)))
 
 ;; it seems there are still some magic happening here... 
 
