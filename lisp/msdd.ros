@@ -495,7 +495,7 @@ Also, instead of working on the sequence of states, it works on individual pairs
        (format *error-output* "encoding length: ~a~%" width)
        (format *error-output* "number of samples: ~a~%" batch)
        (format
-        t "~&~(~:S~)~%"
+        t "~%~(~:S~)~%"
         (make-domain
          (mapcar #'as-012
                  (bistate-msdd batch width array
