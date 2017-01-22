@@ -1,7 +1,7 @@
 #!/bin/sh
 #|-*- mode:lisp -*-|#
 #| <Put a one-line description here>
-exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
+exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
 |#
 (progn ;;init forms
   #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank
@@ -13,6 +13,7 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
   (:shadowing-import-from :immutable-struct :ftype :defstruct))
 (in-package :msdd)
 (SETF *ARITY-CHECK-BY-TEST-CALL* NIL)
+;; (setf (sb-ext:bytes-consed-between-gcs) 100000000)
 (defvar *num-processes*
     (read-from-string
      (uiop:run-program "cat /proc/cpuinfo | grep -c processor" :output :string)))
