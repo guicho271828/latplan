@@ -288,6 +288,14 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
 
 ;;; Pruning rule for action schema
 
+(declaim (inline bit-implies))
+(ftype bit-implies bit-vector bit-vector &optional bit-vector bit-vector)
+(defun bit-implies (bv1 bv2 &optional (bv3 (make-array (length bv1) :element-type 'bit)))
+  "a => b :- not a or b"
+  (bit-not bv1 bv3)
+  (bit-ior bv2 bv3 bv3)
+  bv3)
+
 (ftype valid-node node half boolean)
 (defun valid-node (node width)
   (declare (optimize (speed 3) (safety 0)))
