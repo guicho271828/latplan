@@ -306,23 +306,27 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
             (successor   (make-array width :element-type 'bit))
             (precursor-* (make-array width :element-type 'bit))
             (successor-* (make-array width :element-type 'bit))
-            (tmp1 (make-array width :element-type 'bit))
-            (tmp2 (make-array width :element-type 'bit)))
+            (zero (make-array width :element-type 'bit))
+            (one  (make-array width :element-type 'bit)))
        (declare (half width2)
-                (dynamic-extent    tmp1 tmp2 precursor successor precursor-* successor-*)
-                (simple-bit-vector tmp1 tmp2 precursor successor precursor-* successor-*))
+                (dynamic-extent    zero one precursor successor precursor-* successor-*)
+                (simple-bit-vector zero one precursor successor precursor-* successor-*))
        (replace precursor data :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor data :start1 0 :end1 width :start2 width :end2 width2)
        (replace precursor-* mask :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
-       ;; 1. same bit should not specify the same value (p4,left,par3)
-       (bit-eqv precursor successor tmp1)
-       (bit-xor precursor precursor tmp2)
-       (bit-andc2 tmp1 precursor-* tmp1) ; 1 = wild. filter non-wild
-       (bit-andc2 tmp1 successor-* tmp1)
-       (equal tmp2 tmp1)               ; all zero
-        ;; 2. actions should encode changes? I don't think this is necessary...
-       ))))
+       (fill zero 0)
+       (fill one 1)
+       (and
+        (let ((tmp (make-array width :element-type 'bit)))
+          ;; 1. same bit should not specify the same value (p4,left,par3)
+          (declare (dynamic-extent    tmp)
+                   (simple-bit-vector tmp))
+          (bit-eqv precursor successor tmp) ; same bits get 1; all bits should be 0
+          (bit-andc2 tmp precursor-* tmp)   ; however, masked bits are ok
+          (bit-andc2 tmp successor-* tmp)   ; same for successors
+          ;; all zero
+          (equal zero tmp)))))))
 
 (ftype valid-leaf-node node half boolean)
 (defun valid-leaf-node (node width)
@@ -337,6 +341,7 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
                 (simple-bit-vector tmp1 successor-*))
        (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
        (fill tmp1 1)
+       ;; successor should specify at least one bit
        (not (equal tmp1 successor-*))))))
 
 ;;; MSDD algorithm
