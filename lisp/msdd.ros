@@ -147,8 +147,7 @@ exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
                          &optional (res (make-bit-vector (length condition))))
   "if a then b else c"
   (declare (optimize (speed 3) (safety 0)))
-  (let ((tmp (make-bit-vector (length condition))))
-    (declare (dynamic-extent    tmp))
+  (dlet ((tmp (make-bit-vector (length condition))))
     (bit-and then condition tmp)
     (bit-andc2 else condition res)
     (bit-ior tmp res res)
@@ -167,6 +166,7 @@ exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
   (bit-not bv1 bv3)
   (bit-ior bv2 bv3 bv3)
   bv3)
+
 ;;; other utils
 
 (defmacro dotimes-inline ((var count &optional result-form) &body body &environment env)
@@ -207,7 +207,6 @@ exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
                ,@body
                (incf ,base ,delta)))
            ,result)))))
-
 
 
 ;;; node evaluation functions
@@ -290,11 +289,10 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
   (declare (optimize (speed 3) (safety 0)))
   (match node
     ((node mask)
-     (let* ((width2 (length mask))
-            (width (/ width2 2))
-            (successor-* (make-bit-vector width)))
-       (declare (half width2)
-                (dynamic-extent    successor-*))
+     (dlet* ((width2 (length mask))
+             (width (/ width2 2))
+             (successor-* (make-bit-vector width)))
+       (declare (half width2))
        (replace successor-* mask :start1 0 :end1 width :start2 width :end2 width2)
        (if (not (zerop (count 0 successor-*)))
            ;; non-empty successor
@@ -310,21 +308,20 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
   (declare (optimize (speed 3) (safety 0)))
   (ematch* (node)
     (((node data mask))
-     (let* ((n1 0) (n2 0) (n3 0) (n4 0)
-            (width2 (* 2 width))
-            (precursor   (make-bit-vector width))
-            (successor   (make-bit-vector width))
-            (precursor-* (make-bit-vector width))
-            (successor-* (make-bit-vector width))
-            (zero (make-bit-vector width))
-            (one  (make-bit-vector width))
-            (before-state (make-bit-vector width))
-            (after-state  (make-bit-vector width))
-            (prec-matching (make-bit-vector width))
-            (succ-matching (make-bit-vector width)))
+     (dlet* ((n1 0) (n2 0) (n3 0) (n4 0)
+             (width2 (* 2 width))
+             (precursor   (make-bit-vector width))
+             (successor   (make-bit-vector width))
+             (precursor-* (make-bit-vector width))
+             (successor-* (make-bit-vector width))
+             (zero (make-bit-vector width))
+             (one  (make-bit-vector width))
+             (before-state (make-bit-vector width))
+             (after-state  (make-bit-vector width))
+             (prec-matching (make-bit-vector width))
+             (succ-matching (make-bit-vector width)))
        (declare (fixnum n1 n2 n3 n4)
-                (half width2)
-                (dynamic-extent    precursor successor precursor-* successor-* zero one before-state after-state prec-matching succ-matching))
+                (half width2))
        (replace precursor data :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor data :start1 0 :end1 width :start2 width :end2 width2)
        (replace precursor-* mask :start1 0 :end1 width :start2 0 :end2 width)
@@ -358,15 +355,13 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
   (declare (optimize (speed 3) (safety 0)))
   (match node
     ((node data mask)
-     (let* ((width2 (* 2 width))
-            (precursor   (make-bit-vector width))
-            (successor   (make-bit-vector width))
-            (precursor-* (make-bit-vector width))
-            (successor-* (make-bit-vector width))
-            (zero (make-bit-vector width))
-            (one  (make-bit-vector width)))
-       (declare (half width2)
-                (dynamic-extent    zero one precursor successor precursor-* successor-*))
+     (dlet* ((width2 (* 2 width))
+             (precursor   (make-bit-vector width))
+             (successor   (make-bit-vector width))
+             (precursor-* (make-bit-vector width))
+             (successor-* (make-bit-vector width))
+             (zero (make-bit-vector width))
+             (one  (make-bit-vector width)))
        (replace precursor data :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor data :start1 0 :end1 width :start2 width :end2 width2)
        (replace precursor-* mask :start1 0 :end1 width :start2 0 :end2 width)
@@ -374,9 +369,8 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
        (fill zero 0)
        (fill one 1)
        (and
-        (let ((tmp (make-bit-vector width)))
+        (dlet ((tmp (make-bit-vector width)))
           ;; 1. same bit should not specify the same value (p4,left,par3)
-          (declare (dynamic-extent    tmp))
           (bit-eqv precursor successor tmp) ; same bits get 1; all bits should be 0
           (bit-andc2 tmp precursor-* tmp)   ; however, masked bits are ok
           (bit-andc2 tmp successor-* tmp)   ; same for successors
@@ -388,15 +382,13 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
   (declare (optimize (speed 3) (safety 0)))
   (match node
     ((node data mask)
-     (let* ((width2 (* 2 width))
-            (precursor   (make-bit-vector width))
-            (successor   (make-bit-vector width))
-            (precursor-* (make-bit-vector width))
-            (successor-* (make-bit-vector width))
-            (zero (make-bit-vector width))
-            (one  (make-bit-vector width)))
-       (declare (half width2)
-                (dynamic-extent    zero one precursor successor precursor-* successor-*))
+     (dlet* ((width2 (* 2 width))
+             (precursor   (make-bit-vector width))
+             (successor   (make-bit-vector width))
+             (precursor-* (make-bit-vector width))
+             (successor-* (make-bit-vector width))
+             (zero (make-bit-vector width))
+             (one  (make-bit-vector width)))
        (replace precursor data :start1 0 :end1 width :start2 0 :end2 width)
        (replace successor data :start1 0 :end1 width :start2 width :end2 width2)
        (replace precursor-* mask :start1 0 :end1 width :start2 0 :end2 width)
@@ -405,13 +397,11 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
        (fill one 1)
        (and
         ;; successor should specify at least one bit
-        (let ()
-          (declare (dynamic-extent   ))
+        (dlet ()
           (not (equal one successor-*)))
-        (let ((tmp1 (make-bit-vector width))
-              (tmp2 (make-bit-vector width))
-              (tmp3 (make-bit-vector width)))
-          (declare (dynamic-extent    tmp1 tmp2 tmp3))
+        (dlet ((tmp1 (make-bit-vector width))
+               (tmp2 (make-bit-vector width))
+               (tmp3 (make-bit-vector width)))
           ;; 2. actions should encode changes
           ;; == when the effect specifies something (0), then the precursor should be specified (0)
           ;; and it should be different
