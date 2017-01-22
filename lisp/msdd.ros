@@ -494,6 +494,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
 ;; (setf *print-pretty* nil)
 (defun main (&rest args)
   (match args
+    ((list* (or "-d" "--debug") rest)
+     (format *error-output* "debug mode on~%")
+     (apply #'main "-P" "0" "-s" "2017" "-p" "-t" rest))
     ((list* (or "-g" "--threashold") (read *g-threshold*) rest)
      (check-type *g-threshold* real)
      (apply #'main rest))
