@@ -254,6 +254,25 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
                (incf ,base ,delta)))
            ,result)))))
 
+(declaim (inline bit-if-then-else))
+(ftype bit-if-then-else bit-vector bit-vector bit-vector &optional bit-vector bit-vector)
+(defun bit-if-then-else (condition then else
+                         &optional (res (make-array (length condition) :element-type 'bit)))
+  "if a then b else c"
+  (declare (optimize (speed 3) (safety 0)))
+  (let ((tmp (make-array (length condition) :element-type 'bit)))
+    (declare (dynamic-extent    tmp)
+             (simple-bit-vector tmp))
+    (bit-and then condition tmp)
+    (bit-andc2 else condition res)
+    (bit-ior tmp res res)
+    res))
+
+(assert (equal (bit-if-then-else #*00001111
+                                 #*00110011
+                                 #*01010101)
+               #*01010011))
+
 (ftype contingency-table half half node simple-bit-vector (values fn fn fn fn))
 (defun contingency-table (batch width node array)
   (declare (optimize (speed 3) (safety 0)))
