@@ -512,17 +512,18 @@ Also, instead of working on the sequence of states, it works on individual pairs
                          #'cross-entropy
                        (contingency-table batch width init array))
                      open))
-      (if (plusp *num-processes*)
-          (progn
-            (dotimes (i *num-processes*)
-              (push (bt:make-thread #'worker) threads))
-            (unwind-protect
-                (handler-case
-                    (map nil #'bt:join-thread threads)
-                  (SB-SYS:INTERACTIVE-INTERRUPT ()
-                    (map nil #'bt:destroy-thread threads)))
-              (print-variables acc)))
-          (single-thread-worker)))
+      (handler-case
+          (unwind-protect
+              (if (plusp *num-processes*)
+                  (unwind-protect
+                      (progn
+                        (dotimes (i *num-processes*)
+                          (push (bt:make-thread #'worker) threads))
+                        (map nil #'bt:join-thread threads))
+                    (map nil #'bt:destroy-thread threads))
+                  (single-thread-worker))
+            (print-variables acc))
+        (SB-SYS:INTERACTIVE-INTERRUPT ())))
     (iter (until (pqueue-empty-p acc))
           (for (values node g) = (pqueue-pop acc))
           (print-variables g node)
