@@ -478,27 +478,25 @@ Also, instead of working on the sequence of states, it works on individual pairs
      (let ((*trace-output* *error-output*))
        (time (apply #'main rest))))
     ((list csv)
-     (format *error-output* "dynamic space: ~aGB~%" (/ (sb-ext:dynamic-space-size) 1e9))
-     (format *error-output* "number of threads: ~a~%" *num-processes*)
      (let* ((list (read-as-bvs csv))
-            (batch (length list))
-            (width (/ (length (first list)) 2)))
+            (original-batch (length list))
+            (width (/ (length (first list)) 2))
+            (batch (or *num-samples* original-batch))
+            (array (bvs-array
+                    (if *num-samples*
+                        (simpsamp:list-sample *num-samples* list)
+                        list))))
+       (format *error-output* "dynamic space: ~aGB~%" (/ (sb-ext:dynamic-space-size) 1e9))
+       (format *error-output* "number of threads: ~a~%" *num-processes*)
        (format *error-output* "number of original samples: ~a~%" batch)
        (format *error-output* "encoding length: ~a~%" width)
-       (let ((batch (or *num-samples* batch))
-             (array (bvs-array
-                     (if *num-samples*
-                         (simpsamp:list-sample
-                          *num-samples*
-                          list)
-                         list))))
-         (format *error-output* "number of samples: ~a~%" batch)
-         (format
-          t "~&~(~:S~)~%"
-          (make-domain
-           (mapcar #'as-012
-                   (bistate-msdd batch width array
-                                 *g-threshold* *max-schema*)))))))
+       (format *error-output* "number of samples: ~a~%" batch)
+       (format
+        t "~&~(~:S~)~%"
+        (make-domain
+         (mapcar #'as-012
+                 (bistate-msdd batch width array
+                               *g-threshold* *max-schema*))))))
     (_
      (format *error-output*
              "Usage: msdd.ros ~
