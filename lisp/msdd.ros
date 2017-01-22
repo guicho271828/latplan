@@ -3,6 +3,7 @@
 #| <Put a one-line description here>
 exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
 |#
+;;; setup
 (progn ;;init forms
   #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank
                               priority-queue simpsamp lparallel) :silent t)
