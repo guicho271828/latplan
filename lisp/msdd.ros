@@ -18,7 +18,13 @@ exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
     (read-from-string
      (uiop:run-program "cat /proc/cpuinfo | grep -c processor" :output :string)))
 ;; (setf *kernel* (make-kernel *num-processes*))
-
+(defmacro print-variables (&rest args)
+  `(progn
+     (print (list ,@(iter (for arg in args)
+                          (collect `(quote ,arg))
+                          (collect arg)))
+            *error-output*)
+     (finish-output *error-output*)))
 ;;; set up the learning data
 
 (defun read-as-bvs (csv)
@@ -430,14 +436,6 @@ Wickens, T. D. 1989. Multiway Contingency Tables Analysis for the Social Science
         (progn (setf count 0)
                (format t " ~{~a~^ ~}~%" args)))
       (finish-output))))
-
-(defmacro print-variables (&rest args)
-  `(progn
-     (print (list ,@(iter (for arg in args)
-                          (collect `(quote ,arg))
-                          (collect arg)))
-            *error-output*)
-     (finish-output *error-output*)))
 
 ;; it seems there are still some magic happening here... 
 
