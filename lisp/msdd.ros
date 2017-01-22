@@ -452,7 +452,9 @@ Also, instead of working on the sequence of states, it works on individual pairs
                  (multiple-value-bind (n1 n2 n3 n4)
                      (contingency-table batch width node array)
                    ;; Add the node to the results if they are actually good
-                   (let ((g (cross-entropy n1 n2 n3 n4)))
+                   (let ((g (cross-entropy n1 n2 n3 n4))
+                         (f (msdd-gmax3 node n1 n2 n3 n4)))
+                     ;; (print-variables n1 n2 n3 n4 g f)
                      (when (and (< g-threashold g)
                                 (valid-leaf-node node width))
                        (bt:with-lock-held (lacc)
@@ -460,9 +462,8 @@ Also, instead of working on the sequence of states, it works on individual pairs
                                    (< (pqueue-front-key acc) g))
                            (pqueue-push node g acc))
                          (when (< max-schema (pqueue-length acc))
-                           (pqueue-pop acc)))))
-                   ;; Add the children to the queue
-                   (let ((f (msdd-gmax3 node n1 n2 n3 n4)))
+                           (pqueue-pop acc))))
+                     ;; Add the children to the queue
                      (when (and (< g-threashold f)
                                 (bt:with-lock-held (lacc)
                                   (or (< (pqueue-length acc) max-schema)
