@@ -30,56 +30,137 @@ def ResUnit (*layers):
     return Residual(
         Sequential(layers))
 
-class GumbelAE:
-    # common options
-    
-    def __init__(self,path,M=2,N=25,parameters=[]):
+class Network:
+    def __init__(self,path,parameters={}):
         import subprocess
         subprocess.call(["mkdir",path])
         self.path = path
-        self.M, self.N = M, N
         self.built = False
         self.loaded = False
-        self.min_temperature = 0.1
-        self.max_temperature = 5.0
-        self.anneal_rate = 0.0003
         self.verbose = True
-        self.params = parameters
-    def build_encoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        M, N = self.M, self.N
-        # 1,826,032 trainable params
-        return [Reshape((data_dim,)),
-                GaussianNoise(0.1),
-                Dense(self.params[0], activation='relu'),
-                BN(),
-                Dropout(self.params[1]),
-                Dense(self.params[0], activation='relu'),
-                BN(),
-                Dropout(self.params[1]),
-                Dense(M*N),     # ,activity_regularizer=activity_l1(0.0000001)
-                Reshape((N,M))]
-    def build_decoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        M, N = self.M, self.N
-        return [
-            SpatialDropout1D(self.params[1]),
-            # normal dropout after reshape was also effective
-            Reshape((N*M,)),
-            Dense(self.params[0], activation='relu'),
-            Dropout(self.params[1]),
-            Dense(self.params[0], activation='relu'),
-            Dropout(self.params[1]),
-            Dense(data_dim, activation='sigmoid'),
-            Reshape(input_shape),]
+        self.parameters = parameters
+        self.custom_log_functions = {}
+        self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update)]
     def build(self,input_shape):
         if self.built:
             if self.verbose:
                 print("Avoided building {} twice.".format(self))
             return
+        self._build(input_shape)
+        self.built = True
+        return self
+    def _build(self):
+        pass
+    def local(self,path):
+        import os.path as p
+        return p.join(self.path,path)
+    def save(self):
+        self._save()
+        return self
+    def _save(self):
+        import json
+        with open(self.local('aux.json'), 'w') as f:
+            json.dump({"parameters":self.parameters,
+                       "input_shape":self.net.input_shape[1:]}, f)
+    def load(self):
+        if not self.loaded:
+            self._load()
+            self.loaded = True
+        return self
+    def _load(self):
+        import json
+        with open(self.local('aux.json'), 'r') as f:
+            data = json.load(f)
+            self.parameters = data["parameters"]
+            self.build(tuple(data["input_shape"]))
+    def bar_update(self, epoch, logs):
+        custom_log_values = {}
+        for k in self.custom_log_functions:
+            custom_log_values[k] = self.custom_log_functions[k]()
+        self.bar.update(epoch, **custom_log_values, **logs)
+    def train(self,train_data,
+              epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,**kwargs):
+        for k,v in kwargs.items():
+            setattr(self, k, v)
+        self.build(train_data.shape[1:])
+        self.summary()
+        print({"parameters":self.parameters,
+               "train_shape":train_data.shape,
+               "test_shape":test_data.shape})
+        if test_data is not None:
+            validation = (test_data,test_data)
+        else:
+            validation = None
+        try:
+            import progressbar
+            self.bar = progressbar.ProgressBar(
+                max_value=epoch,
+                widgets=[
+                    progressbar.Timer(format='%(elapsed)s'),
+                    progressbar.Bar(),
+                    progressbar.AbsoluteETA(format='%(eta)s'), ' ',
+                    *(np.array(
+                        [ [progressbar.DynamicMessage(k), ' ',]
+                          for k in self.custom_log_functions ]).flatten()),
+                    progressbar.DynamicMessage('val_loss'), ' ',
+                    progressbar.DynamicMessage('loss')
+                ]
+            )
+            self.net.compile(optimizer=optimizer, loss=self.loss)
+            self.net.fit(
+                train_data, train_data,
+                nb_epoch=epoch, batch_size=batch_size,
+                shuffle=True, validation_data=validation, verbose=False,
+                callbacks=self.callbacks)
+        except KeyboardInterrupt:
+            print("learning stopped")
+        self.loaded = True
+        self.report(train_data,epoch,batch_size,optimizer,test_data)
+        if save:
+            self.save()
+        return self
+    def report(self,train_data,
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None):
+        pass
+
+class GumbelAE(Network):
+    def __init__(self,path,M=2,N=25,parameters={}):
+        super().__init__(path,{'M':M,'N':N,**parameters})
+        self.min_temperature = 0.1
+        self.max_temperature = 5.0
+        self.anneal_rate = 0.0003
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(self.__tau)
+    def build_encoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        M, N = self.parameters['M'], self.parameters['N']
+        return [Reshape((data_dim,)),
+                GaussianNoise(0.1),
+                Dense(self.parameters[0], activation='relu'),
+                BN(),
+                Dropout(self.parameters[1]),
+                Dense(self.parameters[0], activation='relu'),
+                BN(),
+                Dropout(self.parameters[1]),
+                Dense(M*N),
+                Reshape((N,M))]
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        M, N = self.parameters['M'], self.parameters['N']
+        return [
+            SpatialDropout1D(self.parameters[1]),
+            # normal dropout after reshape was also effective
+            Reshape((N*M,)),
+            Dense(self.parameters[0], activation='relu'),
+            Dropout(self.parameters[1]),
+            Dense(self.parameters[0], activation='relu'),
+            Dropout(self.parameters[1]),
+            Dense(data_dim, activation='sigmoid'),
+            Reshape(input_shape),]
+    def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
-        M, N = self.M, self.N
+        M, N = self.parameters['M'], self.parameters['N']
         tau = K.variable(self.max_temperature, name="temperature")
         def sampling(logits):
             U = K.random_uniform(K.shape(logits), 0, 1)
@@ -101,112 +182,49 @@ class GumbelAE:
             kl_loss = K.sum(q * (log_q - K.log(1.0/M)), axis=(1, 2))
             reconstruction_loss = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
                                                  K.reshape(y,(K.shape(x)[0],data_dim,)))
-            # l2_loss = K.sum(K.square(z[:,0]))
-            # l1_loss = K.sum(z[:,0])
-            # l2_loss = data_dim * K.mean(K.square(z[:,0]))
-            # l1_loss = data_dim * K.mean(z[:,0])
             return reconstruction_loss - kl_loss
         
         self.__tau = tau
-        self.__loss = gumbel_loss
+        self.loss = gumbel_loss
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
-        self.autoencoder = Model(x, y)
+        self.net = Model(x, y)
+        self.autoencoder = self.net
         self.autoencoder_binary = Model(x, y3)
-        self.built = True
-        return self
-    def local(self,path):
-        import os.path as p
-        return p.join(self.path,path)
-    def save(self):
-        import json
-        with open(self.local('aux.json'), 'w') as f:
-            json.dump(
-                {"N":self.N,
-                 "params":self.params,
-                 "input_shape":self.encoder.input_shape[1:],}, f)
+    def _save(self):
+        super()._save()
         self.encoder.save_weights(self.local("encoder.h5"))
         self.decoder.save_weights(self.local("decoder.h5"))
-        return self
-    def do_load(self):
-        import json
-        with open(self.local('aux.json'), 'r') as f:
-            data = json.load(f)
-            self.N = data["N"]
-            self.params = data["params"]
-            self.build(tuple(data["input_shape"]))
+    def _load(self):
+        super()._load()
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
-        return self
-    def load(self):
-        if not self.loaded:
-            self.do_load()
-            self.loaded = True
-        return self
-        
     def cool(self, epoch, logs):
-        new_tau = np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
-                          self.min_temperature])
-        # print("Tau = {:.4f}, Epoch = {}, {}".format(new_tau,epoch,logs), flush=True)
-        self.bar.update(epoch, tau=new_tau, **logs)
-        K.set_value(self.__tau, new_tau)
-        
-    def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,**kwargs):
-        for k,v in kwargs.items():
-            setattr(self, k, v)
-        self.build(train_data.shape[1:])
-        self.summary()
-        print({"params":self.params,"train_shape":train_data.shape,"test_shape":test_data.shape})
-        if test_data is not None:
-            validation = (test_data,test_data)
-        else:
-            validation = None
-        try:
-            import progressbar
-            self.bar = progressbar.ProgressBar(
-                max_value=epoch,
-                widgets=[
-                    progressbar.Timer(format='%(elapsed)s'),
-                    progressbar.Bar(),
-                    progressbar.AbsoluteETA(format='%(eta)s'), ' ',
-                    progressbar.DynamicMessage('tau'), ' ',
-                    progressbar.DynamicMessage('val_loss'), ' ',
-                    progressbar.DynamicMessage('loss')
-                ]
-            )
-            self.autoencoder.compile(optimizer=optimizer, loss=self.__loss)
-            self.autoencoder.fit(
-                train_data, train_data,
-                nb_epoch=epoch, batch_size=batch_size,
-                shuffle=True, validation_data=validation, verbose=False,
-                callbacks=[LambdaCallback(on_epoch_end=self.cool)])
-        except KeyboardInterrupt:
-            print("learning stopped")
-        self.loaded = True
-        v = self.verbose
-        self.verbose = False
+        K.set_value(
+            self.__tau,
+            np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
+                    self.min_temperature]))
+    def report(self,train_data,
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None):
+        opts = {'verbose':0,'batch_size':batch_size}
         def test_both(msg, fn):
             print(msg.format(fn(train_data)))
             if test_data is not None:
                 print((msg+" (validation)").format(fn(test_data)))
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
         test_both("Reconstruction MSE: {}",
-                  lambda data: self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder.evaluate(data,data,**opts))
         self.autoencoder_binary.compile(optimizer=optimizer, loss=mse)
         test_both("Binary Reconstruction MSE: {}",
-                  lambda data: self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder_binary.evaluate(data,data,**opts))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
         test_both("Reconstruction BCE: {}",
-                  lambda data: self.autoencoder.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder.evaluate(data,data,**opts))
         self.autoencoder_binary.compile(optimizer=optimizer, loss=bce)
         test_both("Binary Reconstruction BCE: {}",
-                  lambda data: self.autoencoder_binary.evaluate(data,data,verbose=0,batch_size=batch_size,))
+                  lambda data: self.autoencoder_binary.evaluate(data,data,**opts))
         test_both("Latent activation: {}",
                   lambda data: self.encode_binary(train_data,batch_size=batch_size,).mean())
-        self.verbose = v
-        if save:
-            self.save()
         return self
     def encode(self,data,**kwargs):
         self.load()
@@ -218,10 +236,12 @@ class GumbelAE:
         self.load()
         return self.autoencoder.predict(data,**kwargs)
     def encode_binary(self,data,**kwargs):
-        assert self.M == 2, "M={}, not 2".format(self.M)
-        return self.encode(data,**kwargs)[:,:,0].reshape(-1, self.N)
+        M, N = self.parameters['M'], self.parameters['N']
+        assert M == 2, "M={}, not 2".format(M)
+        return self.encode(data,**kwargs)[:,:,0].reshape(-1, N)
     def decode_binary(self,data,**kwargs):
-        assert self.M == 2, "M={}, not 2".format(self.M)
+        M, N = self.parameters['M'], self.parameters['N']
+        assert M == 2, "M={}, not 2".format(M)
         return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
     def summary(self,verbose=False):
         if verbose:
@@ -262,8 +282,8 @@ if __name__ == '__main__':
 class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
         data_dim = np.prod(input_shape)
-        M, N = self.M, self.N
-        # Trainable params: 1,436,320
+        M, N = self.parameters['M'], self.parameters['N']
+        # Trainable parameters: 1,436,320
         return [Reshape(input_shape+(1,)),
                 GaussianNoise(0.1),
                 Convolution2D(128,6,5,activation='relu',border_mode='same'),
@@ -275,3 +295,6 @@ class ConvolutionalGumbelAE(GumbelAE):
                 Flatten(),
                 Dense(M*N),
                 Reshape((N,M))]
+
+# class Discriminator:
+#     pass
