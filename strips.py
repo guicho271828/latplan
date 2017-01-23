@@ -41,7 +41,8 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
         for params in itertools.product(*parameters):
             print("Testing model with parameters={}".format(params))
             ae = learn_model(path, train, test,
-                             network=curry(network,parameters=params))
+                             network=curry(network,
+                                           parameters={i:v for i,v in enumerate(params)}))
             error = ae.autoencoder.evaluate(test,test,batch_size=4000,)
             results.append((error,)+params)
             print("Evaluation result for {} : error = {}".format(params,error))
