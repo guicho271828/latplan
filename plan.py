@@ -45,14 +45,12 @@ def latent_plan(init,goal,ae,mode='original'):
             print("skipped generating {}".format(d))
         return d
     
-    mode_dict = {'original':original, 'augmented':augmented, 'msdd':msdd}
-    
     # start planning
 
     echodo(["make","-C","lisp","-j","1"])
     echodo(["rm",ae.local("problem.plan")])
     
-    domain = mode_dict[mode]()
+    domain = locals()[mode]()
     echodo(["lisp/problem.bin",
             *list(ig_b.flatten().astype('int').astype('str'))],
            ae.local("problem.pddl"))
