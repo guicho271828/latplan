@@ -118,7 +118,9 @@ class Network:
         except KeyboardInterrupt:
             print("learning stopped")
         self.loaded = True
-        self.report(train_data,epoch,batch_size,optimizer,test_data,train_data_to,test_data_to)
+        self.report(train_data,
+                    epoch,batch_size,optimizer,
+                    test_data,train_data_to,test_data_to)
         if save:
             self.save()
         return self
