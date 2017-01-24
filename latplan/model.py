@@ -142,25 +142,25 @@ class GumbelAE(Network):
         M, N = self.parameters['M'], self.parameters['N']
         return [Reshape((data_dim,)),
                 GaussianNoise(0.1),
-                Dense(self.parameters[0], activation='relu'),
+                Dense(self.parameters['layer'], activation='relu'),
                 BN(),
-                Dropout(self.parameters[1]),
-                Dense(self.parameters[0], activation='relu'),
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['layer'], activation='relu'),
                 BN(),
-                Dropout(self.parameters[1]),
+                Dropout(self.parameters['dropout']),
                 Dense(M*N),
                 Reshape((N,M))]
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         M, N = self.parameters['M'], self.parameters['N']
         return [
-            SpatialDropout1D(self.parameters[1]),
+            SpatialDropout1D(self.parameters['dropout']),
             # normal dropout after reshape was also effective
             Reshape((N*M,)),
-            Dense(self.parameters[0], activation='relu'),
-            Dropout(self.parameters[1]),
-            Dense(self.parameters[0], activation='relu'),
-            Dropout(self.parameters[1]),
+            Dense(self.parameters['layer'], activation='relu'),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'], activation='relu'),
+            Dropout(self.parameters['dropout']),
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
     def _build(self,input_shape):
@@ -319,14 +319,13 @@ class Discriminator(Network):
     def build_encoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [Reshape((data_dim,)),
-                Dense(self.parameters[0], activation='relu'),
+                Dense(self.parameters['layer'], activation='relu'),
                 BN(),
-                Dropout(self.parameters[1]),
-                Dense(self.parameters[0], activation='relu'),
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['layer'], activation='relu'),
                 BN(),
-                Dropout(self.parameters[1]),
-                Dense(2),
-                Reshape((1,2))]
+                Dropout(self.parameters['dropout']),
+                Dense(2)]
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
@@ -343,9 +342,8 @@ class Discriminator(Network):
         def gumbel_loss(x, y):
             q = softmax(logits)
             log_q = K.log(q + 1e-20)
-            kl_loss = K.sum(q * (log_q - K.log(1.0/2)), axis=(1, 2))
-            reconstruction_loss = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                                                 K.reshape(y,(K.shape(x)[0],data_dim,)))
+            kl_loss = K.sum(q * (log_q - K.log(1.0/2)), axis=1)
+            reconstruction_loss = data_dim * bce(x,y)
             return reconstruction_loss - kl_loss
         
         self.__tau = tau
@@ -387,8 +385,6 @@ class Discriminator(Network):
         self.load()
         return self.net.predict(data,**kwargs)
     def discriminate_binary(self,data,**kwargs):
-        M, N = self.parameters['M'], self.parameters['N']
-        assert M == 2, "M={}, not 2".format(M)
         return self.discriminate(data,**kwargs)[:,:,0].reshape(-1, N)
     def summary(self,verbose=False):
         self.net.summary()

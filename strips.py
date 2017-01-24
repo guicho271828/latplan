@@ -31,6 +31,7 @@ def learn_model(path,train_data,test_data=None,network=GumbelAE):
     return ae
 
 def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE):
+    names      = ['layer','dropout']
     parameters = [[2000],[0.4],]
     best_error = float('inf')
     best_params = None
@@ -39,18 +40,18 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
     try:
         import itertools
         for params in itertools.product(*parameters):
-            print("Testing model with parameters={}".format(params))
+            params_dict = { k:v for k,v in zip(names,params) }
+            print("Testing model with parameters={}".format(params_dict))
             ae = learn_model(path, train, test,
-                             network=curry(network,
-                                           parameters={i:v for i,v in enumerate(params)}))
+                             network=curry(network, parameters=params_dict))
             error = ae.autoencoder.evaluate(test,test,batch_size=4000,)
             results.append((error,)+params)
-            print("Evaluation result for {} : error = {}".format(params,error))
+            print("Evaluation result for {} : error = {}".format(params_dict,error))
             print("Current results:\n{}".format(np.array(results)),flush=True)
             if error < best_error:
                 print("Found a better parameter {}: error:{} old-best:{}".format(
-                    params,error,best_error))
-                best_params = params
+                    params_dict,error,best_error))
+                best_params = params_dict
                 best_error = error
                 best_ae = ae
         print("Best parameter {}: error:{}".format(best_params,best_error))
