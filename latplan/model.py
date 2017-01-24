@@ -308,7 +308,7 @@ class ConvolutionalGumbelAE(GumbelAE):
                 Dense(M*N),
                 Reshape((N,M))]
 
-class Discriminator:
+class Discriminator(Network):
     def __init__(self,path,parameters={}):
         super().__init__(path,parameters)
         self.min_temperature = 0.1
