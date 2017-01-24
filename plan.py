@@ -60,6 +60,9 @@ def latent_plan(init,goal,ae,mode='original'):
             "--","ff-clean",
             ae.local("problem.pddl"),
             domain])
+    if os.path.exists(ae.local("problem.negative")):
+        echodo(["rm",ae.local("problem.negative")])
+        raise PlanException("goal can be simplified to FALSE. No plan will solve it")
     if not os.path.exists(ae.local("problem.plan")):
         echodo(["planner-scripts/limit.sh","-v","-t","30",
                 "-o","--alias lama-first","--","fd-alias-clean",
