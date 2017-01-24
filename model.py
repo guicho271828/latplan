@@ -325,7 +325,8 @@ class Discriminator(Network):
                 Dense(self.parameters[0], activation='relu'),
                 BN(),
                 Dropout(self.parameters[1]),
-                Dense(2)]
+                Dense(2),
+                Reshape((1,2))]
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
@@ -342,7 +343,7 @@ class Discriminator(Network):
         def gumbel_loss(x, y):
             q = softmax(logits)
             log_q = K.log(q + 1e-20)
-            kl_loss = K.sum(q * (log_q - K.log(1.0/M)), axis=(1, 2))
+            kl_loss = K.sum(q * (log_q - K.log(1.0/2)), axis=(1, 2))
             reconstruction_loss = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
                                                  K.reshape(y,(K.shape(x)[0],data_dim,)))
             return reconstruction_loss - kl_loss
