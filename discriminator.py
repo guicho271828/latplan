@@ -36,13 +36,13 @@ if __name__ == '__main__':
     d2 = np.concatenate((test,  test_random),  axis=0)
     l1 = np.concatenate((np.ones(len(train)), np.zeros(len(train_random))), axis=0)
     l2 = np.concatenate((np.ones(len(test)),  np.zeros(len(test_random))), axis=0)
-    raw_discriminator = Discriminator("samples/mnist_puzzle33p_raw_discriminator/") 
+    raw_discriminator = Discriminator("samples/mnist_puzzle33p_raw_discriminator/",{0:2000,1:0.4}) 
     raw_discriminator.train(d1, test_data=d2, train_data_to=l1, test_data_to=l2)
 
     ae = GumbelAE("samples/mnist_puzzle33p_model/").load()
     b1 = ae.encode_binary(d1)
     b2 = ae.encode_binary(d2)
-    bin_discriminator = Discriminator("samples/mnist_puzzle33p_bin_discriminator/")
+    bin_discriminator = Discriminator("samples/mnist_puzzle33p_bin_discriminator/",{0:2000,1:0.4})
     bin_discriminator.train(b1, test_data=b2, train_data_to=l1, test_data_to=l2)
     
     
