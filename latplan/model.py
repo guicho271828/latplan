@@ -303,5 +303,84 @@ class ConvolutionalGumbelAE(GumbelAE):
                 Dense(M*N),
                 Reshape((N,M))]
 
-# class Discriminator:
-#     pass
+class Discriminator:
+    def __init__(self,path,parameters={}):
+        super().__init__(path,parameters)
+        self.min_temperature = 0.1
+        self.max_temperature = 5.0
+        self.anneal_rate = 0.0003
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(self.__tau)
+    def build_encoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        return [Reshape((data_dim,)),
+                Dense(self.parameters[0], activation='relu'),
+                BN(),
+                Dropout(self.parameters[1]),
+                Dense(self.parameters[0], activation='relu'),
+                BN(),
+                Dropout(self.parameters[1]),
+                Dense(2)]
+    def _build(self,input_shape):
+        data_dim = np.prod(input_shape)
+        print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
+        tau = K.variable(self.max_temperature, name="temperature")
+        def sampling(logits):
+            U = K.random_uniform(K.shape(logits), 0, 1)
+            z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
+            return softmax( z / tau )
+        x = Input(shape=input_shape)
+        logits = Sequential(self.build_encoder(input_shape))(x)
+        z = Lambda(sampling)(logits)
+        z3 = Lambda(lambda z:K.round(z))(z)
+
+        def gumbel_loss(x, y):
+            q = softmax(logits)
+            log_q = K.log(q + 1e-20)
+            kl_loss = K.sum(q * (log_q - K.log(1.0/M)), axis=(1, 2))
+            reconstruction_loss = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                                                 K.reshape(y,(K.shape(x)[0],data_dim,)))
+            return reconstruction_loss - kl_loss
+        
+        self.__tau = tau
+        self.loss = gumbel_loss
+        self.net = Model(x, z)
+        self.net_binary = Model(x, z3)
+    def _save(self):
+        super()._save()
+        self.net.save_weights(self.local("net.h5"))
+    def _load(self):
+        super()._load()
+        self.net.load_weights(self.local("net.h5"))
+    def cool(self, epoch, logs):
+        K.set_value(
+            self.__tau,
+            np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
+                    self.min_temperature]))
+    def report(self,train_data,
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,
+               train_data_to=train_data,
+               test_data_to=test_data):
+        opts = {'verbose':0,'batch_size':batch_size}
+        def test_both(msg, fn): 
+            print(msg.format(fn(train_data,train_data_to)))
+            if test_data is not None:
+                print((msg+" (validation)").format(fn(test_data,test_data_to)))
+        self.net.compile(optimizer=optimizer, loss=bce)
+        test_both("BCE: {}",
+                  lambda data, data_to: self.net.evaluate(data,data_to,**opts))
+        self.net_binary.compile(optimizer=optimizer, loss=bce)
+        test_both("Binary BCE: {}",
+                  lambda data, data_to: self.net_binary.evaluate(data,data_to,**opts))
+        return self
+    def discriminate(self,data,**kwargs):
+        self.load()
+        return self.net.predict(data,**kwargs)
+    def discriminate_binary(self,data,**kwargs):
+        M, N = self.parameters['M'], self.parameters['N']
+        assert M == 2, "M={}, not 2".format(M)
+        return self.discriminate(data,**kwargs)[:,:,0].reshape(-1, N)
+    def summary(self,verbose=False):
+        self.net.summary()
+        return self
+    
