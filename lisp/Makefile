@@ -4,7 +4,7 @@
 	ros build $<
 	mv $* $@
 
-all: domain.bin problem.bin parse-plan.bin
+all: domain.bin problem.bin parse-plan.bin sas.bin
 
 clean:
 	-rm *.bin *.pddl
