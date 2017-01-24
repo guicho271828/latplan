@@ -55,7 +55,10 @@ if __name__ == '__main__':
     bin_discriminator = Discriminator("samples/mnist_puzzle33p_bin_discriminator/",
                                       {'layer':2000,'dropout':0.4}).load()
     # bin_discriminator.train(b1, test_data=b2, train_data_to=l1, test_data_to=l2)
-    print(list(bin_discriminator.discriminate_binary(b1)))
+    results = bin_discriminator.discriminate_binary(b2)
+    print(results)
+    for r in results:
+        print(r)
     
     
     
