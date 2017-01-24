@@ -80,9 +80,13 @@ class Network:
         self.bar.update(epoch, **custom_log_values, **logs)
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,
-              train_data_to=train_data,
-              test_data_to=test_data,
+              train_data_to=None,
+              test_data_to=None,
               **kwargs):
+        test_data     = train_data if test_data is None else test_data
+        train_data_to = train_data if train_data_to is None else train_data_to
+        test_data_to  = test_data  if test_data_to is None else test_data_to
+        validation = (test_data,test_data_to) if test_data is not None else None
         for k,v in kwargs.items():
             setattr(self, k, v)
         self.build(train_data.shape[1:])
@@ -90,10 +94,6 @@ class Network:
         print({"parameters":self.parameters,
                "train_shape":train_data.shape,
                "test_shape":test_data.shape})
-        if test_data is not None:
-            validation = (test_data,test_data_to)
-        else:
-            validation = None
         try:
             import progressbar
             self.bar = progressbar.ProgressBar(
@@ -123,9 +123,10 @@ class Network:
             self.save()
         return self
     def report(self,train_data,
-               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,
-               train_data_to=train_data,
-               test_data_to=test_data):
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               test_data=None,
+               train_data_to=None,
+               test_data_to=None):
         pass
 
 class GumbelAE(Network):
@@ -210,9 +211,13 @@ class GumbelAE(Network):
             np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
                     self.min_temperature]))
     def report(self,train_data,
-               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,
-               train_data_to=train_data,
-               test_data_to=test_data):
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               test_data=None,
+               train_data_to=None,
+               test_data_to=None,):
+        test_data     = train_data if test_data is None else test_data
+        train_data_to = train_data if train_data_to is None else train_data_to
+        test_data_to  = test_data  if test_data_to is None else test_data_to
         opts = {'verbose':0,'batch_size':batch_size}
         def test_both(msg, fn):
             print(msg.format(fn(train_data)))
@@ -358,9 +363,13 @@ class Discriminator:
             np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
                     self.min_temperature]))
     def report(self,train_data,
-               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,
-               train_data_to=train_data,
-               test_data_to=test_data):
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               test_data=None,
+               train_data_to=None,
+               test_data_to=None,):
+        test_data     = train_data if test_data is None else test_data
+        train_data_to = train_data if train_data_to is None else train_data_to
+        test_data_to  = test_data  if test_data_to is None else test_data_to
         opts = {'verbose':0,'batch_size':batch_size}
         def test_both(msg, fn): 
             print(msg.format(fn(train_data,train_data_to)))
