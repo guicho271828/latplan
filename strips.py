@@ -31,6 +31,7 @@ def learn_model(path,train_data,test_data=None,network=GumbelAE):
     return ae
 
 def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE):
+    names      = ['layer','dropout']
     parameters = [[2000],[0.4],]
     best_error = float('inf')
     best_params = None
@@ -39,17 +40,18 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
     try:
         import itertools
         for params in itertools.product(*parameters):
-            print("Testing model with parameters={}".format(params))
+            params_dict = { k:v for k,v in zip(names,params) }
+            print("Testing model with parameters={}".format(params_dict))
             ae = learn_model(path, train, test,
-                             network=curry(network,parameters=params))
+                             network=curry(network, parameters=params_dict))
             error = ae.autoencoder.evaluate(test,test,batch_size=4000,)
             results.append((error,)+params)
-            print("Evaluation result for {} : error = {}".format(params,error))
+            print("Evaluation result for {} : error = {}".format(params_dict,error))
             print("Current results:\n{}".format(np.array(results)),flush=True)
             if error < best_error:
                 print("Found a better parameter {}: error:{} old-best:{}".format(
-                    params,error,best_error))
-                best_params = params
+                    params_dict,error,best_error))
+                best_params = params_dict
                 best_error = error
                 best_ae = ae
         print("Best parameter {}: error:{}".format(best_params,best_error))
@@ -130,32 +132,34 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
     checker = K.function([y_orig,b],[ok])
     def check_ok(flipped_bs):
         return checker([ys1,flipped_bs])[0]
-
-    last_skips = 0
-    for diffbit in range(1,max_diff):
-        some = False
-        for bv in flips(bitnum,diffbit):
-            if np.any([ np.all(np.greater_equal(bv,bv2)) for bv2 in failed_bv ]):
-                # print("previously seen with failure")
-                last_skips += 1
-                continue
-            print(bv, {"blk": len(failed_bv), "skip":last_skips, "acc":len(final_bs1)})
-            last_skips = 0
-            flipped_bs = flip(bs1,[bv])
-            oks = check_ok(flipped_bs)
-            new_bs = flipped_bs[oks]
-            ok_num = len(new_bs)
-            if ok_num > 0:
-                some = True
-                final_bs1.append(new_bs)
-                # we do not enumerate destination states.
-                # because various states are applicable, single destination state is enough
-                final_bs2.append(bs2[oks])
-            else:
-                failed_bv.append(bv)
-        if not some:
-            print("No more augmentation, stopped")
-            break
+    try:
+        last_skips = 0
+        for diffbit in range(1,max_diff):
+            some = False
+            for bv in flips(bitnum,diffbit):
+                if np.any([ np.all(np.greater_equal(bv,bv2)) for bv2 in failed_bv ]):
+                    # print("previously seen with failure")
+                    last_skips += 1
+                    continue
+                print(bv, {"blk": len(failed_bv), "skip":last_skips, "acc":len(final_bs1)})
+                last_skips = 0
+                flipped_bs = flip(bs1,[bv])
+                oks = check_ok(flipped_bs)
+                new_bs = flipped_bs[oks]
+                ok_num = len(new_bs)
+                if ok_num > 0:
+                    some = True
+                    final_bs1.append(new_bs)
+                    # we do not enumerate destination states.
+                    # because various states are applicable, single destination state is enough
+                    final_bs2.append(bs2[oks])
+                else:
+                    failed_bv.append(bv)
+            if not some:
+                print("No more augmentation, stopped")
+                break
+    except KeyboardInterrupt:
+        print("augmentation stopped")
     return np.concatenate(final_bs1,axis=0), np.concatenate(final_bs2,axis=0)
 
 def bce(x,y):
