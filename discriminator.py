@@ -53,9 +53,9 @@ if __name__ == '__main__':
     b1 = ae.encode_binary(d1)
     b2 = ae.encode_binary(d2)
     bin_discriminator = Discriminator("samples/mnist_puzzle33p_bin_discriminator/",
-                                      {'layer':2000,'dropout':0.4})
-    bin_discriminator.train(b1, test_data=b2, train_data_to=l1, test_data_to=l2)
-    
+                                      {'layer':2000,'dropout':0.4}).load()
+    # bin_discriminator.train(b1, test_data=b2, train_data_to=l1, test_data_to=l2)
+    print(list(bin_discriminator.discriminate_binary(b1)))
     
     
     

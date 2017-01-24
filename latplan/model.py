@@ -387,7 +387,7 @@ class Discriminator(Network):
         self.load()
         return self.net.predict(data,**kwargs)
     def discriminate_binary(self,data,**kwargs):
-        return self.discriminate(data,**kwargs)[:,:,0].reshape(-1, N)
+        return self.discriminate(data,**kwargs)[:,0]
     def summary(self,verbose=False):
         self.net.summary()
         return self
