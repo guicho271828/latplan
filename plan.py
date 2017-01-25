@@ -14,89 +14,76 @@ def echodo(cmd,file=None):
         with open(file,"w") as f:
             subprocess.call(cmd,stdout=f)
 
+def echo_out(cmd):
+    subprocess.call(["echo"]+cmd)
+    return subprocess.check_output(cmd)
+
 class PlanException(BaseException):
     pass
 
-def latent_plan(init,goal,ae,mode='original'):
+options = {
+    "lmcut" : "--search astar(lmcut())",
+    "blind" : "--search astar(blind())",
+    "hmax"  : "--search astar(hmax())",
+    "mands" : "--search astar(merge_and_shrink(shrink_strategy=shrink_bisimulation(max_states=50000,greedy=false),merge_strategy=merge_dfp(),label_reduction=exact(before_shrinking=true,before_merging=false)))",
+    "pdb"   : "--search astar(pdb())",
+    "cpdb"  : "--search astar(cpdbs())",
+    "ipdb"  : "--search astar(ipdb())",
+    "zopdb"  : "--search astar(zopdbs())",
+}
+
+def latent_plan(init,goal,ae,mode='lmcut'):
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal.png")
 
-    def original():
-        d = ae.local("domain.pddl")
-        a = ae.local("actions.csv")
-        if not os.path.exists(d) or os.path.getmtime(a) > os.path.getmtime(d):
-            echodo(["lisp/domain.bin",a], d)
-        else:
-            print("skipped generating {}".format(d))
-        return d
-    def augmented():
-        d = ae.local("augmented.pddl")
-        a = ae.local("augmented.csv")
-        if not os.path.exists(d) or os.path.getmtime(a) > os.path.getmtime(d):
-            echodo(["lisp/domain.bin",a], d)
-        else:
-            print("skipped generating {}".format(d))
-        return d
-    def msdd():
-        d = ae.local("msdd.pddl")
-        a = ae.local("augmented.csv")
-        if not os.path.exists(d) or os.path.getmtime(a) > os.path.getmtime(d):
-            echodo(["lisp/msdd.ros", "-t", "-k", "200", "-n", "1000", a], d)
-        else:
-            print("skipped generating {}".format(d))
-        return d
-    
-    # start planning
+    # np.savetxt(ae.local("problem.csv"),ig_b.flatten().astype('int'),"%d")
 
+    # start planning
+    plan_raw = ae.local("problem.sasp.plan")
+    plan = ae.local("{}.plan".format(mode))
+    echodo(["rm",plan])
     echodo(["make","-C","lisp","-j","1"])
-    echodo(["rm",ae.local("problem.plan")])
-    
-    domain = locals()[mode]()
-    echodo(["lisp/problem.bin",
-            *list(ig_b.flatten().astype('int').astype('str'))],
-           ae.local("problem.pddl"))
-    echodo(["planner-scripts/limit.sh","-v","-t","30",
-            "--","ff-clean",
-            ae.local("problem.pddl"),
-            domain])
-    if os.path.exists(ae.local("problem.negative")):
-        echodo(["rm",ae.local("problem.negative")])
-        raise PlanException("goal can be simplified to FALSE. No plan will solve it")
-    if not os.path.exists(ae.local("problem.plan")):
-        echodo(["planner-scripts/limit.sh","-v","-t","30",
-                "-o","--alias lama-first","--","fd-alias-clean",
-                ae.local("problem.pddl"),
-                domain])
-    if not os.path.exists(ae.local("problem.plan")):
+    echodo(["make","-C",ae.path,"-f","../Makefile"])
+    echodo(["planner-scripts/limit.sh","-v","-t","3600",
+            "-o",options[mode],
+            "--","fd-sas-clean",
+            ae.local("problem.sasp")])
+    if not os.path.exists(plan_raw):
         raise PlanException("no plan found")
-    subprocess.call(["echo"]+["lisp/parse-plan.bin",ae.local("problem.plan"),
-                              *list(ig_b[0].flatten().astype('int').astype('str'))])
-    out = subprocess.check_output(["lisp/parse-plan.bin",ae.local("problem.plan"),
-                                   *list(ig_b[0].flatten().astype('int').astype('str'))])
+    echodo(["mv",plan_raw,plan])
+    out = echo_out(["lisp/parse-plan.bin",plan,
+                    *list(ig_b[0].flatten().astype('int').astype('str'))])
     lines = out.splitlines()
     if len(lines) is 2:
         raise PlanException("not an interesting problem")
     numbers = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     print(numbers)
     plan_images = ae.decode_binary(numbers)
-    plot_grid(plan_images,path=ae.local('plan.png'))
+    plot_grid(plan_images,path=ae.local('{}.png'.format(mode)))
 
 def select(data,num):
     return data[np.random.randint(0,data.shape[0],num)]
 
 if __name__ == '__main__':
+    import sys
     import random
     from model import GumbelAE
     ae = GumbelAE("samples/mnist_puzzle33p_model/")
     import mnist_puzzle
     configs = np.array(list(mnist_puzzle.generate_configs(9)))
     while True:
-        ig_c = select(configs,2)
+        # hardest 8puzzle instance (31 moves) from
+        # http://w01fe.com/blog/2009/01/the-hardest-eight-puzzle-instances-take-31-moves-to-solve/
+        # 8 6 7
+        # 2 5 4
+        # 3 . 1
+        ig_c = [[7,8,3,6,5,4,1,2,0],
+                [0,1,2,3,4,5,6,7,8]]
         ig = mnist_puzzle.states(3,3,ig_c)
         try:
-            latent_plan(*ig, ae)
-            break
+            latent_plan(*ig, ae, sys.argv[1])
         except PlanException as e:
             print(e)
+        break
     # print("The problem was solvable. Trying the original formulation")
     # latent_plan(*ig, ae)
     # print("Original formulation is also solvable.")
