@@ -1,0 +1,119 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
+|#
+
+;;; setup
+
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre function-cache swank) :silent t)
+  )
+
+(defpackage :ros.script.to-sas.3690427216
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :function-cache))
+(in-package :ros.script.to-sas.3690427216)
+
+(defun read-as-lists (csv)
+  (remove nil
+          (iter (for line in-file csv using #'read-line)
+                (collect
+                    (iter (for o in-stream (make-string-input-stream line))
+                          (collect o))))))
+
+(function-cache:defcached sym (&rest args)
+  (intern (format nil "~{~a~}" args)))
+
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (sym 'z dim))
+
+;;; sas
+
+(defmacro with-section ((name) &body body)
+  `(call-with-section ',name (lambda () ,@body)))
+(defun call-with-section (name fn)
+  (format t "~&begin_~a~%" name)
+  (funcall fn)
+  (format t "~&end_~a~%" name))
+
+(defun printn (thing)
+  (princ thing)
+  (terpri))
+
+(defun zip (&rest args)
+  (apply #'mapcar #'list args))
+
+(defun make-sas (domain-data problem-data)
+  (let* ((dim (/ (length problem-data) 2))
+         (dims (iota dim))
+         (*print-case* :downcase))
+    (with-section (version)
+      (printn 3))
+    (with-section (metric)
+      (printn 0))
+    (printn dim)
+    (iter (for d in dims)
+          (with-section (variable)
+            (printn (z d))
+            (printn -1)
+            (printn 2)
+            (format t "Atom ~A()~%" (z d))
+            (format t "NegatedAtom ~A()~%" (z d))))
+    (printn 0)                           ;mutex
+    (with-section (state)
+      (format t "~{~A~%~}" (subseq problem-data 0 dim)))
+    (with-section (goal)
+      (printn dim)
+      (format t "~:{~A ~A~%~}" (zip dims (subseq problem-data dim))))
+    (printn (length domain-data))
+    (dolist (transition domain-data)
+      (with-section (operator)
+        (format t "a~{~A~}~%" transition)
+        ;; prevail conditions
+        (let ((from (subseq transition 0 dim))
+              (to   (subseq transition dim)))
+          (printn (count t (mapcar #'= from to)))
+          (iter (for v1 in from)
+                (for v2 in to)
+                (for i from 0)
+                (when (= v1 v2)
+                  (format t "~a ~a~%" i v1))))
+        ;; effects
+        (let ((from (subseq transition 0 dim))
+              (to   (subseq transition dim)))
+          (printn (count t (mapcar #'/= from to)))
+          (iter (for v1 in from)
+                (for v2 in to)
+                (for i from 0)
+                (when (/= v1 v2)
+                  (format t "0 ~a ~a ~a~%" i v1 v2))))
+        (printn 1)))
+    (printn 0)))
+
+;;; interface
+
+(setf *print-right-margin* 70)
+
+(defun main (&rest args)
+  (match args
+    ((list* (or "-p" "--profile") rest)
+     (swank:profile-reset)
+     (swank:profile-package :msdd t nil)
+     (sb-profile:unprofile read-as-bvs bvs-array)
+     (unwind-protect
+         (apply #'main rest)
+       (swank:profile-report)))
+    ((list* (or "-t" "--time") rest)
+     (let ((*trace-output* *error-output*))
+       (time (apply #'main rest))))
+    ((list* domain-csv init-goal)
+     (make-sas (read-as-lists domain-csv)
+               (mapcar #'read-from-string init-goal)))))
+
+
+;;; vim: set ft=lisp lisp:
+
+
+
