@@ -2,7 +2,7 @@
 
 import numpy as np
 from functools import reduce
-from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise
+from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 from keras.optimizers import Adam
@@ -140,11 +140,11 @@ class GumbelSoftmax:
     def call(self,logits):
         u = K.random_uniform(K.shape(logits), 0, 1)
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
-        return softmax( ( logits + gumbel ) / self.tau )
+        return K.softmax( ( logits + gumbel ) / self.tau )
     def __call__(self,logits):
         return Lambda(self.call)(logits)
     def loss(self, logits):
-        q = softmax(logits)
+        q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
         return - K.sum(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
                        axis=tuple(range(1,len(K.int_shape(logits)))))
@@ -387,6 +387,125 @@ class Discriminator(Network):
         return self.net.predict(data,**kwargs)
     def discriminate_binary(self,data,**kwargs):
         return self.discriminate(data,**kwargs)[:,0]
+    def summary(self,verbose=False):
+        self.net.summary()
+        return self
+    
+def wrap(x,y):
+    "wrap arbitrary operation"
+    return Lambda(lambda x:y)(x)
+
+class ActionDiscriminator(Discriminator):
+    def __init__(self,path,parameters={}):
+        super().__init__(path,parameters)
+    def _build(self,input_shape):
+        # Assume a batch of 2N-bit binary vectors.
+        # First N bit is a predecessor, last N bit is a successor.
+        print(input_shape)
+        assert len(input_shape) == 1
+        # 1st version: raw input
+        # x = Input(shape=input_shape)
+        # N = input_shape[1] / 2
+        # x = K.reshape(x,(-1,N,2))
+        # 
+        # 2nd version:
+        # Convert it to bernoulli (binary categorical) distribution.
+        # x1 = Input(shape=input_shape)
+        # x2 = 1 - x1
+        # N = input_shape[1] / 2
+        # x1 = K.permute_dimensions(K.reshape(x1,(-1,N,2,1)),(0,2,3,1)) # -1,2,1,N
+        # x2 = K.permute_dimensions(K.reshape(x2,(-1,N,2,1)),(0,2,3,1))
+        # x = K.concatenate((x1,x2), axis=1)
+        # assert K.int_shape(x)[1] == 4
+        # assert K.int_shape(x)[2] == 1
+        # assert K.int_shape(x)[3] == N
+        # 
+        # 3rd version: 7 cases
+        x = Input(shape=input_shape)
+        N = input_shape[0] // 2
+        print(N)
+        import tensorflow as tfl
+        print(K.int_shape(x))
+        pre_t = tfl.slice(x,[0,0],[-1,N],name="pre_t")
+        suc_t = tfl.slice(x,[0,N],[-1,-1],name="suc_t")
+        pre_f = 1 - pre_t
+        suc_f = 1 - suc_t
+        tt = pre_t * suc_t
+        tf = pre_t * suc_f
+        ft = pre_f * suc_t
+        ff = pre_f * suc_f
+        _t = suc_t
+        _f = suc_f
+        eq = tt + ff
+        strips_category = tfl.stack((tt,tf,ft,ff,_t,_f,eq),axis=-1)
+        strips_category = K.reshape(strips_category,(-1,N,7,1))
+        strips_category = wrap(x,strips_category)
+        a = self.parameters['actions']
+        var_match_logits = Sequential([
+            LocallyConnected2D(2*a,1,7), # [-1,N,1,2a]
+            Reshape((N,a,2))             # [-1,N,a,2]
+        ])(strips_category)
+        gs1 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
+        var_match_bernoulli = gs1(var_match_logits) # [-1,N,a,2]
+
+        print(K.int_shape(var_match_bernoulli))
+        var_match = tfl.slice(var_match_bernoulli,[0,0,0,0],[-1,N,a,1],
+                              name="var_match") # [-1,N,a,1]
+        var_match = K.squeeze(var_match,3)             # [-1,N,a]
+        action_match_logits = K.prod(var_match,axis=1) # [-1,a]
+        action_unmatch_logits = 1 - K.sum(action_match_logits,axis=1,keepdims=True) # [-1,1]
+        action_logits = K.concatenate((action_match_logits,action_unmatch_logits),axis=1) # [-1,a+1]
+        action_logits = wrap(var_match_bernoulli,action_logits)
+        
+        gs2 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
+        action_categorical = gs2(action_logits) # [-1,a+1]
+        action_match_categorical = tfl.slice(action_categorical,[0,0],[-1,a])
+        action_unmatch_categorical = tfl.slice(action_categorical,[0,a],[-1,1])
+        action_match_any = 1 - action_unmatch_categorical
+        def loss(x, y):
+            return bce(x,y) + gs1.loss(var_match_logits) + gs2.loss(action_logits)
+        
+        self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
+        self.callbacks.append(LambdaCallback(on_epoch_end=gs2.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
+        self.loss = loss
+        action_match_any = wrap(action_categorical,action_match_any)
+        self.net = Model(x, action_match_any)
+        var_match = wrap(var_match_bernoulli,var_match)
+        self._precondition_match_var = Model(x, var_match)
+        self._action = Model(x, action_categorical)
+    def _save(self):
+        super()._save()
+        self.net.save_weights(self.local("net.h5"))
+    def _load(self):
+        super()._load()
+        self.net.load_weights(self.local("net.h5"))
+    def report(self,train_data,
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               test_data=None,
+               train_data_to=None,
+               test_data_to=None,):
+        test_data     = train_data if test_data is None else test_data
+        train_data_to = train_data if train_data_to is None else train_data_to
+        test_data_to  = test_data  if test_data_to is None else test_data_to
+        opts = {'verbose':0,'batch_size':batch_size}
+        def test_both(msg, fn): 
+            print(msg.format(fn(train_data,train_data_to)))
+            if test_data is not None:
+                print((msg+" (validation)").format(fn(test_data,test_data_to)))
+        self.net.compile(optimizer=optimizer, loss=bce)
+        test_both("BCE: {}",
+                  lambda data, data_to: self.net.evaluate(data,data_to,**opts))
+        return self
+    def discriminate(self,data,**kwargs):
+        self.load()
+        return self.net.predict(data,**kwargs)
+    def action(self,data,**kwargs):
+        self.load()
+        return self._action.predict(data,**kwargs)
+    def precondition_match_var(self,data,**kwargs):
+        self.load()
+        return self._precondition_match_var.predict(data,**kwargs)
     def summary(self,verbose=False):
         self.net.summary()
         return self
