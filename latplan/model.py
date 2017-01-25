@@ -131,14 +131,35 @@ class Network:
                test_data_to=None):
         pass
 
+
+class GumbelSoftmax:
+    def __init__(self,min,max,anneal_rate):
+        self.min = min
+        self.anneal_rate = anneal_rate
+        self.tau = K.variable(max, name="temperature")
+    def call(self,logits):
+        u = K.random_uniform(K.shape(logits), 0, 1)
+        gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
+        return softmax( ( logits + gumbel ) / self.tau )
+    def __call__(self,logits):
+        return Lambda(self.call)(logits)
+    def loss(self, logits):
+        q = softmax(logits)
+        log_q = K.log(q + 1e-20)
+        return - K.sum(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
+                       axis=tuple(range(1,len(K.int_shape(logits)))))
+    def cool(self, epoch, logs):
+        K.set_value(
+            self.tau,
+            np.max([self.min,
+                    K.get_value(self.tau) * np.exp(- self.anneal_rate * epoch)]))
+
 class GumbelAE(Network):
     def __init__(self,path,M=2,N=25,parameters={}):
         super().__init__(path,{'M':M,'N':N,**parameters})
         self.min_temperature = 0.1
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(self.__tau)
     def build_encoder(self,input_shape):
         data_dim = np.prod(input_shape)
         M, N = self.parameters['M'], self.parameters['N']
@@ -169,14 +190,10 @@ class GumbelAE(Network):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N = self.parameters['M'], self.parameters['N']
-        tau = K.variable(self.max_temperature, name="temperature")
-        def sampling(logits):
-            U = K.random_uniform(K.shape(logits), 0, 1)
-            z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
-            return softmax( z / tau )
         x = Input(shape=input_shape)
         logits = Sequential(self.build_encoder(input_shape))(x)
-        z = Lambda(sampling)(logits)
+        gs = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
+        z = gs(logits)
         _decoder = self.build_decoder(input_shape)
         y  = Sequential(_decoder)(z)
         z2 = Input(shape=(N,M))
@@ -184,16 +201,15 @@ class GumbelAE(Network):
         z3 = Lambda(lambda z:K.round(z))(z)
         y3 = Sequential(_decoder)(z3)
 
-        def gumbel_loss(x, y):
-            q = softmax(logits)
-            log_q = K.log(q + 1e-20)
-            kl_loss = K.sum(q * (log_q - K.log(1.0/M)), axis=(1, 2))
+        def loss(x, y):
+            kl_loss = gs.loss(logits)
             reconstruction_loss = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
                                                  K.reshape(y,(K.shape(x)[0],data_dim,)))
-            return reconstruction_loss - kl_loss
-        
-        self.__tau = tau
-        self.loss = gumbel_loss
+            return reconstruction_loss + kl_loss
+
+        self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
+        self.loss = loss
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.net = Model(x, y)
@@ -207,11 +223,6 @@ class GumbelAE(Network):
         super()._load()
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
-    def cool(self, epoch, logs):
-        K.set_value(
-            self.__tau,
-            np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
-                    self.min_temperature]))
     def report(self,train_data,
                epoch=200,batch_size=1000,optimizer=Adam(0.001),
                test_data=None,
@@ -316,8 +327,6 @@ class Discriminator(Network):
         self.min_temperature = 0.1
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(self.__tau)
     def build_encoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [Reshape((data_dim,)),
@@ -331,25 +340,20 @@ class Discriminator(Network):
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
-        tau = K.variable(self.max_temperature, name="temperature")
-        def sampling(logits):
-            U = K.random_uniform(K.shape(logits), 0, 1)
-            z = logits - K.log(-K.log(U + 1e-20) + 1e-20) # logits + gumbel noise
-            return softmax( z / tau )
         x = Input(shape=input_shape)
         logits = Sequential(self.build_encoder(input_shape))(x)
-        z = Lambda(sampling)(logits)
+        gs = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
+        z = gs(logits)
         z3 = Lambda(lambda z:K.round(z))(z)
 
-        def gumbel_loss(x, y):
-            q = softmax(logits)
-            log_q = K.log(q + 1e-20)
-            kl_loss = K.sum(q * (log_q - K.log(1.0/2)), axis=1)
+        def loss(x, y):
+            kl_loss = gs.loss(logits)
             reconstruction_loss = data_dim * bce(x,y)
             return reconstruction_loss - kl_loss
         
-        self.__tau = tau
-        self.loss = gumbel_loss
+        self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
+        self.loss = loss
         self.net = Model(x, z)
         self.net_binary = Model(x, z3)
     def _save(self):
