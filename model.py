@@ -349,7 +349,7 @@ class Discriminator(Network):
         def loss(x, y):
             kl_loss = gs.loss(logits)
             reconstruction_loss = data_dim * bce(x,y)
-            return reconstruction_loss - kl_loss
+            return reconstruction_loss + kl_loss
         
         self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
@@ -362,11 +362,6 @@ class Discriminator(Network):
     def _load(self):
         super()._load()
         self.net.load_weights(self.local("net.h5"))
-    def cool(self, epoch, logs):
-        K.set_value(
-            self.__tau,
-            np.max([K.get_value(self.__tau) * np.exp(- self.anneal_rate * epoch),
-                    self.min_temperature]))
     def report(self,train_data,
                epoch=200,batch_size=1000,optimizer=Adam(0.001),
                test_data=None,
