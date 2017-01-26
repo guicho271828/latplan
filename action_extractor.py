@@ -58,8 +58,8 @@ if __name__ == '__main__':
                         test_data=test_in,
                         train_data_to=train_out,
                         test_data_to=test_out,
-                        anneal_rate=0.0005,
-                        epoch=50,
+                        anneal_rate=0.0002,
+                        epoch=200,
     )
     print("index, discrimination, action")
     show_n = 10
