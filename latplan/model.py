@@ -409,20 +409,20 @@ class ActionDiscriminator(Discriminator):
         x = Input(shape=input_shape)
         N = input_shape[0] // 2
         print(N)
-        import tensorflow as tfl
+        import tensorflow as tf
         print(K.int_shape(x))
-        pre_t = tfl.slice(x,[0,0],[-1,N],name="pre_t")
-        suc_t = tfl.slice(x,[0,N],[-1,-1],name="suc_t")
-        pre_f = 1 - pre_t
-        suc_f = 1 - suc_t
-        tt = pre_t * suc_t
-        tf = pre_t * suc_f
-        ft = pre_f * suc_t
-        ff = pre_f * suc_f
-        _t = suc_t
-        _f = suc_f
-        eq = tt + ff
-        strips_category = tfl.stack((tt,tf,ft,ff,_t,_f,eq),axis=-1)
+        pre_T = tf.slice(x,[0,0],[-1,N],name="pre_t")
+        suc_T = tf.slice(x,[0,N],[-1,-1],name="suc_t")
+        pre_F = 1 - pre_T
+        suc_F = 1 - suc_T
+        TT = pre_T * suc_T
+        TF = pre_T * suc_F
+        FT = pre_F * suc_T
+        FF = pre_F * suc_F
+        _T = suc_T
+        _F = suc_F
+        EQ = TT + FF
+        strips_category = tf.stack((TT,TF,FT,FF,_T,_F,EQ),axis=-1)
         strips_category = K.reshape(strips_category,(-1,N,7,1))
         strips_category = wrap(x,strips_category)
         a = self.parameters['actions']
@@ -434,9 +434,11 @@ class ActionDiscriminator(Discriminator):
         var_match_bernoulli = gs1(var_match_logits) # [-1,N,a,2]
 
         print(K.int_shape(var_match_bernoulli))
-        var_match = tfl.slice(var_match_bernoulli,[0,0,0,0],[-1,N,a,1],
+        var_match = tf.slice(var_match_bernoulli,[0,0,0,0],[-1,N,a,1],
                               name="var_match") # [-1,N,a,1]
         var_match = K.squeeze(var_match,3)             # [-1,N,a]
+        print(var_match)
+        # with tfl.device('/gpu:0'):
         action_match_logits = K.prod(var_match,axis=1) # [-1,a]
         action_unmatch_logits = 1 - K.sum(action_match_logits,axis=1,keepdims=True) # [-1,1]
         action_logits = K.concatenate((action_match_logits,action_unmatch_logits),axis=1) # [-1,a+1]
@@ -444,8 +446,8 @@ class ActionDiscriminator(Discriminator):
         
         gs2 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
         action_categorical = gs2(action_logits) # [-1,a+1]
-        action_match_categorical = tfl.slice(action_categorical,[0,0],[-1,a])
-        action_unmatch_categorical = tfl.slice(action_categorical,[0,a],[-1,1])
+        action_match_categorical = tf.slice(action_categorical,[0,0],[-1,a])
+        action_unmatch_categorical = tf.slice(action_categorical,[0,a],[-1,1])
         action_match_any = 1 - action_unmatch_categorical
         def loss(x, y):
             return bce(x,y) + gs1.loss(var_match_logits) + gs2.loss(action_logits)
