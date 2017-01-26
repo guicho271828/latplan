@@ -31,13 +31,22 @@ def states(width, height, configs=None):
         configs = generate_configs(digit)
     return generate_mnist_puzzle(configs,width,height)
 
-def transitions(width, height, configs=None):
+def transitions(width, height, configs=None, one_per_state=False):
     from puzzle import successors
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
-    transitions = np.array([ generate_mnist_puzzle([c1,c2],width,height)
-                             for c1 in configs for c2 in successors(c1,width,height) ])
+    if one_per_state:
+        def pickone(thing):
+            index = np.random.randint(0,len(thing))
+            return thing[index]
+        transitions = np.array([
+            generate_mnist_puzzle(
+                [c1,pickone(successors(c1,width,height))],width,height)
+            for c1 in configs ])
+    else:
+        transitions = np.array([ generate_mnist_puzzle([c1,c2],width,height)
+                                 for c1 in configs for c2 in successors(c1,width,height) ])
     return np.einsum('ab...->ba...',transitions)
 
 if __name__ == '__main__':
