@@ -53,10 +53,13 @@ if __name__ == '__main__':
     
     discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'actions':6000})
     # discriminator.load()
-    discriminator.train(train_in, batch_size=100, 
+    discriminator.train(train_in, batch_size=900, 
                         test_data=test_in,
                         train_data_to=train_out,
-                        test_data_to=test_out)
+                        test_data_to=test_out,
+                        anneal_rate=0.0002,
+                        epoch=200,
+    )
     print("index, discrimination, action")
     for i,a in enumerate(discriminator.action(test_in)[:100]):
         print(i,a)
