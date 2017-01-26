@@ -453,14 +453,14 @@ class ActionDiscriminator(Discriminator):
         action_unmatch = tf.slice(action_match,[0,a-1],[-1,1])
         action_match_any = 1 - action_unmatch
         action_match_any = wrap(action_match,action_match_any)
-        def loss(x, y):
-            return bce(x,y) - gs1.loss(var_match_logits)
+        def loss_gum(x, y):
+            return gs1.loss(var_match_logits) / (N*a)
         def loss_bce(x, y):
             return bce(x,y)
         
         self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
-        self.loss = [loss, loss_bce]
+        self.loss = [loss_gum, loss_bce]
         self.net = Model(x, [action_match_any,action_match_any])
         self._precondition_match_var = Model(x, var_match)
         self._action = Model(x, action_match)
