@@ -48,20 +48,24 @@ if __name__ == '__main__':
 
     ae = GumbelAE("samples/mnist_puzzle33p_model/").load()
 
-    train_in, train_out = prepare(configs[:12000],ae)
-    test_in, test_out = prepare(configs[12000:13000],ae)
+    train_n, test_n = 8000, 1000
+    train_in, train_out = prepare(configs[:train_n],ae)
+    test_in, test_out = prepare(configs[train_n:train_n+test_n],ae)
     
-    discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'actions':6000})
+    discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'actions':4000})
     # discriminator.load()
-    discriminator.train(train_in, batch_size=900, 
+    discriminator.train(train_in, batch_size=500, 
                         test_data=test_in,
                         train_data_to=train_out,
                         test_data_to=test_out,
-                        anneal_rate=0.0002,
-                        epoch=200,
+                        anneal_rate=0.0005,
+                        epoch=50,
     )
     print("index, discrimination, action")
-    for i,a in enumerate(discriminator.action(test_in)[:100]):
+    show_n = 10
+    for i,a in enumerate(discriminator.action(test_in)[:show_n]):
+        print(i,a)
+    for i,a in enumerate(discriminator.action(test_in)[test_n:test_n+show_n]):
         print(i,a)
     
     
