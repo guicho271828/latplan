@@ -80,7 +80,7 @@ class Network:
             custom_log_values[k] = self.custom_log_functions[k]()
         self.bar.update(epoch, **custom_log_values, **logs)
     def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,
+              epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,report=True,
               train_data_to=None,
               test_data_to=None,
               **kwargs):
@@ -119,9 +119,10 @@ class Network:
         except KeyboardInterrupt:
             print("learning stopped")
         self.loaded = True
-        self.report(train_data,
-                    epoch,batch_size,optimizer,
-                    test_data,train_data_to,test_data_to)
+        if report:
+            self.report(train_data,
+                        epoch,batch_size,optimizer,
+                        test_data,train_data_to,test_data_to)
         if save:
             self.save()
         return self
