@@ -51,12 +51,12 @@ if __name__ == '__main__':
     train_in, train_out = prepare(configs[:12000],ae)
     test_in, test_out = prepare(configs[12000:13000],ae)
     
-    discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'actions':100})
-    discriminator.load()
-    # discriminator.train(train_in, batch_size=1000,
-    #                     test_data=test_in,
-    #                     train_data_to=train_out,
-    #                     test_data_to=test_out)
+    discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'actions':6000})
+    # discriminator.load()
+    discriminator.train(train_in, batch_size=100, 
+                        test_data=test_in,
+                        train_data_to=train_out,
+                        test_data_to=test_out)
     print("index, discrimination, action")
     for i,a in enumerate(discriminator.action(test_in)[:100]):
         print(i,a)
