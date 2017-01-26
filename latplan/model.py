@@ -75,10 +75,12 @@ class Network:
             self.parameters = data["parameters"]
             self.build(tuple(data["input_shape"]))
     def bar_update(self, epoch, logs):
-        custom_log_values = {}
+        s = ""
         for k in self.custom_log_functions:
-            custom_log_values[k] = self.custom_log_functions[k]()
-        self.bar.update(epoch, **custom_log_values, **logs)
+            s += "{}: {:5.3g}, ".format(k,self.custom_log_functions[k]())
+        for k in logs:
+            s += "{}: {:5.3g}, ".format(k,logs[k])
+        self.bar.update(epoch, stat=s)
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,report=True,
               train_data_to=None,
@@ -103,11 +105,7 @@ class Network:
                     progressbar.Timer(format='%(elapsed)s'),
                     progressbar.Bar(),
                     progressbar.AbsoluteETA(format='%(eta)s'), ' ',
-                    *(np.array(
-                        [ [progressbar.DynamicMessage(k), ' ',]
-                          for k in self.custom_log_functions ]).flatten()),
-                    progressbar.DynamicMessage('val_loss'), ' ',
-                    progressbar.DynamicMessage('loss')
+                    progressbar.DynamicMessage('stat')
                 ]
             )
             self.net.compile(optimizer=optimizer, loss=self.loss)
