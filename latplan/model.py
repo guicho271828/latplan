@@ -18,6 +18,7 @@ from keras.regularizers import activity_l2, activity_l1
 
 def Sequential (array):
     def apply1(arg,f):
+        # print("applying {}({})".format(f,arg))
         return f(arg)
     return lambda x: reduce(apply1, array, x)
 
@@ -403,23 +404,6 @@ class ActionDiscriminator(Discriminator):
         # First N bit is a predecessor, last N bit is a successor.
         print(input_shape)
         assert len(input_shape) == 1
-        # 1st version: raw input
-        # x = Input(shape=input_shape)
-        # N = input_shape[1] / 2
-        # x = K.reshape(x,(-1,N,2))
-        # 
-        # 2nd version:
-        # Convert it to bernoulli (binary categorical) distribution.
-        # x1 = Input(shape=input_shape)
-        # x2 = 1 - x1
-        # N = input_shape[1] / 2
-        # x1 = K.permute_dimensions(K.reshape(x1,(-1,N,2,1)),(0,2,3,1)) # -1,2,1,N
-        # x2 = K.permute_dimensions(K.reshape(x2,(-1,N,2,1)),(0,2,3,1))
-        # x = K.concatenate((x1,x2), axis=1)
-        # assert K.int_shape(x)[1] == 4
-        # assert K.int_shape(x)[2] == 1
-        # assert K.int_shape(x)[3] == N
-        # 
         # 3rd version: 7 cases
         x = Input(shape=input_shape)
         N = input_shape[0] // 2
