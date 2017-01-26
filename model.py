@@ -434,15 +434,21 @@ class ActionDiscriminator(Discriminator):
         var_match_bernoulli = gs1(var_match_logits) # [-1,N,a,2]
 
         print(K.int_shape(var_match_bernoulli))
-        var_match = tf.slice(var_match_bernoulli,[0,0,0,0],[-1,N,a,1],
-                              name="var_match") # [-1,N,a,1]
-        var_match = K.squeeze(var_match,3)             # [-1,N,a]
-        print(var_match)
-        # with tfl.device('/gpu:0'):
-        action_match_logits = K.prod(var_match,axis=1) # [-1,a]
+        var_match = tf.slice(var_match_bernoulli,[0,0,0,0],[-1,N,a,1], name="var_match")
+        var_match = K.squeeze(var_match,3)
+        # K.prod calls reduce_prod which is not supported on GPU on tensorflow
+        # action_match_logits = K.prod(var_match,axis=1) # [-1,a]
+        def prod(tensor,axis):
+            l = len(K.shape(tensor))
+            origin = [ 0 for i in range(l) ]
+            slice = [ -1 for i in range(l) ]
+            slice[axis] = 1
+            return tf.squeeze(tf.slice(tf.cumprod(var_match,axis=axis),origin,slice),[axis])
+        action_match_logits = prod(var_match,1)
         action_unmatch_logits = 1 - K.sum(action_match_logits,axis=1,keepdims=True) # [-1,1]
         action_logits = K.concatenate((action_match_logits,action_unmatch_logits),axis=1) # [-1,a+1]
         action_logits = wrap(var_match_bernoulli,action_logits)
+        
         
         gs2 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
         action_categorical = gs2(action_logits) # [-1,a+1]
