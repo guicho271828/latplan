@@ -1,6 +1,8 @@
 import tensorflow as tf
 import keras.backend as K
 
+# K.set_floatx('float16')
+print("Default float: {}".format(K.floatx()))
 K.set_session(
     tf.Session(
         config=tf.ConfigProto(
