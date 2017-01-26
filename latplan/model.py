@@ -89,7 +89,7 @@ class Network:
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
-        validation = (test_data,test_data_to) if test_data is not None else None
+
         for k,v in kwargs.items():
             setattr(self, k, v)
         self.build(train_data.shape[1:])
@@ -97,6 +97,11 @@ class Network:
         print({"parameters":self.parameters,
                "train_shape":train_data.shape,
                "test_shape":test_data.shape})
+
+        if isinstance(self.loss,list):
+            train_data_to = [ train_data_to for l in self.loss ]
+            test_data_to = [ test_data_to for l in self.loss ]
+        validation = (test_data,test_data_to) if test_data is not None else None
         try:
             import progressbar
             self.bar = progressbar.ProgressBar(
@@ -449,12 +454,14 @@ class ActionDiscriminator(Discriminator):
         action_match_any = 1 - action_unmatch
         action_match_any = wrap(action_match,action_match_any)
         def loss(x, y):
-            return bce(x,y) + gs1.loss(var_match_logits)
+            return bce(x,y) - gs1.loss(var_match_logits)
+        def loss_bce(x, y):
+            return bce(x,y)
         
         self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
-        self.loss = loss
-        self.net = Model(x, action_match_any)
+        self.loss = [loss, loss_bce]
+        self.net = Model(x, [action_match_any,action_match_any])
         self._precondition_match_var = Model(x, var_match)
         self._action = Model(x, action_match)
     def _save(self):
