@@ -151,8 +151,8 @@ class GumbelSoftmax:
     def loss(self, logits):
         q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
-        return - K.sum(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
-                       axis=tuple(range(1,len(K.int_shape(logits)))))
+        return - K.mean(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
+                        axis=tuple(range(1,len(K.int_shape(logits)))))
     def cool(self, epoch, logs):
         K.set_value(
             self.tau,
@@ -208,8 +208,8 @@ class GumbelAE(Network):
 
         def loss(x, y):
             kl_loss = gs.loss(logits)
-            reconstruction_loss = data_dim * bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                                                 K.reshape(y,(K.shape(x)[0],data_dim,)))
+            reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                                      K.reshape(y,(K.shape(x)[0],data_dim,)))
             return reconstruction_loss + kl_loss
 
         self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
@@ -353,7 +353,7 @@ class Discriminator(Network):
 
         def loss(x, y):
             kl_loss = gs.loss(logits)
-            reconstruction_loss = data_dim * bce(x,y)
+            reconstruction_loss = bce(x,y)
             return reconstruction_loss + kl_loss
         
         self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
@@ -453,14 +453,15 @@ class ActionDiscriminator(Discriminator):
         action_unmatch = tf.slice(action_match,[0,a-1],[-1,1])
         action_match_any = 1 - action_unmatch
         action_match_any = wrap(action_match,action_match_any)
-        def loss_gum(x, y):
-            return gs1.loss(var_match_logits) / (N*a)
+        
         def loss_bce(x, y):
             return bce(x,y)
+        def loss_gum(x, y):
+            return gs1.loss(var_match_logits)
         
         self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
-        self.loss = [loss_gum, loss_bce]
+        self.loss = [loss_bce, loss_gum]
         self.net = Model(x, [action_match_any,action_match_any])
         self._precondition_match_var = Model(x, var_match)
         self._action = Model(x, action_match)
