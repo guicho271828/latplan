@@ -107,16 +107,6 @@ if __name__ == '__main__':
     if train:
         discriminator, _, _ = grid_search("samples/mnist_puzzle33p_ad/",
                                           100, train_in, train_out, test_in, test_out)
-        # discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/",
-        #                                     {'valid':1000,'invalid':2000})
-        # discriminator.train(train_in, batch_size=1500, 
-        #                     test_data=test_in,
-        #                     train_data_to=train_out,
-        #                     test_data_to=test_out,
-        #                     # epoch=200,
-        #                     # anneal_rate=0.0002,
-        #                     epoch=1000,
-        #                     anneal_rate=0.000008,)
     else:
         discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/").load()
     print("index, discrimination, action")
