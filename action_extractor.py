@@ -51,21 +51,22 @@ if __name__ == '__main__':
     train_n, test_n = 8000, 1000
     train_in, train_out = prepare(configs[:train_n],ae)
     test_in, test_out = prepare(configs[train_n:train_n+test_n],ae)
-    
+
+    train = True
     discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'valid':1000,'invalid':2000})
-    # discriminator.load()
-    from keras.optimizers import Adam
-    discriminator.train(train_in, batch_size=500, 
-                        test_data=test_in,
-                        train_data_to=train_out,
-                        test_data_to=test_out,
-                        epoch=1000,
-                        anneal_rate=0.000008,
-                        # epoch=200,
-                        # anneal_rate=0.0002,
+    if train:
+        discriminator.train(train_in, batch_size=500, 
+                            test_data=test_in,
+                            train_data_to=train_out,
+                            test_data_to=test_out,
+                            epoch=1000,
+                            anneal_rate=0.000008,
+                            # epoch=200,
+                            # anneal_rate=0.0002,
                         min_temperature=0.5, # zero gradient causes NaN
-                        optimizer=Adam(0.001),
-    )
+        )
+    else:
+        discriminator.load()
     print("index, discrimination, action")
     show_n = 10
     for i,a in enumerate(discriminator.action(test_in)[:show_n]):
