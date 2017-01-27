@@ -55,7 +55,7 @@ if __name__ == '__main__':
     train = True
     discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'valid':1000,'invalid':2000})
     if train:
-        discriminator.train(train_in, batch_size=500, 
+        discriminator.train(train_in, batch_size=1500, 
                             test_data=test_in,
                             train_data_to=train_out,
                             test_data_to=test_out,
@@ -63,7 +63,6 @@ if __name__ == '__main__':
                             anneal_rate=0.000008,
                             # epoch=200,
                             # anneal_rate=0.0002,
-                        min_temperature=0.5, # zero gradient causes NaN
         )
     else:
         discriminator.load()
