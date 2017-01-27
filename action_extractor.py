@@ -115,6 +115,8 @@ if __name__ == '__main__':
         print(i,a)
     for i,a in enumerate(discriminator.discriminate(test_in)[test_n:test_n+show_n]):
         print(i,a)
+    for i,a in enumerate(discriminator.variables(test_in)[:show_n]):
+        print(i,a)
     
     
     
