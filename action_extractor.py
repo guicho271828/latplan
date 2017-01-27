@@ -65,7 +65,7 @@ def grid_search(path, epoch, train_in, train_out, test_in, test_out):
             params_dict = { k:v for k,v in zip(names,params) }
             print("Testing model with parameters={}".format(params_dict))
             discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/",params_dict)
-            batch_size = 1000 
+            batch_size = 1000
             finished = False
             while not finished:
                 print("batch size {}".format(batch_size))
@@ -113,14 +113,14 @@ if __name__ == '__main__':
 
     ae = GumbelAE("samples/mnist_puzzle33p_model/").load()
 
-    train_n, test_n = 8000, 1000
+    train_n, test_n = 12000, 1000
     train_in, train_out = prepare(configs[:train_n],ae)
     test_in, test_out = prepare(configs[train_n:train_n+test_n],ae)
 
     train = True
     if train:
         discriminator, _, _ = grid_search("samples/mnist_puzzle33p_ad/",
-                                          100, train_in, train_out, test_in, test_out)
+                                          5000, train_in, train_out, test_in, test_out)
     else:
         discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/").load()
     print("index, discrimination, action")
