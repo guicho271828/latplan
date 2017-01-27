@@ -54,12 +54,17 @@ if __name__ == '__main__':
     
     discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'valid':1000,'invalid':2000})
     # discriminator.load()
+    from keras.optimizers import Adam
     discriminator.train(train_in, batch_size=500, 
                         test_data=test_in,
                         train_data_to=train_out,
                         test_data_to=test_out,
-                        anneal_rate=0.0002,
-                        epoch=200,
+                        epoch=1000,
+                        anneal_rate=0.000008,
+                        # epoch=200,
+                        # anneal_rate=0.0002,
+                        min_temperature=0.5, # zero gradient causes NaN
+                        optimizer=Adam(0.001),
     )
     print("index, discrimination, action")
     show_n = 10
