@@ -80,7 +80,13 @@ def grid_search(path, epoch, train_in, train_out, test_in, test_out):
                 except tf.errors.ResourceExhaustedError as e:
                     print(e)
                     batch_size = batch_size // 2
-            error = discriminator.net.evaluate(test_in,test_out,batch_size=batch_size,)
+
+            if isinstance(discriminator.loss,list):
+                error = discriminator.net.evaluate(
+                    test_in,[test_out,test_out],batch_size=batch_size,)[0]
+            else:
+                error = discriminator.net.evaluate(
+                    test_in,test_out,batch_size=batch_size,)
             results.append((error,)+params)
             print("Evaluation result for {} : error = {}".format(params_dict,error))
             print("Current results:\n{}".format(np.array(results)),flush=True)
