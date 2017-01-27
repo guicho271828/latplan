@@ -36,7 +36,51 @@ def prepare(configs,ae):
     inputs = np.concatenate((transition_b,invalid_transition_b),axis=0)
     outputs = np.concatenate((np.ones(num),np.zeros(num)),axis=0)
     return inputs, outputs
-    
+
+def grid_search(path, epoch, train_in, train_out, test_in, test_out):
+    names      = ['valid','invalid']
+    parameters = [[100,1000],[1000,4000,],]
+    best_error = float('inf')
+    best_params = None
+    best_ae     = None
+    results = []
+    try:
+        import itertools
+        import tensorflow as tf
+        for params in itertools.product(*parameters):
+            params_dict = { k:v for k,v in zip(names,params) }
+            print("Testing model with parameters={}".format(params_dict))
+            discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/",params_dict)
+            batch_size = 2000
+            finished = False
+            while not finished:
+                print("batch size {}".format(batch_size))
+                try:
+                    discriminator.train(train_in, batch_size=batch_size, 
+                                        test_data=test_in,
+                                        train_data_to=train_out,
+                                        test_data_to=test_out,
+                                        epoch=epoch,)
+                    finished = True
+                except tf.errors.ResourceExhaustedError as e:
+                    print(e)
+                    batch_size = batch_size // 2
+            error = discriminator.net.evaluate(test_in,test_out,batch_size=batch_size,)
+            results.append((error,)+params)
+            print("Evaluation result for {} : error = {}".format(params_dict,error))
+            print("Current results:\n{}".format(np.array(results)),flush=True)
+            if error < best_error:
+                print("Found a better parameter {}: error:{} old-best:{}".format(
+                    params_dict,error,best_error))
+                best_params = params_dict
+                best_error = error
+                best_ae = discriminator
+        print("Best parameter {}: error:{}".format(best_params,best_error))
+    finally:
+        print(results)
+    best_ae.save()
+    return best_ae,best_params,best_error
+
 
 if __name__ == '__main__':
     import numpy.random as random
@@ -53,24 +97,26 @@ if __name__ == '__main__':
     test_in, test_out = prepare(configs[train_n:train_n+test_n],ae)
 
     train = True
-    discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'valid':1000,'invalid':2000})
     if train:
-        discriminator.train(train_in, batch_size=1500, 
-                            test_data=test_in,
-                            train_data_to=train_out,
-                            test_data_to=test_out,
-                            epoch=1000,
-                            anneal_rate=0.000008,
-                            # epoch=200,
-                            # anneal_rate=0.0002,
-        )
+        discriminator, _, _ = grid_search("samples/mnist_puzzle33p_ad/",
+                                    10, train_in, train_out, test_in, test_out)
+        # discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/",
+        #                                     {'valid':1000,'invalid':2000})
+        # discriminator.train(train_in, batch_size=1500, 
+        #                     test_data=test_in,
+        #                     train_data_to=train_out,
+        #                     test_data_to=test_out,
+        #                     # epoch=200,
+        #                     # anneal_rate=0.0002,
+        #                     epoch=1000,
+        #                     anneal_rate=0.000008,)
     else:
-        discriminator.load()
+        discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/").load()
     print("index, discrimination, action")
     show_n = 10
-    for i,a in enumerate(discriminator.action(test_in)[:show_n]):
+    for i,a in enumerate(discriminator.discriminate(test_in)[:show_n]):
         print(i,a)
-    for i,a in enumerate(discriminator.action(test_in)[test_n:test_n+show_n]):
+    for i,a in enumerate(discriminator.discriminate(test_in)[test_n:test_n+show_n]):
         print(i,a)
     
     
