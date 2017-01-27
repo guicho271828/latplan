@@ -80,7 +80,7 @@ class Network:
             s += "{}: {:5.3g}, ".format(k,self.custom_log_functions[k]())
         for k in logs:
             s += "{}: {:5.3g}, ".format(k,logs[k])
-        self.bar.update(epoch, stat=s)
+        self.bar.update(epoch+1, stat=s)
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,report=True,
               train_data_to=None,
