@@ -37,6 +37,11 @@ def prepare(configs,ae):
     outputs = np.concatenate((np.ones(num),np.zeros(num)),axis=0)
     return inputs, outputs
 
+
+def anneal_rate(epoch,min=0.1,max=5.0):
+    import math
+    return (2 / (epoch * (epoch+1))) * math.log(max/min)
+
 def grid_search(path, epoch, train_in, train_out, test_in, test_out):
     names      = ['valid','invalid']
     # parameters = [[2000,1000],[8000,4000,1000],]
@@ -51,6 +56,8 @@ def grid_search(path, epoch, train_in, train_out, test_in, test_out):
     best_params = None
     best_ae     = None
     results = []
+    rate = anneal_rate(epoch,0.5)
+    print("anneal reate is {}".format(rate))
     try:
         import itertools
         import tensorflow as tf
@@ -58,7 +65,7 @@ def grid_search(path, epoch, train_in, train_out, test_in, test_out):
             params_dict = { k:v for k,v in zip(names,params) }
             print("Testing model with parameters={}".format(params_dict))
             discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/",params_dict)
-            batch_size = 1000
+            batch_size = 1000 
             finished = False
             while not finished:
                 print("batch size {}".format(batch_size))
@@ -67,6 +74,7 @@ def grid_search(path, epoch, train_in, train_out, test_in, test_out):
                                         test_data=test_in,
                                         train_data_to=train_out,
                                         test_data_to=test_out,
+                                        anneal_rate=rate,
                                         epoch=epoch,)
                     finished = True
                 except tf.errors.ResourceExhaustedError as e:
