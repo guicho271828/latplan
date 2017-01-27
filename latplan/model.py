@@ -406,73 +406,61 @@ class ActionDiscriminator(Discriminator):
     def _build(self,input_shape):
         # Assume a batch of 2N-bit binary vectors.
         # First N bit is a predecessor, last N bit is a successor.
-        print(input_shape)
-        assert len(input_shape) == 1
-        # 3rd version: 7 cases
         x = Input(shape=input_shape)
         N = input_shape[0] // 2
-        print(N)
         import tensorflow as tf
-        print(K.int_shape(x))
         pre_T = tf.slice(x,[0,0],[-1,N],name="pre_t")
         suc_T = tf.slice(x,[0,N],[-1,-1],name="suc_t")
-        pre_F = 1 - pre_T
-        suc_F = 1 - suc_T
-        TT = pre_T * suc_T
-        TF = pre_T * suc_F
-        FT = pre_F * suc_T
-        FF = pre_F * suc_F
-        _T = suc_T
-        _F = suc_F
+        pre_F, suc_F = 1 - pre_T, 1 - suc_T
+        TT, TF = pre_T * suc_T, pre_T * suc_F
+        FT, FF = pre_F * suc_T, pre_F * suc_F
+        _T, _F = suc_T, suc_F
         EQ = TT + FF
         strips_category = tf.stack((TT,TF,FT,FF,_T,_F,EQ),axis=-1)
         strips_category = K.reshape(strips_category,(-1,N,7,1))
         strips_category = wrap(x,strips_category)
+        self._strips = Model(x, strips_category)
         
         valid = self.parameters['valid']
         invalid = self.parameters['invalid']
         a = valid + invalid
+
+        # gs1 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
+        # vars_bernoulli = gs1(vars_logits) # [-1,N,a,2]
+        # vars = K.squeeze(tf.slice(vars_bernoulli,[0,0,0,0],[-1,N,a,1]),3)
+        # vars = wrap(vars_bernoulli,vars) # [-1,N,a]
+        # # note: gumbel-softmax is softmax as well, so it returns a probability too.
+        # self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
+        # self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
+        # def loss_gum(x, y):
+        #     return gs1.loss(vars_logits)
+
+        score = Sequential([
+            LocallyConnected2D(a,1,7),
+            Reshape((N,a))]
+        )(strips_category)
+        variables = Activation("sigmoid")(score)
+        self._variables = Model(x, variables)
         
-        vars_logits = Sequential([
-            # bias=Fasle is not appropriate due to numb bits in the input
-            LocallyConnected2D(2*a,1,7), # [-1,N,1,2a]
-            Reshape((N,a,2))             # [-1,N,a,2]
-        ])(strips_category)
-        gs1 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
-        vars_bernoulli = gs1(vars_logits) # [-1,N,a,2]
-        vars = K.squeeze(tf.slice(vars_bernoulli,[0,0,0,0],[-1,N,a,1]),3)
-        vars = wrap(vars_bernoulli,vars) # [-1,N,a]
-        # note: gumbel-softmax is softmax as well, so it returns a probability too.
-        
-        def prod1(tensor,axis):
-            # K.prod calls reduce_prod which is not supported on GPU on tensorflow
-            # so we cannot use it.
-            # action_match_logits = K.prod(vars,axis=1) # [-1,a]
-            l = K.ndim(x)+1
+        def prod1(x,axis):
+            l = K.ndim(x)
             origin = [ 0 for i in range(l) ]
             slice = [ -1 for i in range(l) ]
             slice[axis] = 1
-            return tf.squeeze(tf.slice(tf.cumprod(vars,axis=axis),origin,slice),[axis])
-        actions = prod1(vars,1)
-        actions = wrap(vars_bernoulli,actions) # [-1, a]
+            return tf.squeeze(tf.slice(tf.cumprod(x,axis=axis,reverse=True),origin,slice),[axis])
+        actions = prod1(variables,1)
+        actions = wrap(variables,actions) # [-1, a]
+        self._actions = Model(x, actions)
+
         valid_actions   = tf.slice(actions,[0,0],    [-1,valid])
         invalid_actions = tf.slice(actions,[0,valid],[-1,invalid])
         actions_any = K.sum(valid_actions,axis=1,keepdims=True)
         actions_any = wrap(actions,actions_any)
+        self._actions_any = Model(x, actions_any)
 
-        # vars_grad = tf.gradients(loss, [var])[0]
+        self.loss = bce
+        self.net = Model(x, actions_any)
         
-        def loss_bce(x, y):
-            return bce(x,y)
-        def loss_gum(x, y):
-            return gs1.loss(vars_logits)
-        
-        self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
-        self.loss = [loss_bce, loss_gum]
-        self.net = Model(x, [actions_any,actions_any])
-        self._precondition_match_vars = Model(x, vars)
-        self._action = Model(x, actions)
     def _save(self):
         super()._save()
         self.net.save_weights(self.local("net.h5"))
@@ -496,15 +484,18 @@ class ActionDiscriminator(Discriminator):
         test_both("BCE: {}",
                   lambda data, data_to: self.net.evaluate(data,data_to,**opts))
         return self
+    def strips(self,data,**kwargs):
+        self.load()
+        return self._strips.predict(data,**kwargs)
+    def variables(self,data,**kwargs):
+        self.load()
+        return self._variables.predict(data,**kwargs)
+    def actions(self,data,**kwargs):
+        self.load()
+        return self._actions.predict(data,**kwargs)
     def discriminate(self,data,**kwargs):
         self.load()
-        return self.net.predict(data,**kwargs)
-    def action(self,data,**kwargs):
-        self.load()
-        return self._action.predict(data,**kwargs)
-    def precondition_match_var(self,data,**kwargs):
-        self.load()
-        return self._precondition_match_var.predict(data,**kwargs)
+        return self._actions_any.predict(data,**kwargs)
     def summary(self,verbose=False):
         self.net.summary()
         return self
