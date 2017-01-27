@@ -52,7 +52,7 @@ if __name__ == '__main__':
     train_in, train_out = prepare(configs[:train_n],ae)
     test_in, test_out = prepare(configs[train_n:train_n+test_n],ae)
     
-    discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'actions':4000})
+    discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/", {'valid':1000,'invalid':2000})
     # discriminator.load()
     discriminator.train(train_in, batch_size=500, 
                         test_data=test_in,

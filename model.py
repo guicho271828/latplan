@@ -428,43 +428,51 @@ class ActionDiscriminator(Discriminator):
         strips_category = tf.stack((TT,TF,FT,FF,_T,_F,EQ),axis=-1)
         strips_category = K.reshape(strips_category,(-1,N,7,1))
         strips_category = wrap(x,strips_category)
-        a = self.parameters['actions'] + 1 # for none-onf-the-above action
-        var_match_logits = Sequential([
+        
+        valid = self.parameters['valid']
+        invalid = self.parameters['invalid']
+        a = valid + invalid
+        
+        vars_logits = Sequential([
+            # bias=Fasle is not appropriate due to numb bits in the input
             LocallyConnected2D(2*a,1,7), # [-1,N,1,2a]
             Reshape((N,a,2))             # [-1,N,a,2]
         ])(strips_category)
         gs1 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
-        var_match_bernoulli = gs1(var_match_logits) # [-1,N,a,2]
-        var_match = K.squeeze(tf.slice(var_match_bernoulli,[0,0,0,0],[-1,N,a,1]),3) # [-1,N,a]
-        var_match = wrap(var_match_bernoulli,var_match)
+        vars_bernoulli = gs1(vars_logits) # [-1,N,a,2]
+        vars = K.squeeze(tf.slice(vars_bernoulli,[0,0,0,0],[-1,N,a,1]),3)
+        vars = wrap(vars_bernoulli,vars) # [-1,N,a]
         # note: gumbel-softmax is softmax as well, so it returns a probability too.
         
         def prod1(tensor,axis):
             # K.prod calls reduce_prod which is not supported on GPU on tensorflow
             # so we cannot use it.
-            # action_match_logits = K.prod(var_match,axis=1) # [-1,a]
+            # action_match_logits = K.prod(vars,axis=1) # [-1,a]
             l = K.ndim(x)+1
             origin = [ 0 for i in range(l) ]
             slice = [ -1 for i in range(l) ]
             slice[axis] = 1
-            return tf.squeeze(tf.slice(tf.cumprod(var_match,axis=axis),origin,slice),[axis])
-        action_match = prod1(var_match,1)
-        action_match = wrap(var_match_bernoulli,action_match)
-        action_unmatch = tf.slice(action_match,[0,a-1],[-1,1])
-        action_match_any = 1 - action_unmatch
-        action_match_any = wrap(action_match,action_match_any)
+            return tf.squeeze(tf.slice(tf.cumprod(vars,axis=axis),origin,slice),[axis])
+        actions = prod1(vars,1)
+        actions = wrap(vars_bernoulli,actions) # [-1, a]
+        valid_actions   = tf.slice(actions,[0,0],    [-1,valid])
+        invalid_actions = tf.slice(actions,[0,valid],[-1,invalid])
+        actions_any = K.sum(valid_actions,axis=1,keepdims=True)
+        actions_any = wrap(actions,actions_any)
+
+        # vars_grad = tf.gradients(loss, [var])[0]
         
         def loss_bce(x, y):
             return bce(x,y)
         def loss_gum(x, y):
-            return gs1.loss(var_match_logits)
+            return gs1.loss(vars_logits)
         
         self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
         self.loss = [loss_bce, loss_gum]
-        self.net = Model(x, [action_match_any,action_match_any])
-        self._precondition_match_var = Model(x, var_match)
-        self._action = Model(x, action_match)
+        self.net = Model(x, [actions_any,actions_any])
+        self._precondition_match_vars = Model(x, vars)
+        self._action = Model(x, actions)
     def _save(self):
         super()._save()
         self.net.save_weights(self.local("net.h5"))
