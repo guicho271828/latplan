@@ -74,6 +74,7 @@ class Network:
             data = json.load(f)
             self.parameters = data["parameters"]
             self.build(tuple(data["input_shape"]))
+        self.net.compile(Adam(0.001),bce)
     def bar_update(self, epoch, logs):
         s = ""
         for k in self.custom_log_functions:
