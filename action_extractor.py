@@ -7,7 +7,7 @@ from model import GumbelAE, ActionDiscriminator
 import keras.backend as K
 import tensorflow as tf
 
-float_formatter = lambda x: "%.1f" % x
+float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
 ################################################################
@@ -39,7 +39,14 @@ def prepare(configs,ae):
 
 def grid_search(path, epoch, train_in, train_out, test_in, test_out):
     names      = ['valid','invalid']
-    parameters = [[100,1000],[1000,4000,],]
+    # parameters = [[2000,1000],[8000,4000,1000],]
+    # [[0.048 2000.000 8000.000]
+    #  [0.028 2000.000 4000.000]
+    #  [0.027 2000.000 1000.000]
+    #  [0.035 1000.000 8000.000]
+    #  [0.029 1000.000 4000.000]
+    #  [0.029 1000.000 1000.000]]
+    parameters = [[2000],[1000],]
     best_error = float('inf')
     best_params = None
     best_ae     = None
@@ -51,7 +58,7 @@ def grid_search(path, epoch, train_in, train_out, test_in, test_out):
             params_dict = { k:v for k,v in zip(names,params) }
             print("Testing model with parameters={}".format(params_dict))
             discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/",params_dict)
-            batch_size = 2000
+            batch_size = 1000
             finished = False
             while not finished:
                 print("batch size {}".format(batch_size))
@@ -99,7 +106,7 @@ if __name__ == '__main__':
     train = True
     if train:
         discriminator, _, _ = grid_search("samples/mnist_puzzle33p_ad/",
-                                    10, train_in, train_out, test_in, test_out)
+                                          100, train_in, train_out, test_in, test_out)
         # discriminator = ActionDiscriminator("samples/mnist_puzzle33p_ad/",
         #                                     {'valid':1000,'invalid':2000})
         # discriminator.train(train_in, batch_size=1500, 
