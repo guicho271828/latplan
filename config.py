@@ -1,6 +1,6 @@
 import tensorflow as tf
 import keras.backend as K
-
+tf.logging.set_verbosity(tf.logging.ERROR)
 # K.set_floatx('float16')
 print("Default float: {}".format(K.floatx()))
 K.set_session(
