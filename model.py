@@ -412,9 +412,9 @@ class Discriminator(Network):
         self.net.summary()
         return self
     
-def wrap(x,y):
+def wrap(x,y,**kwargs):
     "wrap arbitrary operation"
-    return Lambda(lambda x:y)(x)
+    return Lambda(lambda x:y,**kwargs)(x)
 
 class ActionDiscriminator(Discriminator):
     def __init__(self,path,parameters={}):
