@@ -31,6 +31,21 @@ def ResUnit (*layers):
     return Residual(
         Sequential(layers))
 
+from keras.constraints import Constraint, maxnorm,nonneg,unitnorm
+class UnitNormL1(Constraint):
+    def __init__(self, axis=0):
+        self.axis = axis
+
+    def __call__(self, p):
+        return p / (K.epsilon() + K.sum(p,
+                                        axis=self.axis,
+                                        keepdims=True))
+
+    def get_config(self):
+        return {'name': self.__class__.__name__,
+                'axis': self.axis}
+
+
 class Network:
     def __init__(self,path,parameters={}):
         import subprocess
