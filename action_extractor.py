@@ -144,6 +144,14 @@ if __name__ == '__main__':
 
     result = discriminator.variables(probe)
     print(result)
+    print(result.shape)
+    print(discriminator.parameters)
+    result = result[:,:,:discriminator.parameters["valid"]]
+    print(result.shape)
+
+    np.savetxt(discriminator.local("variables.csv"),
+               np.einsum("fNa->aNf",result).round().astype(int).reshape((-1,bit*4)),
+               "%d")
     
     r = np.einsum("fNa->aNf",result).round().astype(bool)
     print(r.shape)
