@@ -117,7 +117,7 @@ if __name__ == '__main__':
     train_in, train_out = prepare(configs[:train_n],ae)
     test_in, test_out = prepare(configs[train_n:train_n+test_n],ae)
 
-    train = False
+    train = True
     if train:
         discriminator, _, _ = grid_search("samples/mnist_puzzle33p_ad/",
                                           5000, train_in, train_out, test_in, test_out)
