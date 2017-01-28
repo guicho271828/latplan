@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import warnings
 import config
 import numpy as np
 from model import GumbelAE, ActionDiscriminator
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     train_in, train_out = prepare(configs[:train_n],ae)
     test_in, test_out = prepare(configs[train_n:train_n+test_n],ae)
 
-    train = True
+    train = False
     if train:
         discriminator, _, _ = grid_search("samples/mnist_puzzle33p_ad/",
                                           5000, train_in, train_out, test_in, test_out)
@@ -131,6 +131,67 @@ if __name__ == '__main__':
         print(i,a)
     for i,a in enumerate(discriminator.variables(test_in)[:show_n]):
         print(i,a)
+
     
+    bit = train_in.shape[1]//2
+    T = np.ones(bit)
+    F = np.zeros(bit)
+    TT = np.concatenate((T,T))
+    TF = np.concatenate((T,F))
+    FT = np.concatenate((F,T))
+    FF = np.concatenate((F,F))
+    probe = np.stack((TT,TF,FT,FF),axis=0)
+
+    result = discriminator.variables(probe)
+    print(result)
     
-    
+    r = np.einsum("fNa->aNf",result).round().astype(bool)
+    print(r.shape)
+    for action in range(r.shape[0]):
+        for bit in range(r.shape[1]):
+            tt = r[action,bit,0]
+            tf = r[action,bit,1]
+            ft = r[action,bit,2]
+            ff = r[action,bit,3]
+            if     tt and     tf and     ft and     ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if     tt and     tf and     ft and not ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if     tt and     tf and not ft and     ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if     tt and     tf and not ft and not ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if     tt and not tf and     ft and     ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if     tt and not tf and     ft and not ff:
+                pre_t, pre_f, suc_t, suc_f = False, False, True, False
+            if     tt and not tf and not ft and     ff:
+                pre_t, pre_f, suc_t, suc_f = False, False, False, False
+            if     tt and not tf and not ft and not ff:
+                pre_t, pre_f, suc_t, suc_f = True, False, False, False
+            if not tt and     tf and     ft and     ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if not tt and     tf and     ft and not ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if not tt and     tf and not ft and     ff:
+                pre_t, pre_f, suc_t, suc_f = False, False, False, True
+            if not tt and     tf and not ft and not ff:
+                pre_t, pre_f, suc_t, suc_f = True, False, False, True
+            if not tt and not tf and     ft and     ff:
+                warnings.warn("don't care bit")
+                dont_care = True
+            if not tt and not tf and     ft and not ff:
+                pre_t, pre_f, suc_t, suc_f = False, True, True, False
+            if not tt and not tf and not ft and     ff:
+                pre_t, pre_f, suc_t, suc_f = False, True, False, False
+            if not tt and not tf and not ft and not ff:
+                warnings.warn("doesn't match anything")
+                never_match = True
+            
