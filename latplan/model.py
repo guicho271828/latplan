@@ -154,6 +154,7 @@ class Network:
 
 
 class GumbelSoftmax:
+    count = 0
     def __init__(self,min,max,anneal_rate):
         self.min = min
         self.anneal_rate = anneal_rate
@@ -163,7 +164,8 @@ class GumbelSoftmax:
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
         return K.softmax( ( logits + gumbel ) / self.tau )
     def __call__(self,logits):
-        return Lambda(self.call)(logits)
+        GumbelSoftmax.count += 1
+        return Lambda(self.call,name="gumbel_{}".format(GumbelSoftmax.count-1))(logits)
     def loss(self, logits):
         q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
