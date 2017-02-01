@@ -2,6 +2,7 @@
 
 import config
 import numpy as np
+import numpy.random as random
 from model import GumbelAE, ConvolutionalGumbelAE
 
 import keras.backend as K
@@ -63,28 +64,10 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
         json.dump(results, f)
     return best_ae,best_params,best_error
 
-# all_bitarray = np.unpackbits(np.arange(2**8, dtype=np.uint8).reshape((2**8,1)),axis=1)
-# 
-# def binary_counter(bitnum):           # 25
-#     if bitnum > 8:              # yes
-#         nextbitnum = bitnum - 8 # 17
-#         for i in range(2**8):
-#             for lowerbits in binary_counter(nextbitnum):
-#                 yield np.concatenate((all_bitarray[i],lowerbits),axis=0)
-#     else:
-#         bitarray = all_bitarray[0:2**bitnum,8-bitnum:8]
-#         for v in bitarray:
-#             yield v
-
 def flip(bv1,bv2):
     "bv1,bv2: integer 1D vector, whose values are 0 or 1"
     iv1 = np.packbits(bv1,axis=-1)
     iv2 = np.packbits(bv2,axis=-1)
-    # print(iv1,iv2)
-    # print(np.bitwise_xor(iv1,iv2))
-    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1))
-    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1).shape)
-    # print(bv1.shape)
     return \
         np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1)[:, :bv1.shape[-1]]
 
@@ -169,12 +152,6 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
 def bce(x,y):
     return K.mean(K.binary_crossentropy(x,y),axis=(1,2))
 
-# def bce(x,y):
-#     x_sym = K.placeholder(shape=x.shape)
-#     y_sym = K.placeholder(shape=y.shape)
-#     diff_sym = K.mean(K.binary_crossentropy(x_sym,y_sym),axis=(1,2))
-#     return K.function([x_sym,y_sym],[diff_sym])([x,y])[0]
-
 def dump_actions(ae,transitions,threshold=0.):
     orig, dest = transitions[0], transitions[1]
     orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
@@ -187,7 +164,7 @@ def dump_actions(ae,transitions,threshold=0.):
     print(ae.local("augmented.csv"))
     np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
-def dump(ae, path, train=None, test=None , transitions=None, **kwargs):
+def dump(ae, train=None, test=None , transitions=None, **kwargs):
     if test is not None:
         plot_ae(ae,select(test,12),"autoencoding_test.png")
     plot_ae(ae,select(train,12),"autoencoding_train.png")
@@ -215,16 +192,14 @@ from plot import plot_ae
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
-if __name__ == '__main__':
-    import numpy.random as random
-    from trace import trace
-    def run(learn,*args, **kwargs):
-        if learn:
-            ae, _, _ = grid_search(*args, **kwargs)
-        else:
-            ae = (lambda network=GumbelAE,**kwargs:network)(**kwargs)(args[0]).load()
-            # ==network(path)
-        return ae
+def run(learn,*args, **kwargs):
+    if learn:
+        ae, _, _ = grid_search(*args, **kwargs)
+    else:
+        ae = (lambda network=GumbelAE,**kwargs:network)(**kwargs)(args[0]).load()
+    return ae
+
+def run_mnist_puzzle():
     import mnist_puzzle
     configs = mnist_puzzle.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -236,8 +211,11 @@ if __name__ == '__main__':
     transitions = mnist_puzzle.transitions(3,3,train_c)
     print(len(configs),len(train),len(test))
     ae = run(True,"samples/mnist_puzzle33p_model/", train, test, transitions)
-    dump(ae, "", train,test)
+    dump(ae, train,test)
     dump_all_actions(ae,configs)
+    
 
-# Dropout is useful for avoiding the overfitting, but requires larger epochs
-# Too short epochs may result in underfitting
+if __name__ == '__main__':
+    from trace import trace
+    run_mnist_puzzle()
+
