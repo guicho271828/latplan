@@ -13,20 +13,20 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 def curry(fn,*args1,**kwargs1):
     return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
 
+def anneal_rate(epoch,min=0.1,max=5.0):
+    import math
+    return (2 / (epoch * (epoch+1))) * math.log(max/min)
+
 def learn_model(path,train_data,test_data=None,network=GumbelAE):
     ae = network(path)
     ae.train(train_data,
              epoch=1000,
-             anneal_rate=0.000008,
              # epoch=500,
-             # anneal_rate=0.0001,
              # epoch=200,
-             # anneal_rate=0.0002,
-             max_temperature=5.0,
-             # 
+             anneal_rate=anneal_rate(1000),
              batch_size=4000,
              test_data=test_data,
-             min_temperature=0.1,
+             report=False 
     )
     return ae
 
