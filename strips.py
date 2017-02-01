@@ -57,6 +57,7 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
         print("Best parameter {}: error:{}".format(best_params,best_error))
     finally:
         print(results)
+    best_ae.save()
     return best_ae,best_params,best_error
 
 # all_bitarray = np.unpackbits(np.arange(2**8, dtype=np.uint8).reshape((2**8,1)),axis=1)
