@@ -15,6 +15,11 @@ from keras.objectives import mse
 from keras.callbacks import LambdaCallback
 from keras.regularizers import activity_l2, activity_l1
 
+def Print():
+    def printer(x):
+        print(x)
+        return x
+    return Lambda(printer)
 
 def Sequential (array):
     def apply1(arg,f):
