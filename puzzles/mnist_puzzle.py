@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from puzzle import generate_configs
+from .puzzle import generate_configs, successors
 
-from mnist import mnist
+from .mnist import mnist
 x_train, y_train, _, _ = mnist()
 filters = [ np.equal(i,y_train) for i in range(10) ]
 imgs    = [ x_train[f] for f in filters ]
 panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
 
-def generate_mnist_puzzle(configs, width, height):
+def generate(configs, width, height):
     assert width*height <= 9
     base_width = 28
     base_height = 28
@@ -29,10 +29,9 @@ def states(width, height, configs=None):
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
-    return generate_mnist_puzzle(configs,width,height)
+    return generate(configs,width,height)
 
 def transitions(width, height, configs=None, one_per_state=False):
-    from puzzle import successors
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
@@ -41,11 +40,11 @@ def transitions(width, height, configs=None, one_per_state=False):
             index = np.random.randint(0,len(thing))
             return thing[index]
         transitions = np.array([
-            generate_mnist_puzzle(
+            generate(
                 [c1,pickone(successors(c1,width,height))],width,height)
             for c1 in configs ])
     else:
-        transitions = np.array([ generate_mnist_puzzle([c1,c2],width,height)
+        transitions = np.array([ generate([c1,c2],width,height)
                                  for c1 in configs for c2 in successors(c1,width,height) ])
     return np.einsum('ab...->ba...',transitions)
 
@@ -69,10 +68,10 @@ if __name__ == '__main__':
             ax.get_yaxis().set_visible(False)
         plt.savefig(name)
     configs = generate_configs(6)
-    puzzles = generate_mnist_puzzle(configs, 2, 3)
+    puzzles = generate(configs, 2, 3)
     print(puzzles[10])
-    plot_image(puzzles[10],"samples/mnist_puzzle.png")
-    plot_grid(puzzles[:36],"samples/mnist_puzzles.png")
+    plot_image(puzzles[10],"mnist_puzzle.png")
+    plot_grid(puzzles[:36],"mnist_puzzles.png")
     _transitions = transitions(2,3)
     import numpy.random as random
     indices = random.randint(0,_transitions[0].shape[0],18)
@@ -82,5 +81,5 @@ if __name__ == '__main__':
         np.einsum('ba...->ab...',_transitions) \
           .reshape((-1,)+_transitions.shape[2:])
     print(transitions_for_show.shape)
-    plot_grid(transitions_for_show,"samples/mnist_puzzle_transitions.png")
+    plot_grid(transitions_for_show,"mnist_puzzle_transitions.png")
 
