@@ -31,9 +31,9 @@ def learn_model(path,train_data,test_data=None,network=GumbelAE):
     )
     return ae
 
-def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE):
+def grid_search(path, train=None, test=None, network=GumbelAE):
     names      = ['layer','dropout']
-    parameters = [[2000],[0.4],]
+    parameters = [[1000,2000,4000],[0.4],]
     best_error = float('inf')
     best_params = None
     best_ae     = None
@@ -171,12 +171,12 @@ def dump(ae, train=None, test=None , transitions=None, **kwargs):
     if transitions is not None:
         dump_actions(ae,transitions)
 
-def dump_all_actions(ae,configs,threshold=0.):
+def dump_all_actions(ae,configs,trans_fn):
     prev = 0
     with open(ae.local("all_actions.csv"), 'ab') as f:
         for now in range(10000,len(configs),10000):
             print((prev,now,len(configs)))
-            transitions = mnist_puzzle.transitions(3,3,configs[prev:now])
+            transitions = trans_fn(configs[prev:now])
             orig, dest = transitions[0], transitions[1]
             orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
             dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
@@ -200,22 +200,141 @@ def run(learn,*args, **kwargs):
     return ae
 
 def run_mnist_puzzle():
-    import mnist_puzzle
-    configs = mnist_puzzle.generate_configs(9)
+    import puzzles.mnist_puzzle as p
+    configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
-    train       = mnist_puzzle.states(3,3,train_c)
-    test        = mnist_puzzle.states(3,3,test_c)
-    transitions = mnist_puzzle.transitions(3,3,train_c)
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/mnist_puzzle33p_model/", train, test, transitions)
+    ae = run(True,"samples/mnist_puzzle33p_model/", train, test)
     dump(ae, train,test)
-    dump_all_actions(ae,configs)
-    
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def run_random_mnist_puzzle():
+    import puzzles.random_mnist_puzzle as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/random_mnist_puzzle33p_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def run_lenna_puzzle():
+    import puzzles.lenna_puzzle as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/lenna_puzzle33p_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def run_spider_puzzle():
+    import puzzles.spider_puzzle as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/spider_puzzle33p_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def run_digital_puzzle():
+    import puzzles.digital_puzzle as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/digital_puzzle33p_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def run_digital_lightsout():
+    import puzzles.digital_lightsout as p
+    configs = np.tile(p.generate_configs(3),1000)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:int(len(configs)*(0.8))]
+    test_c  = configs[int(len(configs)*(0.8)):]
+    print(train_c)
+    train       = p.states(3,train_c)
+    test        = p.states(3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/digital_lightsout_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
+
+def run_mnist_counter():
+    import puzzles.mnist_counter as p
+    configs = np.tile(p.generate_configs(10),10000)
+    states = p.states(10,configs)
+    train       = states[:int(len(states)*(0.8))]
+    test        = states[int(len(states)*(0.8)):]
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/mnist_counter_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
+
+
+def run_random_mnist_counter():
+    import puzzles.random_mnist_counter as p
+    configs = np.tile(p.generate_configs(10),10000)
+    states = p.states(10,configs)
+    train       = states[:int(len(states)*(0.8))]
+    test        = states[int(len(states)*(0.8)):]
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/random_mnist_counter_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
 if __name__ == '__main__':
     from trace import trace
-    run_mnist_puzzle()
-
+    # try:
+    #     run_lenna_puzzle()
+    # except:
+    #     pass    
+    # try:
+    #     run_spider_puzzle()
+    # except:
+    #     pass    
+    try:
+        run_digital_lightsout()
+    except:
+        pass    
+    try:
+        run_mnist_counter()
+    except:
+        pass    
+    try:
+        run_random_mnist_counter()
+    except:
+        pass    
+    try:
+        run_mnist_puzzle()
+    except:
+        pass    
+    try:
+        run_random_mnist_puzzle()
+    except:
+        pass    
+    
