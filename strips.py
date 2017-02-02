@@ -47,7 +47,7 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
             error = ae.autoencoder.evaluate(test,test,batch_size=4000,verbose=0)
             results.append((error,)+params)
             print("Evaluation result for {} : error = {}".format(params_dict,error))
-            print("Current results:\n{}".format(np.array(results)),flush=True)
+            print("Current results:\n{}".format(results),flush=True)
             if error < best_error:
                 print("Found a better parameter {}: error:{} old-best:{}".format(
                     params_dict,error,best_error))
