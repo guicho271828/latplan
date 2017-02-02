@@ -303,35 +303,6 @@ class GumbelAE(Network):
         self.autoencoder.summary()
         return self
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    import shlex, subprocess
-    from mnist import mnist
-    x_train, _, x_test, _ = mnist()
-    ae = GumbelAE("samples/mnist_model/")
-    ae.train(x_train,test_data=x_test)
-    ae.summary()
-    del ae
-    ae = GumbelAE("samples/mnist_model/")
-    howmany=10
-    y_test = ae.autoencode(x_test[:howmany])
-    z_test = ae.encode_binary(x_test[:howmany])
-
-    plt.figure(figsize=(30, 5))
-    for i in range(howmany):
-        plt.subplot(3,howmany,i+1)
-        plt.imshow(x_test[i].reshape(28, 28), cmap='gray')
-        plt.axis('off')
-        plt.subplot(3,howmany,i+1+1*howmany)
-        plt.imshow(z_test[i].reshape(4,4), cmap='gray',
-                   interpolation='nearest')
-        plt.axis('off')
-        plt.subplot(3,howmany,i+1+2*howmany)
-        plt.imshow(y_test[i].reshape(28, 28), cmap='gray')
-        plt.axis('off')
-    plt.savefig(ae.local('viz.png'))
-
-
 class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
         data_dim = np.prod(input_shape)
@@ -523,3 +494,33 @@ class ActionDiscriminator(Discriminator):
         self.net.summary()
         return self
     
+def main ():
+    import matplotlib.pyplot as plt
+    import shlex, subprocess
+    from mnist import mnist
+    x_train, _, x_test, _ = mnist()
+    ae = GumbelAE("samples/mnist_model/")
+    ae.train(x_train,test_data=x_test)
+    ae.summary()
+    del ae
+    ae = GumbelAE("samples/mnist_model/")
+    howmany=10
+    y_test = ae.autoencode(x_test[:howmany])
+    z_test = ae.encode_binary(x_test[:howmany])
+
+    plt.figure(figsize=(30, 5))
+    for i in range(howmany):
+        plt.subplot(3,howmany,i+1)
+        plt.imshow(x_test[i].reshape(28, 28), cmap='gray')
+        plt.axis('off')
+        plt.subplot(3,howmany,i+1+1*howmany)
+        plt.imshow(z_test[i].reshape(4,4), cmap='gray',
+                   interpolation='nearest')
+        plt.axis('off')
+        plt.subplot(3,howmany,i+1+2*howmany)
+        plt.imshow(y_test[i].reshape(28, 28), cmap='gray')
+        plt.axis('off')
+    plt.savefig(ae.local('viz.png'))
+    
+if __name__ == '__main__':
+    main()
