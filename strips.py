@@ -58,6 +58,9 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
     finally:
         print(results)
     best_ae.save()
+    with open(best_ae.local("grid_search.log"), 'w') as f:
+        import json
+        json.dump(results, f)
     return best_ae,best_params,best_error
 
 # all_bitarray = np.unpackbits(np.arange(2**8, dtype=np.uint8).reshape((2**8,1)),axis=1)
