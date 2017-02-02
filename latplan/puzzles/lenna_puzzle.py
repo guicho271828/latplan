@@ -13,7 +13,7 @@ def generate(configs, width, height):
         panels  = split_image(os.path.join(os.path.dirname(__file__), "lenna.png"),width,height)
         stepy = panels[0].shape[0]//28
         stepx = panels[0].shape[1]//28
-        panels = panels[:,::stepy,::stepx][:,:28,:28]
+        panels = panels[:,::stepy,::stepx][:,:28,:28].round()
     assert width*height <= 9
     base_width = 28
     base_height = 28
