@@ -63,30 +63,30 @@ def latent_plan(init,goal,ae,mode='lmcut'):
 def select(data,num):
     return data[np.random.randint(0,data.shape[0],num)]
 
+def run_puzzle(path, p):
+    from model import GumbelAE
+    ae = GumbelAE(path)
+    configs = np.array(list(p.generate_configs(9)))
+    def convert(panels):
+        return np.array([
+            [i for i,x in enumerate(panels) if x == p]
+            for p in range(9)]).reshape(-1)
+    ig_c = [convert([8,0,6,5,4,7,2,3,1])
+            convert([0,1,2,3,4,5,6,7,8])]
+    ig = p.states(3,3,ig_c)
+    try:
+        latent_plan(*ig, ae, sys.argv[1])
+    except PlanException as e:
+        print(e)
+    
+
 if __name__ == '__main__':
     import sys
     import random
-    from model import GumbelAE
-    ae = GumbelAE("samples/mnist_puzzle33p_model/")
-    import mnist_puzzle
-    configs = np.array(list(mnist_puzzle.generate_configs(9)))
-    while True:
-        # hardest 8puzzle instance (31 moves) from
-        # http://w01fe.com/blog/2009/01/the-hardest-eight-puzzle-instances-take-31-moves-to-solve/
-        # 8 6 7
-        # 2 5 4
-        # 3 . 1
-        ig_c = [[7,8,3,6,5,4,1,2,0],
-                [0,1,2,3,4,5,6,7,8]]
-        ig = mnist_puzzle.states(3,3,ig_c)
-        try:
-            latent_plan(*ig, ae, sys.argv[1])
-        except PlanException as e:
-            print(e)
-        break
-    # print("The problem was solvable. Trying the original formulation")
-    # latent_plan(*ig, ae)
-    # print("Original formulation is also solvable.")
-    
-    
+    import puzzles.mnist_puzzle as p
+    run_puzzle("samples/mnist_puzzle33p_model/",p)
+    import puzzles.lenna_puzzle as p
+    run_puzzle("samples/lenna_puzzle33p_model/",p)
+    import puzzles.spider_puzzle as p
+    run_puzzle("samples/spider_puzzle33p_model/",p)
     
