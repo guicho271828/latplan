@@ -97,12 +97,12 @@ def run_lightsout(path, p):
 if __name__ == '__main__':
     import sys
     import random
-    import puzzles.mnist_puzzle as p
-    run_puzzle("samples/mnist_puzzle33p_model/",p)
+    # import puzzles.mnist_puzzle as p
+    # run_puzzle("samples/mnist_puzzle33p_model/",p)
     import puzzles.lenna_puzzle as p
     run_puzzle("samples/lenna_puzzle33p_model/",p)
-    import puzzles.spider_puzzle as p
-    run_puzzle("samples/spider_puzzle33p_model/",p)
-    import puzzles.digital_lightsout as p
-    run_lightsout("samples/digital_lightsout_model/",p)
+    # import puzzles.spider_puzzle as p
+    # run_puzzle("samples/spider_puzzle33p_model/",p)
+    # import puzzles.digital_lightsout as p
+    # run_lightsout("samples/digital_lightsout_model/",p)
     

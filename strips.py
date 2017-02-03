@@ -21,10 +21,10 @@ def anneal_rate(epoch,min=0.1,max=5.0):
 def learn_model(path,train_data,test_data=None,network=GumbelAE):
     ae = network(path)
     ae.train(train_data,
-             epoch=1000,
+             epoch=10000,
              # epoch=500,
              # epoch=200,
-             anneal_rate=anneal_rate(1000),
+             anneal_rate=anneal_rate(10000),
              batch_size=4000,
              test_data=test_data,
              report=False 
@@ -242,7 +242,7 @@ def run_lenna_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/lenna_puzzle33p_model/", train, test)
+    ae = run(True,"samples/lenna_puzzle33p_model_long/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -256,7 +256,7 @@ def run_spider_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/spider_puzzle33p_model/", train, test)
+    ae = run(True,"samples/spider_puzzle33p_model_long/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -314,32 +314,27 @@ def run_random_mnist_counter():
 
 if __name__ == '__main__':
     from trace import trace
+    run_spider_puzzle()
+    run_lenna_puzzle()
+    # run_digital_lightsout()
     # try:
-    #     run_lenna_puzzle()
+    #     run_digital_lightsout()
     # except:
     #     pass    
     # try:
-    #     run_spider_puzzle()
+    #     run_mnist_counter()
     # except:
     #     pass    
-    try:
-        run_digital_lightsout()
-    except:
-        pass    
-    try:
-        run_mnist_counter()
-    except:
-        pass    
-    try:
-        run_random_mnist_counter()
-    except:
-        pass    
-    try:
-        run_mnist_puzzle()
-    except:
-        pass    
-    try:
-        run_random_mnist_puzzle()
-    except:
-        pass    
+    # try:
+    #     run_random_mnist_counter()
+    # except:
+    #     pass    
+    # try:
+    #     run_mnist_puzzle()
+    # except:
+    #     pass    
+    # try:
+    #     run_random_mnist_puzzle()
+    # except:
+    #     pass    
     
