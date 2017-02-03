@@ -71,7 +71,7 @@ def run_puzzle(path, p):
         return np.array([
             [i for i,x in enumerate(panels) if x == p]
             for p in range(9)]).reshape(-1)
-    ig_c = [convert([8,0,6,5,4,7,2,3,1])
+    ig_c = [convert([8,0,6,5,4,7,2,3,1]),
             convert([0,1,2,3,4,5,6,7,8])]
     ig = p.states(3,3,ig_c)
     try:
