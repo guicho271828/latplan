@@ -79,6 +79,20 @@ def run_puzzle(path, p):
     except PlanException as e:
         print(e)
     
+def run_lightsout(path, p):
+    from model import GumbelAE
+    ae = GumbelAE(path)
+    configs = np.array(list(p.generate_configs(3)))
+    ig_c = [[0,0,1,
+             0,1,0,
+             1,0,1,],
+            np.zeros(9)]
+    ig = p.states(3,ig_c)
+    try:
+        latent_plan(*ig, ae, sys.argv[1])
+    except PlanException as e:
+        print(e)
+    
 
 if __name__ == '__main__':
     import sys
@@ -89,4 +103,6 @@ if __name__ == '__main__':
     run_puzzle("samples/lenna_puzzle33p_model/",p)
     import puzzles.spider_puzzle as p
     run_puzzle("samples/spider_puzzle33p_model/",p)
+    import puzzles.digital_lightsout as p
+    run_lightsout("samples/digital_lightsout_model/",p)
     
