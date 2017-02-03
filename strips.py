@@ -276,7 +276,7 @@ def run_digital_puzzle():
 
 def run_digital_lightsout():
     import puzzles.digital_lightsout as p
-    configs = np.tile(p.generate_configs(3),1000)
+    configs = np.repeat(p.generate_configs(3),1,axis=0)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     train_c = configs[:int(len(configs)*(0.8))]
@@ -291,7 +291,7 @@ def run_digital_lightsout():
 
 def run_mnist_counter():
     import puzzles.mnist_counter as p
-    configs = np.tile(p.generate_configs(10),10000)
+    configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
@@ -303,7 +303,7 @@ def run_mnist_counter():
 
 def run_random_mnist_counter():
     import puzzles.random_mnist_counter as p
-    configs = np.tile(p.generate_configs(10),10000)
+    configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
