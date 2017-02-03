@@ -33,7 +33,7 @@ def learn_model(path,train_data,test_data=None,network=GumbelAE):
 
 def grid_search(path, train=None, test=None, network=GumbelAE):
     names      = ['layer','dropout']
-    parameters = [[1000,2000,4000],[0.4],]
+    parameters = [[4000],[0.4],]
     best_error = float('inf')
     best_params = None
     best_ae     = None
