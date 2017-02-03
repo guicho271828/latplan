@@ -172,19 +172,21 @@ def dump(ae, train=None, test=None , transitions=None, **kwargs):
         dump_actions(ae,transitions)
 
 def dump_all_actions(ae,configs,trans_fn):
-    prev = 0
+    l = len(configs)
+    batch = 10000
+    loop = (l // batch) + 1
     try:
         with open(ae.local("all_actions.csv"), 'ab') as f:
-            for now in range(10000,len(configs),10000):
-                print((prev,now,len(configs)))
-                transitions = trans_fn(configs[prev:now])
+            for begin in range(0,loop*batch,batch):
+                end = begin + batch
+                print((begin,end,len(configs)))
+                transitions = trans_fn(configs[begin:end])
                 orig, dest = transitions[0], transitions[1]
                 orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
                 dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
                 actions = np.concatenate((orig_b,dest_b), axis=1)
                 print(ae.local("all_actions.csv"))
                 np.savetxt(f,actions,"%d")
-                prev = now
     except KeyboardInterrupt:
         print("dump stopped")
 
