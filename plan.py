@@ -59,6 +59,7 @@ def latent_plan(init,goal,ae,mode='lmcut'):
     print(numbers)
     plan_images = ae.decode_binary(numbers)
     plot_grid(plan_images,path=ae.local('{}.png'.format(mode)))
+    plot_grid(plan_images.round(),path=ae.local('{}-rounded.png'.format(mode)))
 
 def select(data,num):
     return data[np.random.randint(0,data.shape[0],num)]
