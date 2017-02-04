@@ -105,8 +105,8 @@ def run_hanoi(path, p):
     from model import GumbelAE
     ae = GumbelAE(path)
     configs = np.array(list(p.generate_configs(3)))
-    ig_c = [[0,0,0,0,0,0,0,0,0],
-            [2,2,2,2,2,2,2,2,2]]
+    ig_c = [[0,0,0,0,0,0],
+            [2,2,2,2,2,2]]
     ig = p.states(9,ig_c)
     try:
         latent_plan(*ig, ae, sys.argv[1])
