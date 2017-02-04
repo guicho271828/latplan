@@ -59,7 +59,7 @@ def grid_search(path, train=None, test=None, network=GumbelAE):
     finally:
         print(results)
     best_ae.save()
-    with open(best_ae.local("grid_search.log"), 'w') as f:
+    with open(best_ae.local("grid_search.log"), 'a') as f:
         import json
         json.dump(results, f)
     return best_ae,best_params,best_error
