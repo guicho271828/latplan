@@ -192,6 +192,8 @@ def dump_all_actions(ae,configs,trans_fn):
 
 ################################################################
 
+learn_flag = True
+
 from plot import plot_ae
 
 def select(data,num):
@@ -214,7 +216,7 @@ def run_mnist_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/mnist_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/mnist_puzzle33p_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -228,7 +230,7 @@ def run_random_mnist_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/random_mnist_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/random_mnist_puzzle33p_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -242,7 +244,7 @@ def run_lenna_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/lenna_puzzle33p_model_long/", train, test)
+    ae = run(learn_flag,"samples/lenna_puzzle33p_model_long/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -256,7 +258,7 @@ def run_mandrill_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/mandrill_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/mandrill_puzzle33p_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -270,7 +272,7 @@ def run_spider_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/spider_puzzle33p_model_long/", train, test)
+    ae = run(learn_flag,"samples/spider_puzzle33p_model_long/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -284,7 +286,7 @@ def run_digital_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/digital_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/digital_puzzle33p_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
@@ -297,7 +299,7 @@ def run_hanoi():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/hanoi_model/", train, test)
+    ae = run(learn_flag,"samples/hanoi_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
 
@@ -312,7 +314,7 @@ def run_digital_lightsout():
     train       = p.states(3,train_c)
     test        = p.states(3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/digital_lightsout_model/", train, test)
+    ae = run(learn_flag,"samples/digital_lightsout_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
 
@@ -323,7 +325,7 @@ def run_mnist_counter():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/mnist_counter_model/", train, test)
+    ae = run(learn_flag,"samples/mnist_counter_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
@@ -335,11 +337,14 @@ def run_random_mnist_counter():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(True,"samples/random_mnist_counter_model/", train, test)
+    ae = run(learn_flag,"samples/random_mnist_counter_model/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
 if __name__ == '__main__':
+    import sys
+    if len(sys.argv) > 1:
+        learn_flag = (sys.argv[1] != 'dump')
     from trace import trace
     # run_spider_puzzle()
     run_hanoi()
