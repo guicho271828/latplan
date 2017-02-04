@@ -52,7 +52,7 @@ def successors(config):
                 if not state[j] or state[j][0] > state[i][0]:
                     # pseudo code
                     copy = deepcopy(state)
-                    disk = copy[i].pop()
+                    disk = copy[i].pop(0)
                     copy[j].append(disk)
                     succ.append(state_config(copy))
     return succ
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     puzzles = generate(configs)
     print(puzzles.shape)
     print(puzzles[10])
-    plot_image(puzzles[10],"hanoi.png")
+    plot_image(puzzles[0],"hanoi.png")
     plot_grid(puzzles[:36],"hanois.png")
     _transitions = transitions(disks)
     print(_transitions.shape)
