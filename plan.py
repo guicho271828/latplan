@@ -37,7 +37,7 @@ def latent_plan(init,goal,ae,mode='lmcut'):
 
     np.savetxt("/tmp/problem.csv",ig_b.flatten().astype('int'),"%d")
     try:
-        out = echo_out(["md5","/tmp/problem.csv",ae.local("problem.csv")])
+        out = echo_out(["md5sum","/tmp/problem.csv",ae.local("problem.csv")])
         tokens = out.split()
         if tokens[0] != tokens[2]:
             echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
