@@ -31,7 +31,7 @@ def plot_grid(images,w=10,path="plan.png"):
     images = fix_images(images)
     l = len(images)
     h = int(math.ceil(l/w))
-    plt.figure(figsize=(w, h))
+    plt.figure(figsize=(w*2, h*2))
     for i,image in enumerate(images):
         ax = plt.subplot(h,w,i+1)
         try:
