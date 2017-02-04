@@ -293,10 +293,9 @@ def run_hanoi():
     configs = p.generate_configs(6)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    train       = p.states(6,train_c)
-    test        = p.states(6,test_c)
+    states = p.states(6,configs)
+    train       = states[:int(len(states)*(0.8))]
+    test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
     ae = run(True,"samples/hanoi_model/", train, test)
     dump(ae, train,test)
