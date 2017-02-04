@@ -290,17 +290,17 @@ def run_digital_puzzle():
 
 def run_hanoi():
     import puzzles.hanoi as p
-    configs = p.generate_configs(9)
+    configs = p.generate_configs(6)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
-    train       = p.states(9,train_c)
-    test        = p.states(9,test_c)
+    train       = p.states(6,train_c)
+    test        = p.states(6,test_c)
     print(len(configs),len(train),len(test))
     ae = run(True,"samples/hanoi_model/", train, test)
     dump(ae, train,test)
-    dump_all_actions(ae,configs,lambda configs: p.transitions(9,configs))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
 
 def run_digital_lightsout():
     import puzzles.digital_lightsout as p
