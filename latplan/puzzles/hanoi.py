@@ -22,8 +22,8 @@ import numpy as np
 
 # random config is available from np.random.randint(0,3,size)
 
-def generate_configs(size=10):
-    assert size < 21
+def generate_configs(size=6):
+    assert size <= 6
     import itertools
     return itertools.product(range(3),repeat=size)
 
@@ -61,11 +61,9 @@ def generate1(config):
     figure = np.zeros([84,84],dtype=np.int8)
     state = config_state(config)
     for i, tower in enumerate(state):
-        y = 1
         tower.reverse()
-        for disk in tower:
-            figure[81-y:83-y,(28*i-14)-disk:(28*i-14)+disk] = 1
-            y += 4
+        for j,disk in enumerate(tower):
+            figure[14*(5-j)+1:14*(6-j)-1,(28*i-14)-2*disk:(28*i-14)+2*disk] = 1
     return figure
 
 def generate(configs):
@@ -104,7 +102,7 @@ if __name__ == '__main__':
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
         plt.savefig(name)
-    disks = 9
+    disks = 6
     configs = generate_configs(disks)
     puzzles = generate(configs)
     print(puzzles.shape)
