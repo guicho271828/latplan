@@ -35,7 +35,14 @@ options = {
 def latent_plan(init,goal,ae,mode='lmcut'):
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal.png")
 
-    # np.savetxt(ae.local("problem.csv"),ig_b.flatten().astype('int'),"%d")
+    np.savetxt("/tmp/problem.csv",ig_b.flatten().astype('int'),"%d")
+    try:
+        out = echo_out(["md5","/tmp/problem.csv",ae.local("problem.csv")])
+        tokens = out.split()
+        if tokens[0] != tokens[2]:
+            echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
+    except subprocess.CalledProcessError:
+        echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
 
     # start planning
     plan_raw = ae.local("problem.sasp.plan")
