@@ -288,6 +288,20 @@ def run_digital_puzzle():
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
+def run_hanoi():
+    import puzzles.hanoi as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(9,train_c)
+    test        = p.states(9,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(True,"samples/hanoi_model/", train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(9,configs))
+
 def run_digital_lightsout():
     import puzzles.digital_lightsout as p
     configs = np.repeat(p.generate_configs(3),1,axis=0)
@@ -328,8 +342,8 @@ def run_random_mnist_counter():
 
 if __name__ == '__main__':
     from trace import trace
-    run_spider_puzzle()
-    run_lenna_puzzle()
+    # run_spider_puzzle()
+    run_hanoi()
     # run_digital_lightsout()
     # try:
     #     run_digital_lightsout()
