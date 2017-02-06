@@ -182,6 +182,19 @@ class GumbelSoftmax:
             np.max([self.min,
                     K.get_value(self.tau) * np.exp(- self.anneal_rate * epoch)]))
 
+class GaussianSample:
+    count = 0
+    def call(self,mean,log_var):
+        epsilon = K.random_normal(shape=K.shape(mean), mean=0., std=1.0)
+        return mean + K.exp(log_var / 2) * epsilon
+    def __call__(self,mean,log_var):
+        GaussianSample.count += 1
+        return Lambda(self.call,name="gaussian_{}".format(GaussianSample.count-1))(mean,log_var)
+    def loss(self, mean, log_var):
+        return - 0.5 * K.sum(
+            1 + log_var - K.square(mean) - K.exp(log_var),
+            axis=-1)
+        
 class GumbelAE(Network):
     def __init__(self,path,M=2,N=25,parameters={}):
         super().__init__(path,{'M':M,'N':N,**parameters})
