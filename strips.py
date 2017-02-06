@@ -18,26 +18,33 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return (2 / (epoch * (epoch+1))) * math.log(max/min)
 
-def learn_model(path,train_data,test_data=None,network=GumbelAE):
+default_networks = {'fc':GumbelAE,'conv':ConvolutionalGumbelAE}
+encoder = 'fc'
+
+def learn_model(path,train_data,test_data=None,network=None):
+    if network is None:
+        network = default_networks[encoder]
     ae = network(path)
     ae.train(train_data,
-             epoch=10000,
+             epoch=1000,
              # epoch=500,
              # epoch=200,
-             anneal_rate=anneal_rate(10000),
-             batch_size=4000,
+             anneal_rate=anneal_rate(1000),
+             batch_size=2000,
              test_data=test_data,
              report=False 
     )
     return ae
 
-def grid_search(path, train=None, test=None, network=GumbelAE):
+def grid_search(path, train=None, test=None):
+    network = default_networks[encoder]
     names      = ['layer','dropout']
-    parameters = [[4000],[0.4],]
+    parameters = [[1000],[0.4],]
     best_error = float('inf')
     best_params = None
     best_ae     = None
     results = []
+    print("Network: {}".format(network))
     try:
         import itertools
         for params in itertools.product(*parameters):
@@ -204,10 +211,11 @@ def run(learn,*args, **kwargs):
     if learn:
         ae, _, _ = grid_search(*args, **kwargs)
     else:
-        ae = (lambda network=GumbelAE,**kwargs:network)(**kwargs)(args[0]).load()
+        ae = default_networks[encoder](args[0]).load()
+        ae.summary()
     return ae
 
-def run_mnist_puzzle():
+def mnist_puzzle():
     import puzzles.mnist_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -217,11 +225,11 @@ def run_mnist_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mnist_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/mnist_puzzle33p_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-def run_random_mnist_puzzle():
+def random_mnist_puzzle():
     import puzzles.random_mnist_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -231,11 +239,11 @@ def run_random_mnist_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/random_mnist_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/random_mnist_puzzle33p_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-def run_lenna_puzzle():
+def lenna_puzzle():
     import puzzles.lenna_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -245,11 +253,11 @@ def run_lenna_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/lenna_puzzle33p_model_long/", train, test)
+    ae = run(learn_flag,"samples/lenna_puzzle33p_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-def run_mandrill_puzzle():
+def mandrill_puzzle():
     import puzzles.mandrill_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -259,11 +267,11 @@ def run_mandrill_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mandrill_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/mandrill_puzzle33p_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-def run_spider_puzzle():
+def spider_puzzle():
     import puzzles.spider_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -273,11 +281,11 @@ def run_spider_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/spider_puzzle33p_model_long/", train, test)
+    ae = run(learn_flag,"samples/spider_puzzle33p_{}_long/", train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-def run_digital_puzzle():
+def digital_puzzle():
     import puzzles.digital_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -287,11 +295,11 @@ def run_digital_puzzle():
     train       = p.states(3,3,train_c)
     test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/digital_puzzle33p_model/", train, test)
+    ae = run(learn_flag,"samples/digital_puzzle33p_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-def run_hanoi():
+def hanoi():
     import puzzles.hanoi as p
     configs = p.generate_configs(6)
     configs = np.array([ c for c in configs ])
@@ -300,11 +308,11 @@ def run_hanoi():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/hanoi_model/", train, test)
+    ae = run(learn_flag,"samples/hanoi_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
 
-def run_digital_lightsout():
+def digital_lightsout():
     import puzzles.digital_lightsout as p
     configs = np.repeat(p.generate_configs(3),1,axis=0)
     configs = np.array([ c for c in configs ])
@@ -315,59 +323,48 @@ def run_digital_lightsout():
     train       = p.states(3,train_c)
     test        = p.states(3,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/digital_lightsout_model/", train, test)
+    ae = run(learn_flag,"samples/digital_lightsout_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
 
-def run_mnist_counter():
+def mnist_counter():
     import puzzles.mnist_counter as p
     configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mnist_counter_model/", train, test)
+    ae = run(learn_flag,"samples/mnist_counter_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
 
-def run_random_mnist_counter():
+def random_mnist_counter():
     import puzzles.random_mnist_counter as p
     configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/random_mnist_counter_model/", train, test)
+    ae = run(learn_flag,"samples/random_mnist_counter_{}/".format(encoder), train, test)
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
+modes = {'learn':True,'dump':False}
 if __name__ == '__main__':
     import sys
-    if len(sys.argv) > 1:
-        learn_flag = (sys.argv[1] != 'dump')
-    from trace import trace
-    # run_spider_puzzle()
-    run_hanoi()
-    # run_digital_lightsout()
-    # try:
-    #     run_digital_lightsout()
-    # except:
-    #     pass    
-    # try:
-    #     run_mnist_counter()
-    # except:
-    #     pass    
-    # try:
-    #     run_random_mnist_counter()
-    # except:
-    #     pass    
-    # try:
-    #     run_mnist_puzzle()
-    # except:
-    #     pass    
-    # try:
-    #     run_random_mnist_puzzle()
-    # except:
-    #     pass    
-    
+    if len(sys.argv) == 1:
+        print({ k for k in default_networks})
+        gs = globals()
+        print({ k for k in gs if hasattr(gs[k], '__call__')})
+        print({k for k in modes})
+    else:
+        encoder = sys.argv[1]
+        if encoder not in default_networks:
+            raise ValueError("invalid encoder!: {}".format(sys.argv))
+        task = sys.argv[2]
+        mode = sys.argv[3]
+        if mode not in modes:
+            raise ValueError("invalid mode!: {}".format(sys.argv))
+        learn_flag = modes[mode]
+        globals()[task]()
