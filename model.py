@@ -308,15 +308,20 @@ class ConvolutionalGumbelAE(GumbelAE):
         data_dim = np.prod(input_shape)
         M, N = self.parameters['M'], self.parameters['N']
         # Trainable parameters: 1,436,320
-        return [Reshape(input_shape+(1,)),
+        return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
-                Convolution2D(128,6,5,activation='relu',border_mode='same'),
-                SpatialDropout2D(0.4),
+                Convolution2D(9,3,3,subsample=(3,3),
+                              activation='relu',border_mode='same'),
+                Dropout(self.parameters['dropout']),
                 BN(),
-                Convolution2D(128,6,5,subsample=(6,5),activation='relu',border_mode='same'),
-                SpatialDropout2D(0.4),
+                Convolution2D(81,3,3,subsample=(3,3),
+                              activation='relu',border_mode='same'),
+                Dropout(self.parameters['dropout']),
                 BN(),
                 Flatten(),
+                Dense(self.parameters['layer']),
+                BN(),
+                Dropout(self.parameters['dropout']),
                 Dense(M*N),
                 Reshape((N,M))]
 
