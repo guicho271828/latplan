@@ -2,13 +2,25 @@
 
 trap exit SIGINT
 
-./strips.py conv mnist_puzzle learn
-./strips.py fc mnist_puzzle learn
-./strips.py conv lenna_puzzle learn
-./strips.py fc lenna_puzzle learn
-./strips.py conv mandrill_puzzle learn
-./strips.py fc mandrill_puzzle learn
-./strips.py conv digital_lightsout learn
-./strips.py fc digital_lightsout learn
-./strips.py conv hanoi learn
-./strips.py fc hanoi learn
+# hanoi: finished.
+# lightsout: finished.
+# mnist, mandrill: 
+#  mnist_puzzle mandrill_puzzle
+# digital_lightsout 
+for type in fc ; do
+    for task in hanoi  ; do
+        for mode in learn ; do
+            ./strips.py $type $task $mode
+            samples/sync.sh
+        done
+    done
+done
+
+# for type in fc fcg ; do
+#     for task in random_mnist_puzzle ; do
+#         for mode in dump ; do
+#             ./strips.py $type $task $mode
+#             samples/sync.sh
+#         done
+#     done
+# done
