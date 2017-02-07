@@ -160,18 +160,27 @@ class Network:
 
 class GumbelSoftmax:
     count = 0
-    def __init__(self,min,max,anneal_rate):
+    def __init__(self,N,M,min,max,anneal_rate):
+        self.N = N
+        self.M = M
         self.min = min
         self.anneal_rate = anneal_rate
         self.tau = K.variable(max, name="temperature")
-    def call(self,logits):
+    def call(self,prev):
+        N, M = self.N, self.M
+        logits = Sequential([
+            Flatten(),
+            Dense(N * M),
+            Reshape((N,M))])(prev)
+        self.logits = logits
         u = K.random_uniform(K.shape(logits), 0, 1)
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
         return K.softmax( ( logits + gumbel ) / self.tau )
-    def __call__(self,logits):
+    def __call__(self,prev):
         GumbelSoftmax.count += 1
-        return Lambda(self.call,name="gumbel_{}".format(GumbelSoftmax.count-1))(logits)
-    def loss(self, logits):
+        return Lambda(self.call,name="gumbel_{}".format(GumbelSoftmax.count-1))(prev)
+    def loss(self):
+        logits = self.logits
         q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
         return - K.mean(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
@@ -184,42 +193,42 @@ class GumbelSoftmax:
 
 class GaussianSample:
     count = 0
-    def call(self,mean,log_var):
+    def __init__(self,G):
+        self.G = G
+    def call(self,prev):
+        prev = Flatten()(prev)
+        mean    = Dense(self.G)(pre_encoded)
+        log_var = Dense(self.G)(pre_encoded)
+        self.mean, self.log_var = mean, log_var
         epsilon = K.random_normal(shape=K.shape(mean), mean=0., std=1.0)
         return mean + K.exp(log_var / 2) * epsilon
-    def __call__(self,mean,log_var):
+    def __call__(self,prev):
         GaussianSample.count += 1
-        return Lambda(self.call,name="gaussian_{}".format(GaussianSample.count-1))(mean,log_var)
-    def loss(self, mean, log_var):
+        return Lambda(self.call,name="gaussian_{}".format(GaussianSample.count-1))(prev)
+    def loss(self):
         return - 0.5 * K.sum(
-            1 + log_var - K.square(mean) - K.exp(log_var),
+            1 + self.log_var - K.square(self.mean) - K.exp(self.log_var),
             axis=-1)
         
 class GumbelAE(Network):
-    def __init__(self,path,M=2,N=25,parameters={}):
-        super().__init__(path,{'M':M,'N':N,**parameters})
+    def __init__(self,path,N=25,M=2,parameters={}):
+        super().__init__(path,{'N':N,'M':M,**parameters})
         self.min_temperature = 0.1
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
     def build_encoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        M, N = self.parameters['M'], self.parameters['N']
-        return [Reshape((data_dim,)),
+        return [Flatten(),
                 GaussianNoise(0.1),
                 Dense(self.parameters['layer'], activation='relu'),
                 BN(),
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['layer'], activation='relu'),
                 BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(M*N),
-                Reshape((N,M))]
+                Dropout(self.parameters['dropout']),]
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
-        M, N = self.parameters['M'], self.parameters['N']
         return [
             SpatialDropout1D(self.parameters['dropout']),
-            # normal dropout after reshape was also effective
             Reshape((N*M,)),
             Dense(self.parameters['layer'], activation='relu'),
             Dropout(self.parameters['dropout']),
@@ -232,9 +241,9 @@ class GumbelAE(Network):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N = self.parameters['M'], self.parameters['N']
         x = Input(shape=input_shape)
-        logits = Sequential(self.build_encoder(input_shape))(x)
-        gs = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
-        z = gs(logits)
+        pre_encoded = Sequential(self.build_encoder(input_shape))(x)
+        gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
+        z = gs(pre_encoded)
         _decoder = self.build_decoder(input_shape)
         y  = Sequential(_decoder)(z)
         z2 = Input(shape=(N,M))
@@ -243,7 +252,7 @@ class GumbelAE(Network):
         y3 = Sequential(_decoder)(z3)
 
         def loss(x, y):
-            kl_loss = gs.loss(logits)
+            kl_loss = gs.loss()
             reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
                                       K.reshape(y,(K.shape(x)[0],data_dim,)))
             return reconstruction_loss + kl_loss
@@ -318,9 +327,6 @@ class GumbelAE(Network):
 
 class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        M, N = self.parameters['M'], self.parameters['N']
-        # Trainable parameters: 1,436,320
         return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
                 Convolution2D(9,3,3,subsample=(3,3),
@@ -334,9 +340,57 @@ class ConvolutionalGumbelAE(GumbelAE):
                 Flatten(),
                 Dense(self.parameters['layer']),
                 BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(M*N),
-                Reshape((N,M))]
+                Dropout(self.parameters['dropout']),]
+
+class GaussianGumbelAE(GumbelAE):
+    def __init__(self,path,G=10,N=25,M=2,parameters={}):
+        super().__init__(path,N,M,{'G':G,**parameters})
+
+    def _build(self,input_shape):
+        data_dim = np.prod(input_shape)
+        print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
+        M, N, G = self.parameters['M'], self.parameters['N'], self.parameters['G'], 
+        x = Input(shape=input_shape)
+        pre_encoded = Sequential(self.build_encoder(input_shape))(x)
+        gumbel = GumbelSoftmax(N,M,
+                               self.min_temperature,
+                               self.max_temperature,
+                               self.anneal_rate)
+        gauss  = GaussianSample(G)
+        z_cat   = gumbel(pre_encoded)
+        z_gauss = gauss (pre_encoded)
+        z_cat_flat = Flatten()(z_cat)
+        z = K.merge((z_cat_flat, z_gauss), mode='concat')
+        _decoder = self.build_decoder(input_shape)
+        y  = Sequential(_decoder)(z)
+        
+        z2_cat = Input(shape=(N,M))
+        z2_cat_flat = Flatten()(z2_cat)
+        z2 = K.merge((z2_cat_flat, K.zeros(K.shape(z_gauss))), mode='concat')
+        y2 = Sequential(_decoder)(z2)
+        
+        z3_cat = Lambda(lambda z_cat:K.round(z_cat))(z_cat)
+        z3_cat_flat = Flatten()(z3_cat)
+        z3 = K.merge((z3_cat_flat, K.zeros(K.shape(z_gauss))), mode='concat')
+        y3 = Sequential(_decoder)(z3)
+
+        def loss(x, y):
+            kl_loss = gumbel.loss() + gauss.loss()
+            reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                                      K.reshape(y,(K.shape(x)[0],data_dim,)))
+            return reconstruction_loss + kl_loss
+
+        self.callbacks.append(LambdaCallback(on_epoch_end=gumbel.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(gumbel.tau)
+        self.loss = loss
+        self.encoder     = Model(x, z_cat)
+        self.decoder     = Model(z2_cat, y2)
+        self.net = Model(x, y)
+        self.autoencoder = self.net
+        self.autoencoder_binary = Model(x, y3)
+
+class GaussianConvolutionalGumbelAE(GaussianGumbelAE,ConvolutionalGumbelAE):
+    pass
 
 class Discriminator(Network):
     def __init__(self,path,parameters={}):
