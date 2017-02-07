@@ -216,8 +216,12 @@ class GaussianSample:
             axis=-1)
         
 class GumbelAE(Network):
-    def __init__(self,path,N=25,M=2,parameters={}):
-        super().__init__(path,{'N':N,'M':M,**parameters})
+    def __init__(self,path,parameters={}):
+        if 'N' not in parameters:
+            parameters['N'] = 25
+        if 'M' not in parameters:
+            parameters['M'] = 2
+        super().__init__(path,parameters)
         self.min_temperature = 0.1
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
@@ -342,8 +346,10 @@ class ConvolutionalGumbelAE(GumbelAE):
                 Dropout(self.parameters['dropout']),]
 
 class GaussianGumbelAE(GumbelAE):
-    def __init__(self,path,G=10,N=25,M=2,parameters={}):
-        super().__init__(path,N,M,{'G':G,**parameters})
+    def __init__(self,path,parameters={}):
+        if 'G' not in parameters:
+            parameters['G'] = 10
+        super().__init__(path,parameters)
 
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
