@@ -186,6 +186,7 @@ def dump_all_actions(ae,configs,trans_fn):
     batch = 10000
     loop = (l // batch) + 1
     try:
+        print(ae.local("all_actions.csv"))
         with open(ae.local("all_actions.csv"), 'ab') as f:
             for begin in range(0,loop*batch,batch):
                 end = begin + batch
@@ -195,7 +196,6 @@ def dump_all_actions(ae,configs,trans_fn):
                 orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
                 dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
                 actions = np.concatenate((orig_b,dest_b), axis=1)
-                print(ae.local("all_actions.csv"))
                 np.savetxt(f,actions,"%d")
     except KeyboardInterrupt:
         print("dump stopped")
