@@ -32,7 +32,7 @@ def states(width, height, configs=None):
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
-    return generate(configs,width,height,random_panels())
+    return np.array([ generate([c],width,height,random_panels()) for c in configs ])
 
 def transitions(width, height, configs=None, one_per_state=False):
     digit = width * height
