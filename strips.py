@@ -3,7 +3,8 @@
 import config
 import numpy as np
 import numpy.random as random
-from model import GumbelAE, ConvolutionalGumbelAE
+from model import GumbelAE, ConvolutionalGumbelAE, \
+    GaussianGumbelAE, GaussianConvolutionalGumbelAE
 
 import keras.backend as K
 import tensorflow as tf
@@ -18,7 +19,8 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return (2 / (epoch * (epoch+1))) * math.log(max/min)
 
-default_networks = {'fc':GumbelAE,'conv':ConvolutionalGumbelAE}
+default_networks = {'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
+                    'fcg':GaussianGumbelAE,'convg':GaussianConvolutionalGumbelAE}
 encoder = 'fc'
 
 def learn_model(path,train_data,test_data=None,network=None):
