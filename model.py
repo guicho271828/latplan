@@ -2,7 +2,7 @@
 
 import numpy as np
 from functools import reduce
-from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D
+from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D, merge
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 from keras.optimizers import Adam
@@ -222,8 +222,7 @@ class GumbelAE(Network):
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
     def build_encoder(self,input_shape):
-        return [Flatten(),
-                GaussianNoise(0.1),
+        return [GaussianNoise(0.1),
                 Dense(self.parameters['layer'], activation='relu'),
                 BN(),
                 Dropout(self.parameters['dropout']),
@@ -233,8 +232,7 @@ class GumbelAE(Network):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
-            SpatialDropout1D(self.parameters['dropout']),
-            Reshape((N*M,)),
+            Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu'),
             Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu'),
@@ -246,15 +244,18 @@ class GumbelAE(Network):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N = self.parameters['M'], self.parameters['N']
         x = Input(shape=input_shape)
-        pre_encoded = Sequential(self.build_encoder(input_shape))(x)
+        x_flat = Flatten()(x)
+        pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
+        print(Model(x,pre_encoded))
         gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
         z = gs(pre_encoded)
+        z_flat = Flatten()(z)
         _decoder = self.build_decoder(input_shape)
-        y  = Sequential(_decoder)(z)
+        y  = Sequential(_decoder)(z_flat)
+        
         z2 = Input(shape=(N,M))
-        y2 = Sequential(_decoder)(z2)
-        z3 = Lambda(lambda z:K.round(z))(z)
-        y3 = Sequential(_decoder)(z3)
+        z2_flat = Flatten()(z2)
+        y2 = Sequential(_decoder)(z2_flat)
 
         def loss(x, y):
             kl_loss = gs.loss()
@@ -269,7 +270,6 @@ class GumbelAE(Network):
         self.decoder     = Model(z2, y2)
         self.net = Model(x, y)
         self.autoencoder = self.net
-        self.autoencoder_binary = Model(x, y3)
     def _save(self):
         super()._save()
         self.encoder.save_weights(self.local("encoder.h5"))
@@ -294,15 +294,9 @@ class GumbelAE(Network):
         self.autoencoder.compile(optimizer=optimizer, loss=mse)
         test_both("Reconstruction MSE: {}",
                   lambda data: self.autoencoder.evaluate(data,data,**opts))
-        self.autoencoder_binary.compile(optimizer=optimizer, loss=mse)
-        test_both("Binary Reconstruction MSE: {}",
-                  lambda data: self.autoencoder_binary.evaluate(data,data,**opts))
         self.autoencoder.compile(optimizer=optimizer, loss=bce)
         test_both("Reconstruction BCE: {}",
                   lambda data: self.autoencoder.evaluate(data,data,**opts))
-        self.autoencoder_binary.compile(optimizer=optimizer, loss=bce)
-        test_both("Binary Reconstruction BCE: {}",
-                  lambda data: self.autoencoder_binary.evaluate(data,data,**opts))
         test_both("Latent activation: {}",
                   lambda data: self.encode_binary(train_data,batch_size=batch_size,).mean())
         return self
@@ -356,7 +350,8 @@ class GaussianGumbelAE(GumbelAE):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N, G = self.parameters['M'], self.parameters['N'], self.parameters['G'], 
         x = Input(shape=input_shape)
-        pre_encoded = Sequential(self.build_encoder(input_shape))(x)
+        x_flat = Flatten()(x)
+        pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
         gumbel = GumbelSoftmax(N,M,
                                self.min_temperature,
                                self.max_temperature,
@@ -365,20 +360,16 @@ class GaussianGumbelAE(GumbelAE):
         z_cat   = gumbel(pre_encoded)
         z_gauss = gauss (pre_encoded)
         z_cat_flat = Flatten()(z_cat)
-        z = K.merge((z_cat_flat, z_gauss), mode='concat')
+        z = merge([z_cat_flat, z_gauss], mode='concat')
         _decoder = self.build_decoder(input_shape)
         y  = Sequential(_decoder)(z)
-        
-        z2_cat = Input(shape=(N,M))
+
+        z_gzero = Input(shape=(G,))
+        z2_cat  = Input(shape=(N,M))
         z2_cat_flat = Flatten()(z2_cat)
-        z2 = K.merge((z2_cat_flat, K.zeros(K.shape(z_gauss))), mode='concat')
+        z2 = Lambda(K.concatenate)([z2_cat_flat, z_gzero])
         y2 = Sequential(_decoder)(z2)
         
-        z3_cat = Lambda(lambda z_cat:K.round(z_cat))(z_cat)
-        z3_cat_flat = Flatten()(z3_cat)
-        z3 = K.merge((z3_cat_flat, K.zeros(K.shape(z_gauss))), mode='concat')
-        y3 = Sequential(_decoder)(z3)
-
         def loss(x, y):
             kl_loss = gumbel.loss() + gauss.loss()
             reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
@@ -388,11 +379,15 @@ class GaussianGumbelAE(GumbelAE):
         self.callbacks.append(LambdaCallback(on_epoch_end=gumbel.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(gumbel.tau)
         self.loss = loss
+        self.net         = Model(x, y)
         self.encoder     = Model(x, z_cat)
-        self.decoder     = Model(z2_cat, y2)
-        self.net = Model(x, y)
+        self.decoder     = Model([z2_cat,z_gzero],y2)
         self.autoencoder = self.net
-        self.autoencoder_binary = Model(x, y3)
+    def decode(self,data,**kwargs):
+        self.load()
+        return self.decoder.predict([
+            data,
+            np.zeros((data.shape[0],self.parameters['G']))],**kwargs)
 
 class GaussianConvolutionalGumbelAE(GaussianGumbelAE,ConvolutionalGumbelAE):
     pass
