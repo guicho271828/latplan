@@ -166,19 +166,21 @@ class GumbelSoftmax:
         self.min = min
         self.anneal_rate = anneal_rate
         self.tau = K.variable(max, name="temperature")
-    def call(self,prev):
-        N, M = self.N, self.M
-        logits = Sequential([
-            Flatten(),
-            Dense(N * M),
-            Reshape((N,M))])(prev)
-        self.logits = logits
+    def call(self,logits):
         u = K.random_uniform(K.shape(logits), 0, 1)
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
         return K.softmax( ( logits + gumbel ) / self.tau )
     def __call__(self,prev):
         GumbelSoftmax.count += 1
-        return Lambda(self.call,name="gumbel_{}".format(GumbelSoftmax.count-1))(prev)
+        c = GumbelSoftmax.count-1
+        if K.ndim(prev) >= 3:
+            prev = Flatten()(prev)
+        N, M = self.N, self.M
+        logits = Sequential([
+            Dense(N * M),
+            Reshape((N,M))])(prev)
+        self.logits = logits
+        return Lambda(self.call,name="gumbel_{}".format(c))(logits)
     def loss(self):
         logits = self.logits
         q = K.softmax(logits)
@@ -195,18 +197,21 @@ class GaussianSample:
     count = 0
     def __init__(self,G):
         self.G = G
-    def call(self,prev):
-        prev = Flatten()(prev)
-        mean    = Dense(self.G)(pre_encoded)
-        log_var = Dense(self.G)(pre_encoded)
-        self.mean, self.log_var = mean, log_var
+    def call(self,args):
+        mean, log_var = args
         epsilon = K.random_normal(shape=K.shape(mean), mean=0., std=1.0)
         return mean + K.exp(log_var / 2) * epsilon
     def __call__(self,prev):
         GaussianSample.count += 1
-        return Lambda(self.call,name="gaussian_{}".format(GaussianSample.count-1))(prev)
+        c = GaussianSample.count-1
+        if K.ndim(prev) >= 3:
+            prev = Flatten()(prev)
+        mean    = Dense(self.G,name="gmean_{}".format(c))(prev)
+        log_var = Dense(self.G,name="glogvar_{}".format(c))(prev)
+        self.mean, self.log_var = mean, log_var
+        return Lambda(self.call,name="gaussian_{}".format(c))([mean,log_var])
     def loss(self):
-        return - 0.5 * K.sum(
+        return - 0.5 * K.mean(
             1 + self.log_var - K.square(self.mean) - K.exp(self.log_var),
             axis=-1)
         
