@@ -58,13 +58,13 @@ def successors(config):
     return succ
 
 def generate1(config):
-    # y84 x252
-    figure = np.zeros([84,252],dtype=np.int8)
+    # y42 x126
+    figure = np.zeros([42,126],dtype=np.int8)
     state = config_state(config)
     for i, tower in enumerate(state):
         tower.reverse()
         for j,disk in enumerate(tower):
-            figure[14*(5-j)+1:14*(6-j)-1,(84*i+42)-7*(1+disk)+1:(84*i+42)+7*(1+disk)-1] = 1
+            figure[7*(5-j)+1:7*(6-j)-1,(42*i+21)-3*(1+disk)+1:(42*i+21)+3*(1+disk)-1] = 1
     return figure
 
 def generate(configs):
