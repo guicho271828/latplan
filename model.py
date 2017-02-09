@@ -231,6 +231,7 @@ class GumbelAE(Network):
                 BN(),
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['layer'], activation='relu'),
+                # !!!! gumbel softmax is a softmax, don't use batchnorm !!!!!
                 BN(),
                 Dropout(self.parameters['dropout']),]
     def build_decoder(self,input_shape):
@@ -238,8 +239,11 @@ class GumbelAE(Network):
         return [
             Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu'),
+            # this BN may be initially bad for val_loss, but is ok for longer epochs
+            BN(),
             Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu'),
+            # BN(),
             Dropout(self.parameters['dropout']),
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
