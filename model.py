@@ -163,6 +163,9 @@ class GumbelSoftmax:
     def __init__(self,N,M,min,max,anneal_rate):
         self.N = N
         self.M = M
+        self.layers = Sequential([
+            Dense(N * M),
+            Reshape((N,M))])
         self.min = min
         self.anneal_rate = anneal_rate
         self.tau = K.variable(max, name="temperature")
@@ -171,14 +174,13 @@ class GumbelSoftmax:
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
         return K.softmax( ( logits + gumbel ) / self.tau )
     def __call__(self,prev):
+        if hasattr(self,'logits'):
+            raise ValueError('do not reuse the same GumbelSoftmax; reuse GumbelSoftmax.layers')
         GumbelSoftmax.count += 1
         c = GumbelSoftmax.count-1
         if K.ndim(prev) >= 3:
             prev = Flatten()(prev)
-        N, M = self.N, self.M
-        logits = Sequential([
-            Dense(N * M),
-            Reshape((N,M))])(prev)
+        logits = self.layers(prev)
         self.logits = logits
         return Lambda(self.call,name="gumbel_{}".format(c))(logits)
     def loss(self):
