@@ -12,10 +12,10 @@ from numpy.random import randint
 def random_panels():
     return [ digits[randint(0,len(digits))].reshape((28,28)) for digits in imgs ]
 
+base_width = 28
+base_height = 28
 def generate(configs, width, height, panels):
     assert width*height <= 9
-    base_width = 28
-    base_height = 28
     dim_x = base_width*width
     dim_y = base_height*height
     def generate(config):
@@ -32,7 +32,7 @@ def states(width, height, configs=None):
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
-    return np.array([ generate([c],width,height,random_panels()) for c in configs ])
+    return np.array([ generate([c],width,height,random_panels()) for c in configs ]).reshape([-1,base_height*height,base_width*width])
 
 def transitions(width, height, configs=None, one_per_state=False):
     digit = width * height
