@@ -7,6 +7,7 @@ from model import GumbelAE, ConvolutionalGumbelAE, \
     GaussianGumbelAE, GaussianConvolutionalGumbelAE
 
 import keras.backend as K
+from keras.optimizers import Adam
 import tensorflow as tf
 
 float_formatter = lambda x: "%.5f" % x
@@ -23,16 +24,18 @@ default_networks = {'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
                     'fcg':GaussianGumbelAE,'convg':GaussianConvolutionalGumbelAE}
 encoder = 'fc'
 
+epoch = 1000
+batch_size = 2000
+
 def learn_model(path,train_data,test_data=None,network=None):
     if network is None:
         network = default_networks[encoder]
     ae = network(path)
     ae.train(train_data,
-             epoch=1000,
-             # epoch=500,
-             # epoch=200,
-             anneal_rate=anneal_rate(1000),
-             batch_size=2000,
+             epoch=epoch,
+             anneal_rate=anneal_rate(epoch),
+             # optimizer=Adam(0.003),
+             batch_size=batch_size,
              test_data=test_data,
              report=False 
     )
@@ -40,8 +43,8 @@ def learn_model(path,train_data,test_data=None,network=None):
 
 def grid_search(path, train=None, test=None):
     network = default_networks[encoder]
-    names      = ['layer','dropout']
-    parameters = [[1000],[0.4],]
+    names      = ['layer','dropout','N']
+    parameters = [[4000],[0.4],[25]]
     best_error = float('inf')
     best_params = None
     best_ae     = None
@@ -54,8 +57,9 @@ def grid_search(path, train=None, test=None):
             print("Testing model with parameters={}".format(params_dict))
             ae = learn_model(path, train, test,
                              network=curry(network, parameters=params_dict))
-            error = ae.autoencoder.evaluate(test,test,batch_size=4000,verbose=0)
-            results.append((error,)+params)
+            error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
+            results.append({'error':error,'epoch':epoch,'batch_size':batch_size,
+                            **params_dict})
             print("Evaluation result for {} : error = {}".format(params_dict,error))
             print("Current results:\n{}".format(results),flush=True)
             if error < best_error:
@@ -218,6 +222,8 @@ def run(learn,*args, **kwargs):
     return ae
 
 def mnist_puzzle():
+    # N=81 too much
+    # N=25
     import puzzles.mnist_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -302,6 +308,7 @@ def digital_puzzle():
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
 def hanoi():
+    # 3000,0.4,N=64 worked best
     import puzzles.hanoi as p
     configs = p.generate_configs(6)
     configs = np.array([ c for c in configs ])
