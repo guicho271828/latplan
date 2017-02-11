@@ -362,6 +362,31 @@ class GumbelAE(AE):
         assert M == 2, "M={}, not 2".format(M)
         return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
 
+    def plot(self,data,path):
+        xs = data
+        zs = self.encode_binary(xs)
+        ys = self.decode_binary(zs)
+        bs = np.round(zs)
+        bys = self.decode_binary(bs)
+        M, N = self.parameters['M'], self.parameters['N']
+        import math
+        root = math.sqrt(N)
+        l1 = math.floor(root)
+        if l1*l1 == N:
+            _zs = zs.reshape((-1,l1,l1))
+            _bs = bs.reshape((-1,l1,l1))
+        else:
+            l2 = math.ceil(root)
+            size = l1*l2
+            _zs = np.concatenate((zs,np.ones((zs.shape[0],size-N))),axis=1).reshape((-1,l1,l2))
+            _bs = np.concatenate((bs,np.ones((bs.shape[0],size-N))),axis=1).reshape((-1,l1,l2))
+        images = []
+        from plot import plot_grid
+        for seq in zip(xs, _zs, ys, _bs, bys):
+            images.extend(seq)
+        plot_grid(images, path=self.local(path))
+        return xs,zs,ys,bs,bys
+
 class GaussianAE(AE):
     def __init__(self,path,parameters={}):
         if 'G' not in parameters:
@@ -394,6 +419,27 @@ class GaussianAE(AE):
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2,y2)
         self.autoencoder = self.net
+
+    def plot(self,data,path):
+        xs = data
+        zs = self.encode(xs)
+        ys = self.decode(zs)
+        G = self.parameters['G']
+        import math
+        root = math.sqrt(G)
+        l1 = math.floor(root)
+        if l1*l1 == G:
+            _zs = zs.reshape((-1,l1,l1))
+        else:
+            l2 = math.ceil(root)
+            size = l1*l2
+            _zs = np.concatenate((zs,np.ones((zs.shape[0],size-G))),axis=1).reshape((-1,l1,l2))
+        images = []
+        from plot import plot_grid
+        for seq in zip(xs, _zs, ys):
+            images.extend(seq)
+        plot_grid(images, path=self.local(path))
+        return xs,zs,ys
         
 class GumbelAE2(GumbelAE):
     def build_decoder(self,input_shape):
