@@ -484,12 +484,9 @@ class GaussianGumbelAE(GumbelAE):
             data,
             np.zeros((data.shape[0],self.parameters['G']))],**kwargs)
 
-class GaussianGumbelAE2(GumbelAE2):
-    def __init__(self,path,parameters={}):
-        if 'G' not in parameters:
-            parameters['G'] = 10
-        super().__init__(path,parameters)
-
+# Now effectively 3 subclasses; GumbelSoftmax in the output, Convolution, Gaussian.
+# there are 4 more results of mixins:
+class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
@@ -548,14 +545,14 @@ class GaussianGumbelAE2(GumbelAE2):
         self.decoder     = Model([z2_cat,z2_gzero],y2)
         self.autoencoder = self.net
 
-    def decode(self,data,**kwargs):
-        self.load()
-        return self.decoder.predict([
-            data,
-            np.zeros((data.shape[0],self.parameters['G']))],**kwargs)
-        
 class GaussianConvolutionalGumbelAE(GaussianGumbelAE,ConvolutionalGumbelAE):
     pass
+class ConvolutionalGumbelAE2(ConvolutionalGumbelAE,GumbelAE2):
+    pass
+class GaussianConvolutionalGumbelAE2(GaussianGumbelAE2,ConvolutionalGumbelAE):
+    pass
+
+# state/action discriminator ####################################################
 
 class Discriminator(Network):
     def __init__(self,path,parameters={}):
