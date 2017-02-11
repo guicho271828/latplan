@@ -66,25 +66,4 @@ def plot_grid2(images,w=10,path="plan.png"):
     plt.savefig(path)
 
 def plot_ae(ae,data,path):
-    xs = data
-    zs = ae.encode_binary(xs)
-    ys = ae.decode_binary(zs)
-    bs = np.round(zs)
-    bys = ae.decode_binary(bs)
-    M, N = ae.parameters['M'], ae.parameters['N']
-    import math
-    root = math.sqrt(N)
-    l1 = math.floor(root)
-    if l1*l1 == N:
-        _zs = zs.reshape((-1,l1,l1))
-        _bs = bs.reshape((-1,l1,l1))
-    else:
-        l2 = math.ceil(root)
-        size = l1*l2
-        _zs = np.concatenate((zs,np.ones((zs.shape[0],size-N))),axis=1).reshape((-1,l1,l2))
-        _bs = np.concatenate((bs,np.ones((bs.shape[0],size-N))),axis=1).reshape((-1,l1,l2))
-    images = []
-    for seq in zip(xs, _zs, ys, _bs, bys):
-        images.extend(seq)
-    plot_grid(images, path=ae.local(path))
-    return xs,zs,ys,bs,bys
+    return ae.plot(data,path)
