@@ -246,11 +246,10 @@ class GumbelAE(Network):
         
     def build_encoder(self,input_shape):
         return [GaussianNoise(0.1),
-                Dense(self.parameters['layer'], activation='relu'),
+                Dense(self.parameters['layer'], activation='relu', bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu'),
-                # !!!! gumbel softmax is a softmax, don't use batchnorm !!!!!
+                Dense(self.parameters['layer'], activation='relu', bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),]
     
@@ -258,7 +257,7 @@ class GumbelAE(Network):
         data_dim = np.prod(input_shape)
         return [
             Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu'),
+            Dense(self.parameters['layer'], activation='relu', bias=False),
             # this BN may be initially bad for val_loss, but is ok for longer epochs
             BN(),
             Dropout(self.parameters['dropout']),
@@ -367,7 +366,7 @@ class GumbelAE2(GumbelAE):
         data_dim = np.prod(input_shape)
         return [
             Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu'),
+            Dense(self.parameters['layer'], activation='relu', bias=False),
             # this BN may be initially bad for val_loss, but is ok for longer epochs
             BN(),
             Dropout(self.parameters['dropout']),
@@ -424,17 +423,14 @@ class ConvolutionalGumbelAE(GumbelAE):
         return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
                 Convolution2D(9,3,3,subsample=(3,3),
-                              activation='relu',border_mode='same'),
+                              activation='relu',border_mode='same', bias=False),
                 Dropout(self.parameters['dropout']),
                 BN(),
                 Convolution2D(81,3,3,subsample=(3,3),
-                              activation='relu',border_mode='same'),
+                              activation='relu',border_mode='same', bias=False),
                 Dropout(self.parameters['dropout']),
                 BN(),
-                Flatten(),
-                Dense(self.parameters['layer']),
-                BN(),
-                Dropout(self.parameters['dropout']),]
+                Flatten(),]
 
 class GaussianGumbelAE(GumbelAE):
     def __init__(self,path,parameters={}):
@@ -569,10 +565,10 @@ class Discriminator(Network):
     def build_encoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [Reshape((data_dim,)),
-                Dense(self.parameters['layer'], activation='relu'),
+                Dense(self.parameters['layer'], activation='relu', bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu'),
+                Dense(self.parameters['layer'], activation='relu', bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),
                 Dense(2)]
