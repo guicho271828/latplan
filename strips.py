@@ -192,6 +192,8 @@ def dump(ae, train=None, test=None , transitions=None, **kwargs):
         dump_actions(ae,transitions)
 
 def dump_all_actions(ae,configs,trans_fn):
+    if mode != 'learn_dump':
+        return
     l = len(configs)
     batch = 10000
     loop = (l // batch) + 1
@@ -367,7 +369,7 @@ def random_mnist_counter():
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
-modes = {'learn':True,'dump':False}
+modes = {'learn':True,'learn_dump':True,'dump':False}
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 1:
