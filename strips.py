@@ -4,7 +4,9 @@ import config
 import numpy as np
 import numpy.random as random
 from model import GumbelAE, ConvolutionalGumbelAE, \
-    GaussianGumbelAE, GaussianConvolutionalGumbelAE
+    GumbelAE2, \
+    GaussianGumbelAE, GaussianConvolutionalGumbelAE, \
+    GaussianGumbelAE2
 
 import keras.backend as K
 from keras.optimizers import Adam
@@ -21,6 +23,7 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     return (2 / (epoch * (epoch+1))) * math.log(max/min)
 
 default_networks = {'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
+                    'fc2':GumbelAE2,'fcg2': GaussianGumbelAE2,
                     'fcg':GaussianGumbelAE,'convg':GaussianConvolutionalGumbelAE}
 encoder = 'fc'
 
