@@ -208,6 +208,8 @@ def dump_all_actions(ae,configs,trans_fn):
                 dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
                 actions = np.concatenate((orig_b,dest_b), axis=1)
                 np.savetxt(f,actions,"%d")
+    except AttributeError:
+        print("this AE does not support dumping")
     except KeyboardInterrupt:
         print("dump stopped")
 
