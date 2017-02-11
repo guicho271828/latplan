@@ -9,7 +9,6 @@ from model import GumbelAE, GaussianAE, \
     GaussianConvolutionalGumbelAE2
 
 import keras.backend as K
-from keras.optimizers import Adam
 import tensorflow as tf
 
 float_formatter = lambda x: "%.5f" % x
@@ -41,7 +40,7 @@ def learn_model(path,train_data,test_data=None,network=None):
              epoch=epoch,
              anneal_rate=anneal_rate(epoch,max=max_temperature),
              max_temperature=max_temperature,
-             # optimizer=Adam(0.003),
+             lr=0.0001,
              batch_size=batch_size,
              test_data=test_data,
              report=False 
