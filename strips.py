@@ -27,13 +27,15 @@ encoder = 'fc'
 epoch = 1000
 batch_size = 2000
 
+max_temperature = 1.0
 def learn_model(path,train_data,test_data=None,network=None):
     if network is None:
         network = default_networks[encoder]
     ae = network(path)
     ae.train(train_data,
              epoch=epoch,
-             anneal_rate=anneal_rate(epoch),
+             anneal_rate=anneal_rate(epoch,max=max_temperature),
+             max_temperature=max_temperature,
              # optimizer=Adam(0.003),
              batch_size=batch_size,
              test_data=test_data,
