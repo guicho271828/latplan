@@ -3,8 +3,8 @@
 import config
 import numpy as np
 import numpy.random as random
-from model import GumbelAE, \
-    ConvolutionalGumbelAE, GumbelAE2, GaussianGumbelAE \
+from model import GumbelAE, GaussianAE, \
+    ConvolutionalGumbelAE, GumbelAE2, GaussianGumbelAE, \
     GaussianGumbelAE2, GaussianConvolutionalGumbelAE, ConvolutionalGumbelAE2, \
     GaussianConvolutionalGumbelAE2
 
@@ -22,7 +22,8 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return (2 / (epoch * (epoch+1))) * math.log(max/min)
 
-default_networks = {'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
+default_networks = {'gauss':GaussianAE,
+                    'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
                     'fc2':GumbelAE2,'conv2':ConvolutionalGumbelAE2,
                     'fcg':GaussianGumbelAE,'convg':GaussianConvolutionalGumbelAE,
                     'fcg2':GaussianGumbelAE2, 'convg2': GaussianConvolutionalGumbelAE2,}
