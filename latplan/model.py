@@ -50,7 +50,6 @@ class UnitNormL1(Constraint):
         return {'name': self.__class__.__name__,
                 'axis': self.axis}
 
-
 class Network:
     def __init__(self,path,parameters={}):
         import subprocess
@@ -62,6 +61,7 @@ class Network:
         self.parameters = parameters
         self.custom_log_functions = {}
         self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update)]
+        
     def build(self,input_shape):
         if self.built:
             if self.verbose:
@@ -70,24 +70,30 @@ class Network:
         self._build(input_shape)
         self.built = True
         return self
+    
     def _build(self):
         pass
+    
     def local(self,path):
         import os.path as p
         return p.join(self.path,path)
+    
     def save(self):
         self._save()
         return self
+    
     def _save(self):
         import json
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
                        "input_shape":self.net.input_shape[1:]}, f)
+            
     def load(self):
         if not self.loaded:
             self._load()
             self.loaded = True
         return self
+    
     def _load(self):
         import json
         with open(self.local('aux.json'), 'r') as f:
@@ -95,6 +101,7 @@ class Network:
             self.parameters = data["parameters"]
             self.build(tuple(data["input_shape"]))
         self.net.compile(Adam(0.001),bce)
+        
     def bar_update(self, epoch, logs):
         s = ""
         for k in self.custom_log_functions:
@@ -102,6 +109,7 @@ class Network:
         for k in logs:
             s += "{}: {:5.3g}, ".format(k,logs[k])
         self.bar.update(epoch+1, stat=s)
+        
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,report=True,
               train_data_to=None,
@@ -150,6 +158,7 @@ class Network:
         if save:
             self.save()
         return self
+    
     def report(self,train_data,
                epoch=200,batch_size=1000,optimizer=Adam(0.001),
                test_data=None,
@@ -157,9 +166,9 @@ class Network:
                test_data_to=None):
         pass
 
-
 class GumbelSoftmax:
     count = 0
+    
     def __init__(self,N,M,min,max,anneal_rate):
         self.N = N
         self.M = M
@@ -169,10 +178,12 @@ class GumbelSoftmax:
         self.min = min
         self.anneal_rate = anneal_rate
         self.tau = K.variable(max, name="temperature")
+        
     def call(self,logits):
         u = K.random_uniform(K.shape(logits), 0, 1)
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
         return K.softmax( ( logits + gumbel ) / self.tau )
+    
     def __call__(self,prev):
         if hasattr(self,'logits'):
             raise ValueError('do not reuse the same GumbelSoftmax; reuse GumbelSoftmax.layers')
@@ -183,6 +194,7 @@ class GumbelSoftmax:
         logits = self.layers(prev)
         self.logits = logits
         return Lambda(self.call,name="gumbel_{}".format(c))(logits)
+    
     def loss(self):
         logits = self.logits
         q = K.softmax(logits)
@@ -197,12 +209,15 @@ class GumbelSoftmax:
 
 class GaussianSample:
     count = 0
+    
     def __init__(self,G):
         self.G = G
+        
     def call(self,args):
         mean, log_var = args
         epsilon = K.random_normal(shape=K.shape(mean), mean=0., std=1.0)
         return mean + K.exp(log_var / 2) * epsilon
+    
     def __call__(self,prev):
         GaussianSample.count += 1
         c = GaussianSample.count-1
@@ -212,6 +227,7 @@ class GaussianSample:
         log_var = Dense(self.G,name="glogvar_{}".format(c))(prev)
         self.mean, self.log_var = mean, log_var
         return Lambda(self.call,name="gaussian_{}".format(c))([mean,log_var])
+    
     def loss(self):
         return - 0.5 * K.mean(
             1 + self.log_var - K.square(self.mean) - K.exp(self.log_var),
@@ -227,6 +243,7 @@ class GumbelAE(Network):
         self.min_temperature = 0.1
         self.max_temperature = 5.0
         self.anneal_rate = 0.0003
+        
     def build_encoder(self,input_shape):
         return [GaussianNoise(0.1),
                 Dense(self.parameters['layer'], activation='relu'),
@@ -236,6 +253,7 @@ class GumbelAE(Network):
                 # !!!! gumbel softmax is a softmax, don't use batchnorm !!!!!
                 BN(),
                 Dropout(self.parameters['dropout']),]
+    
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
@@ -249,6 +267,7 @@ class GumbelAE(Network):
             Dropout(self.parameters['dropout']),
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
+    
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
@@ -280,14 +299,17 @@ class GumbelAE(Network):
         self.decoder     = Model(z2, y2)
         self.net = Model(x, y)
         self.autoencoder = self.net
+        
     def _save(self):
         super()._save()
         self.encoder.save_weights(self.local("encoder.h5"))
         self.decoder.save_weights(self.local("decoder.h5"))
+        
     def _load(self):
         super()._load()
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
+        
     def report(self,train_data,
                epoch=200,batch_size=1000,optimizer=Adam(0.001),
                test_data=None,
@@ -310,23 +332,29 @@ class GumbelAE(Network):
         test_both("Latent activation: {}",
                   lambda data: self.encode_binary(train_data,batch_size=batch_size,).mean())
         return self
+    
     def encode(self,data,**kwargs):
         self.load()
         return self.encoder.predict(data,**kwargs)
+    
     def decode(self,data,**kwargs):
         self.load()
         return self.decoder.predict(data,**kwargs)
+    
     def autoencode(self,data,**kwargs):
         self.load()
         return self.autoencoder.predict(data,**kwargs)
+    
     def encode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
         assert M == 2, "M={}, not 2".format(M)
         return self.encode(data,**kwargs)[:,:,0].reshape(-1, N)
+    
     def decode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
         assert M == 2, "M={}, not 2".format(M)
         return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
+    
     def summary(self,verbose=False):
         if verbose:
             self.encoder.summary()
@@ -346,6 +374,7 @@ class GumbelAE2(GumbelAE):
             Dense(self.parameters['layer'], activation='relu'),
             # BN(),
             Dropout(self.parameters['dropout']),]
+    
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
@@ -360,6 +389,7 @@ class GumbelAE2(GumbelAE):
         y_logit  = Sequential(_decoder)(z_flat)
         gs2 = GumbelSoftmax(data_dim,2,self.min_temperature,self.max_temperature,self.anneal_rate)
         y_cat = gs2(y_logit)
+        
         def take_true(y_cat):
             import tensorflow as tf
             return tf.slice(y_cat,[0,0,0],[-1,-1,1])
@@ -373,7 +403,6 @@ class GumbelAE2(GumbelAE):
         y2_cat = gs3(y2_logit)
         y2 = Reshape(input_shape)(Lambda(take_true)(y2_cat))
         
-
         def loss(x, y):
             kl_loss = gs.loss() + gs2.loss()
             reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
@@ -390,7 +419,6 @@ class GumbelAE2(GumbelAE):
         self.net = Model(x, y)
         self.autoencoder = self.net
 
-    
 class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
