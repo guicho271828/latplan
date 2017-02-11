@@ -100,7 +100,7 @@ class Network:
             data = json.load(f)
             self.parameters = data["parameters"]
             self.build(tuple(data["input_shape"]))
-        self.net.compile(Adam(0.001),bce)
+        self.net.compile(Adam(0.0001),bce)
         
     def bar_update(self, epoch, logs):
         s = ""
@@ -111,10 +111,11 @@ class Network:
         self.bar.update(epoch+1, stat=s)
         
     def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer=Adam(0.001),test_data=None,save=True,report=True,
+              epoch=200,batch_size=1000,optimizer=Adam,lr=0.0001,test_data=None,save=True,report=True,
               train_data_to=None,
               test_data_to=None,
               **kwargs):
+        o = optimizer(lr)
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
@@ -142,7 +143,7 @@ class Network:
                     progressbar.DynamicMessage('stat')
                 ]
             )
-            self.net.compile(optimizer=optimizer, loss=self.loss)
+            self.net.compile(optimizer=o, loss=self.loss)
             self.net.fit(
                 train_data, train_data_to,
                 nb_epoch=epoch, batch_size=batch_size,
@@ -153,7 +154,7 @@ class Network:
         self.loaded = True
         if report:
             self.report(train_data,
-                        epoch,batch_size,optimizer,
+                        epoch,batch_size,o,
                         test_data,train_data_to,test_data_to)
         if save:
             self.save()
