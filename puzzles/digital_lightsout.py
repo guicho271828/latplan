@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from .lightsout import generate_configs, successors
+from .lightsout import generate_configs, generate_random_configs, successors
 
 on = [[0, 0, 0, 0, 0,],
       [0, 0, 1, 0, 0,],
