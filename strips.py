@@ -192,7 +192,7 @@ def dump(ae, train=None, test=None , transitions=None, **kwargs):
         dump_actions(ae,transitions)
 
 def dump_all_actions(ae,configs,trans_fn):
-    if mode != 'learn_dump':
+    if 'dump' not in mode:
         return
     l = len(configs)
     batch = 10000
