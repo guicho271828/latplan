@@ -172,6 +172,14 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
 def bce(x,y):
     return K.mean(K.binary_crossentropy(x,y),axis=(1,2))
 
+
+def dump(ae, train=None, test=None , transitions=None, **kwargs):
+    if test is not None:
+        plot_ae(ae,select(test,12),"autoencoding_test.png")
+    plot_ae(ae,select(train,12),"autoencoding_train.png")
+    if transitions is not None:
+        dump_actions(ae,transitions)
+
 def dump_actions(ae,transitions,threshold=0.):
     orig, dest = transitions[0], transitions[1]
     orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
@@ -183,13 +191,6 @@ def dump_actions(ae,transitions,threshold=0.):
         augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.09), axis=1)
     print(ae.local("augmented.csv"))
     np.savetxt(ae.local("augmented.csv"),actions,"%d")
-
-def dump(ae, train=None, test=None , transitions=None, **kwargs):
-    if test is not None:
-        plot_ae(ae,select(test,12),"autoencoding_test.png")
-    plot_ae(ae,select(train,12),"autoencoding_train.png")
-    if transitions is not None:
-        dump_actions(ae,transitions)
 
 def dump_all_actions(ae,configs,trans_fn):
     if 'dump' not in mode:
