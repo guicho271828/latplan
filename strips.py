@@ -320,7 +320,9 @@ def digital_lightsout():
 
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/digital_lightsout_{}/".format(encoder), train, test)
+    print('dumping actions ...')
     dump(ae, train,test,p.transitions(4,train_c,True))
+    print('dumping all actions ...')
     dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
 
 def digital_lightsout_skewed():
@@ -336,7 +338,9 @@ def digital_lightsout_skewed():
 
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/digital_lightsout_skewed_{}/".format(encoder), train, test)
+    print('dumping actions ...')
     dump(ae, train,test,p.transitions(4,train_c,True))
+    print('dumping all actions ...')
     dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
 
 def mnist_counter():
