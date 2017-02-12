@@ -28,7 +28,7 @@ default_networks = {'gauss':GaussianAE,
                     'fcg2':GaussianGumbelAE2, 'convg2': GaussianConvolutionalGumbelAE2,}
 encoder = 'fc'
 
-epoch = 1000
+epoch = 100
 batch_size = 2000
 lr = 0.0006
 max_temperature = 1.0
