@@ -75,6 +75,8 @@ def generate1(config):
             figure[
                 (l-j)*2-1,
                 x_left + (l-disk) : x_right - (l-disk)] = 1
+            figure[(l-j)*2-2, x_left  + (l-disk)] = 1
+            figure[(l-j)*2-2, x_right - (l-disk) -1] = 1
     return figure
 
 def generate(configs):
