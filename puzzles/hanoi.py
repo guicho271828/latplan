@@ -23,7 +23,6 @@ import numpy as np
 # random config is available from np.random.randint(0,3,size)
 
 def generate_configs(size=6):
-    assert size <= 6
     import itertools
     return itertools.product(range(3),repeat=size)
 
