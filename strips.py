@@ -292,12 +292,14 @@ def mandrill_puzzle():
 def hanoi():
     # 3000,0.4,N=64 worked best
     import puzzles.hanoi as p
-    configs = p.generate_configs(6)
+    configs = p.generate_configs(10)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
-    states = p.states(6,configs)
-    train       = states[:int(len(states)*(0.8))]
-    test        = states[int(len(states)*(0.8)):]
+    print(len(configs))
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(10,train_c)
+    test        = p.states(10,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/hanoi_{}/".format(encoder), train, test)
     dump(ae, train,test)
