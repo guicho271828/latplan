@@ -17,14 +17,14 @@ trap exit SIGINT
 # mnist_puzzle mandrill_puzzle: finished.
 # random_mnist_puzzle: not finished yet.
 
-for type in fc2 ; do
-    for task in hanoi mnist_puzzle mandrill_puzzle lenna_puzzle ; do
-        for mode in learn ; do
-            ./strips.py $type $task $mode
-            samples/sync.sh
-        done
-    done
-done
+# for type in fc2 ; do
+#     for task in mnist_puzzle ; do
+#         for mode in learn ; do
+#             ./strips.py $type $task $mode
+#             samples/sync.sh
+#         done
+#     done
+# done
 
 #  fcg2 1000
 #  convg2 convg conv2 conv fc2 fc

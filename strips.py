@@ -28,9 +28,9 @@ default_networks = {'gauss':GaussianAE,
                     'fcg2':GaussianGumbelAE2, 'convg2': GaussianConvolutionalGumbelAE2,}
 encoder = 'fc'
 
-epoch = 100
+epoch = 1000
 batch_size = 2000
-lr = 0.0006
+lr = 0.001
 max_temperature = 1.0
 def learn_model(path,train_data,test_data=None,network=None):
     if network is None:
