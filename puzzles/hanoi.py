@@ -58,13 +58,23 @@ def successors(config):
     return succ
 
 def generate1(config):
-    # y42 x126
-    figure = np.zeros([42,126],dtype=np.int8)
+    l = len(config)
+    base_disk_width = 5
+    figure = np.zeros([l*2,(l*2+base_disk_width)*3+2],dtype=np.int8)
     state = config_state(config)
+    # print(l,figure.shape)
+    # print(config)
+    # print(state)
     for i, tower in enumerate(state):
         tower.reverse()
+        # print(i,tower)
+        x_left  = (l*2+base_disk_width)*i     +   i
+        x_right = (l*2+base_disk_width)*(i+1) + (i+1) - 1
         for j,disk in enumerate(tower):
-            figure[7*(5-j)+1:7*(6-j)-1,(42*i+21)-3*(1+disk)+1:(42*i+21)+3*(1+disk)-1] = 1
+            # print(j,disk,(l-j)*2)
+            figure[
+                (l-j)*2-1,
+                x_left + (l-disk) : x_right - (l-disk)] = 1
     return figure
 
 def generate(configs):
