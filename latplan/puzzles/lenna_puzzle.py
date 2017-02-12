@@ -7,25 +7,25 @@ import os
 
 panels = None
 
+base = 10
+
 def generate(configs, width, height):
     global panels
     if panels is None:
         panels  = split_image(os.path.join(os.path.dirname(__file__), "lenna.png"),width,height)
-        stepy = panels[0].shape[0]//28
-        stepx = panels[0].shape[1]//28
-        panels = panels[:,::stepy,::stepx][:,:28,:28].round()
+        stepy = panels[0].shape[0]//base
+        stepx = panels[0].shape[1]//base
+        panels = panels[:,::stepy,::stepx][:,:base,:base].round()
     assert width*height <= 9
-    base_width = 28
-    base_height = 28
-    dim_x = base_width*width
-    dim_y = base_height*height
+    dim_x = base*width
+    dim_y = base*height
     def generate(config):
         figure = np.zeros((dim_y,dim_x))
         for digit,pos in enumerate(config):
             x = pos % width
             y = pos // width
-            figure[y*base_height:(y+1)*base_height,
-                   x*base_width:(x+1)*base_width] = panels[digit]
+            figure[y*base:(y+1)*base,
+                   x*base:(x+1)*base] = panels[digit]
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
