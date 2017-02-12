@@ -30,7 +30,7 @@ encoder = 'fc'
 
 epoch = 1000
 batch_size = 2000
-
+lr = 0.0006
 max_temperature = 1.0
 def learn_model(path,train_data,test_data=None,network=None):
     if network is None:
@@ -40,7 +40,7 @@ def learn_model(path,train_data,test_data=None,network=None):
              epoch=epoch,
              anneal_rate=anneal_rate(epoch,max=max_temperature),
              max_temperature=max_temperature,
-             lr=0.0001,
+             lr=lr,
              batch_size=batch_size,
              test_data=test_data,
              report=False 
