@@ -370,6 +370,7 @@ if __name__ == '__main__':
         print({ k for k in gs if hasattr(gs[k], '__call__')})
         print({k for k in modes})
     else:
+        print('args:',sys.argv)
         encoder = sys.argv[1]
         if encoder not in default_networks:
             raise ValueError("invalid encoder!: {}".format(sys.argv))
