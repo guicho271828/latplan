@@ -6,6 +6,10 @@ def generate_configs (size=3):
     import itertools
     return list(itertools.product([-1,1], repeat=size*size))
 
+def generate_random_configs (size=3,sample=13000):
+    import itertools
+    return np.random.random_integers(0,1,size*size*sample).reshape((sample,-1))
+
 def successors (config):
     import math
     leds = len(config)

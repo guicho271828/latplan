@@ -348,18 +348,19 @@ def digital_lightsout():
 
 def digital_lightsout_skewed():
     import puzzles.digital_lightsout_skewed as p
-    configs = np.repeat(p.generate_configs(3),1,axis=0)
-    configs = np.array([ c for c in configs ])
+    print('generating configs...')
+    configs = p.generate_configs(4)
     random.shuffle(configs)
-    train_c = configs[:int(len(configs)*(0.8))]
-    test_c  = configs[int(len(configs)*(0.8)):]
-    print(train_c)
-    train       = p.states(3,train_c)
-    test        = p.states(3,test_c)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    print('generating figures...')
+    train       = p.states(4,train_c)
+    test        = p.states(4,test_c)
+
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/digital_lightsout_skewed_{}/".format(encoder), train, test)
     dump(ae, train,test)
-    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
 
 def mnist_counter():
     import puzzles.mnist_counter as p
