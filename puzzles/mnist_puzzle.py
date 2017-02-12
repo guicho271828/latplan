@@ -7,21 +7,23 @@ from .mnist import mnist
 x_train, y_train, _, _ = mnist()
 filters = [ np.equal(i,y_train) for i in range(10) ]
 imgs    = [ x_train[f] for f in filters ]
-panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
+panels  = np.array([ imgs[0].reshape((28,28)) for imgs in imgs ])
+base = 14
+stepy = panels[0].shape[0]//base
+stepx = panels[0].shape[1]//base
+panels = panels[:,::stepy,::stepx][:,:base,:base].round()
 
 def generate(configs, width, height):
     assert width*height <= 9
-    base_width = 28
-    base_height = 28
-    dim_x = base_width*width
-    dim_y = base_height*height
+    dim_x = base*width
+    dim_y = base*height
     def generate(config):
         figure = np.zeros((dim_y,dim_x))
         for digit,pos in enumerate(config):
             x = pos % width
             y = pos // width
-            figure[y*base_height:(y+1)*base_height,
-                   x*base_width:(x+1)*base_width] = panels[digit]
+            figure[y*base:(y+1)*base,
+                   x*base:(x+1)*base] = panels[digit]
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
