@@ -39,11 +39,19 @@ def states(size, configs=None):
         configs = generate_configs(size)
     return generate(configs)
 
-def transitions(size, configs=None):
+def transitions(size, configs=None, one_per_state=False):
     if configs is None:
         configs = generate_configs(size)
-    transitions = np.array([ generate([c1,c2])
-                             for c1 in configs for c2 in successors(c1) ])
+    if one_per_state:
+        def pickone(thing):
+            index = np.random.randint(0,len(thing))
+            return thing[index]
+        transitions = np.array([
+            generate([c1,pickone(successors(c1))])
+            for c1 in configs ])
+    else:
+        transitions = np.array([ generate([c1,c2])
+                                 for c1 in configs for c2 in successors(c1) ])
     return np.einsum('ab...->ba...',transitions)
 
 
