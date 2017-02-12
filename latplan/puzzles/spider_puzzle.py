@@ -20,14 +20,14 @@ def generate(configs, width, height):
     dim_x = base_width*width
     dim_y = base_height*height
     def generate(config):
-        figure = np.zeros((dim_y,dim_x))
+        figure = np.zeros((dim_y+height-1,dim_x+width-1))
         for digit,pos in enumerate(config):
             x = pos % width
             y = pos // width
-            figure[y*base_height:(y+1)*base_height,
-                   x*base_width:(x+1)*base_width] = panels[digit]
+            figure[y*(base+1):(y+1)*(base+1)-1,
+                   x*(base+1):(x+1)*(base+1)-1] = panels[digit]
         return figure
-    return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
+    return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y+height-1,dim_x+width-1))
 
 def states(width, height, configs=None):
     digit = width * height
