@@ -118,12 +118,12 @@ def run_hanoi(path, p):
     except PlanException as e:
         print(e)
 
+
 if __name__ == '__main__':
     import sys
-    sys.argv.pop()
-    option = sys.argv[4]
-    globals()[sys.argv[1]](
-        sys.argv[3]
-        __import__("puzzles.%s" % sys.argv[2]))
+    from importlib import import_module
+    sys.argv.pop(0)
+    option = sys.argv.pop(0)
+    eval(sys.argv[0])
     echodo(["samples/sync.sh"])
     
