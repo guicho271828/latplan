@@ -180,10 +180,10 @@ def dump_actions(ae,transitions,threshold=0.):
     actions = np.concatenate((orig_b,dest_b), axis=1)
     print(ae.local("actions.csv"))
     np.savetxt(ae.local("actions.csv"),actions,"%d")
-    actions = np.concatenate(
-        augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
-    print(ae.local("augmented.csv"))
-    np.savetxt(ae.local("augmented.csv"),actions,"%d")
+    # actions = np.concatenate(
+    #     augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
+    # print(ae.local("augmented.csv"))
+    # np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
 def dump_all_actions(ae,configs,trans_fn):
     if 'dump' not in mode:
