@@ -72,12 +72,14 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     plot_grid(plan_images,path=ae.local('{}-{}.png'.format(action_type,mode)))
     plot_grid(plan_images.round(),path=ae.local('{}-{}-rounded.png'.format(action_type,mode)))
 
+from model import default_networks
+
 def select(data,num):
     return data[np.random.randint(0,data.shape[0],num)]
 
-def run_puzzle(path, p):
+def run_puzzle(path, network, p):
     from model import GumbelAE
-    ae = GumbelAE(path)
+    ae = default_networks[network](path)
     configs = np.array(list(p.generate_configs(9)))
     def convert(panels):
         return np.array([
@@ -91,9 +93,9 @@ def run_puzzle(path, p):
     except PlanException as e:
         print(e)
     
-def run_lightsout(path, p):
+def run_lightsout(path, network, p):
     from model import GumbelAE
-    ae = GumbelAE(path)
+    ae = default_networks[network](path)
     configs = np.array(list(p.generate_configs(4)))
     ig_c = [[0,0,1,0,
              0,1,0,0,
@@ -106,9 +108,9 @@ def run_lightsout(path, p):
     except PlanException as e:
         print(e)
     
-def run_hanoi(path, p):
+def run_hanoi(path, network, p):
     from model import GumbelAE
-    ae = GumbelAE(path)
+    ae = default_networks[network](path)
     configs = np.array(list(p.generate_configs(10)))
     ig_c = [[0,0,0,0,0,0,0,0,0,0],
             [2,2,2,2,2,2,2,2,2,2]]
