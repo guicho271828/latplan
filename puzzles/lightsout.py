@@ -14,6 +14,7 @@ def successors (config):
     import math
     leds = len(config)
     size = int(math.sqrt(leds))
+    succs = []
     for i in range(leds):
         y = i // size
         x = i % size
@@ -27,7 +28,8 @@ def successors (config):
             succ[i-size] *= -1
         if y+1 < size:
             succ[i+size] *= -1
-        yield succ
+        succs.append(succ)
+    return succs
 
 
 if __name__ == '__main__':
