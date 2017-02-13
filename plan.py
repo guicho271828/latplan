@@ -53,7 +53,10 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     plan = ae.local("{}.plan".format(mode))
     echodo(["rm",plan])
     echodo(["make","-C","lisp","-j","1"])
-    echodo(["make","-C",ae.path,"-f","../Makefile","problem_{}.sasp".format(action_type)])
+    echodo(["make","-C",ae.path,"-f","../Makefile",
+            # dummy pddl (text file with length 0)
+            "domain.pddl",
+            "problem_{}.sasp".format(action_type)])
     echodo(["planner-scripts/limit.sh","-v","-t","3600",
             "-o",options[mode],
             "--","fd-sas-clean",
