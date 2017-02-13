@@ -838,3 +838,9 @@ def main ():
     
 if __name__ == '__main__':
     main()
+
+default_networks = {'gauss':GaussianAE,
+                    'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
+                    'fc2':GumbelAE2,'conv2':ConvolutionalGumbelAE2,
+                    'fcg':GaussianGumbelAE,'convg':GaussianConvolutionalGumbelAE,
+                    'fcg2':GaussianGumbelAE2, 'convg2': GaussianConvolutionalGumbelAE2,}
