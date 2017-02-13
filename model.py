@@ -364,6 +364,7 @@ class GumbelAE(AE):
         return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
 
     def plot(self,data,path):
+        self.load()
         xs = data
         zs = self.encode_binary(xs)
         ys = self.decode_binary(zs)
@@ -422,6 +423,7 @@ class GaussianAE(AE):
         self.autoencoder = self.net
 
     def plot(self,data,path):
+        self.load()
         xs = data
         zs = self.encode(xs)
         ys = self.decode(zs)
