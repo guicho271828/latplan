@@ -46,16 +46,18 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     except subprocess.CalledProcessError:
         echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
 
+    action_type = "all"
+        
     # start planning
-    plan_raw = ae.local("problem.sasp.plan")
+    plan_raw = ae.local("problem_{}.sasp.plan".format(action_type))
     plan = ae.local("{}.plan".format(mode))
     echodo(["rm",plan])
     echodo(["make","-C","lisp","-j","1"])
-    echodo(["make","-C",ae.path,"-f","../Makefile"])
+    echodo(["make","-C",ae.path,"-f","../Makefile","problem_{}.sasp".format(action_type)])
     echodo(["planner-scripts/limit.sh","-v","-t","3600",
             "-o",options[mode],
             "--","fd-sas-clean",
-            ae.local("problem.sasp")])
+            ae.local("problem_{}.sasp".format(action_type))])
     if not os.path.exists(plan_raw):
         raise PlanException("no plan found")
     echodo(["mv",plan_raw,plan])
@@ -67,8 +69,8 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     numbers = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     print(numbers)
     plan_images = ae.decode_binary(numbers)
-    plot_grid(plan_images,path=ae.local('{}.png'.format(mode)))
-    plot_grid(plan_images.round(),path=ae.local('{}-rounded.png'.format(mode)))
+    plot_grid(plan_images,path=ae.local('{}-{}.png'.format(action_type,mode)))
+    plot_grid(plan_images.round(),path=ae.local('{}-{}-rounded.png'.format(action_type,mode)))
 
 def select(data,num):
     return data[np.random.randint(0,data.shape[0],num)]
