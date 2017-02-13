@@ -32,7 +32,9 @@ options = {
     "zopdb"  : "--search astar(zopdbs())",
 }
 
-def latent_plan(init,goal,ae,mode='lmcut'):
+option = "blind"
+
+def latent_plan(init,goal,ae,mode = 'blind'):
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal.png")
 
     np.savetxt("/tmp/problem.csv",ig_b.flatten().astype('int'),"%d")
@@ -83,47 +85,43 @@ def run_puzzle(path, p):
             convert([0,1,2,3,4,5,6,7,8])]
     ig = p.states(3,3,ig_c)
     try:
-        latent_plan(*ig, ae, sys.argv[1])
+        latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
     
 def run_lightsout(path, p):
     from model import GumbelAE
     ae = GumbelAE(path)
-    configs = np.array(list(p.generate_configs(3)))
-    ig_c = [[0,0,1,
-             0,1,0,
-             1,0,1,],
-            np.zeros(9)]
-    ig = p.states(3,ig_c)
+    configs = np.array(list(p.generate_configs(4)))
+    ig_c = [[0,0,1,0,
+             0,1,0,0,
+             1,0,1,0,
+             1,0,1,0,],
+            np.zeros(16)]
+    ig = p.states(4,ig_c)
     try:
-        latent_plan(*ig, ae, sys.argv[1])
+        latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
     
 def run_hanoi(path, p):
     from model import GumbelAE
     ae = GumbelAE(path)
-    configs = np.array(list(p.generate_configs(3)))
-    ig_c = [[0,0,0,0,0,0],
-            [2,2,2,2,2,2]]
-    ig = p.states(9,ig_c)
+    configs = np.array(list(p.generate_configs(10)))
+    ig_c = [[0,0,0,0,0,0,0,0,0,0],
+            [2,2,2,2,2,2,2,2,2,2]]
+    ig = p.states(10,ig_c)
     try:
-        latent_plan(*ig, ae, sys.argv[1])
+        latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
 
 if __name__ == '__main__':
     import sys
-    import random
-    # import puzzles.mnist_puzzle as p
-    # run_puzzle("samples/mnist_puzzle33p_model/",p)
-    # import puzzles.lenna_puzzle as p
-    # run_puzzle("samples/lenna_puzzle33p_model_long/",p)
-    import puzzles.hanoi as p
-    run_hanoi("samples/hanoi_model/",p)
-    # import puzzles.spider_puzzle as p
-    # run_puzzle("samples/spider_puzzle33p_model/",p)
-    # import puzzles.digital_lightsout as p
-    # run_lightsout("samples/digital_lightsout_model/",p)
+    sys.argv.pop()
+    option = sys.argv[4]
+    globals()[sys.argv[1]](
+        sys.argv[3]
+        __import__("puzzles.%s" % sys.argv[2]))
+    echodo(["samples/sync.sh"])
     
