@@ -188,7 +188,7 @@ def dump_actions(ae,transitions,threshold=0.):
     print(ae.local("actions.csv"))
     np.savetxt(ae.local("actions.csv"),actions,"%d")
     actions = np.concatenate(
-        augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.09), axis=1)
+        augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
     print(ae.local("augmented.csv"))
     np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
