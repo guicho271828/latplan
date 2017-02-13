@@ -284,7 +284,7 @@ def mandrill_puzzle():
     dump(ae, train,test,p.transitions(3,3,train_c,True))
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-def hanoi():
+def hanoi10():
     # 3000,0.4,N=64 worked best
     import puzzles.hanoi as p
     configs = p.generate_configs(10)
@@ -298,8 +298,24 @@ def hanoi():
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/hanoi_{}/".format(encoder), train, test)
     dump(ae, train,test,p.transitions(10,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
+def hanoi4():
+    # 3000,0.4,N=64 worked best
+    import puzzles.hanoi as p
+    configs = p.generate_configs(4)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.8)]
+    test_c  = configs[int(len(configs)*0.8):]
+    train       = p.states(4,train_c)
+    test        = p.states(4,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(4,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+    
 def digital_lightsout():
     import puzzles.digital_lightsout as p
     print('generating configs...')
