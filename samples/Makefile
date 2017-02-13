@@ -1,5 +1,5 @@
 
-all: problem.sasp
+domain.pddl:
 	touch domain.pddl
 
 %_all.sas: %.csv all_actions.csv
