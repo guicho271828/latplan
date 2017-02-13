@@ -1,4 +1,6 @@
 
+.PRECIOUS: %.sas %.sasp
+
 domain.pddl:
 	touch domain.pddl
 
@@ -10,5 +12,5 @@ domain.pddl:
 	../../lisp/sas.bin -t augmented.csv $(shell cat $<) > $@
 
 %.sasp: %.sas
-	../../downward/fast-downward.py --preprocess $<
+	../../downward/fast-downward.py --build release64 --preprocess $<
 	mv output $@
