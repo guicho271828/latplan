@@ -2,9 +2,13 @@
 all: problem.sasp
 	touch domain.pddl
 
-problem.sas: all_actions.csv problem.csv
-	../../lisp/sas.bin -t all_actions.csv $(shell cat problem.csv) > $@
+%_all.sas: %.csv all_actions.csv
+	../../lisp/sas.bin -t all_actions.csv <($<) > $@
+%_raw.sas: %.csv actions.csv
+	../../lisp/sas.bin -t actions.csv <($<) > $@
+%_aug.sas: %.csv augmented.csv
+	../../lisp/sas.bin -t augmented.csv <($<) > $@
 
-problem.sasp: problem.sas
+%.sasp: %.sas
 	../../downward/fast-downward.py --preprocess $<
 	mv output $@
