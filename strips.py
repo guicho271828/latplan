@@ -42,10 +42,12 @@ def learn_model(path,train_data,test_data=None,network=None):
     )
     return ae
 
+
+names      = ['layer','dropout','N']
+parameters = [[4000],[0.4],[36]]
+
 def grid_search(path, train=None, test=None):
     network = default_networks[encoder]
-    names      = ['layer','dropout','N']
-    parameters = [[4000],[0.4],[36]]
     best_error = float('inf')
     best_params = None
     best_ae     = None
@@ -231,6 +233,8 @@ def run(learn,*args, **kwargs):
 
 
 def mnist_puzzle():
+    global parameters
+    parameters = [[4000],[0.4],[49]]
     # N=81 too much
     # N=25
     import puzzles.mnist_puzzle as p
@@ -261,6 +265,8 @@ def random_mnist_puzzle():
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
 def lenna_puzzle():
+    global parameters
+    parameters = [[4000],[0.4],[49]]
     import puzzles.lenna_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -275,6 +281,8 @@ def lenna_puzzle():
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
 def mandrill_puzzle():
+    global parameters
+    parameters = [[4000],[0.4],[49]]
     import puzzles.mandrill_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
