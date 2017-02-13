@@ -7,7 +7,7 @@ import os
 
 panels = None
 
-base = 10
+base = 21
 
 def generate(configs, width, height):
     global panels
