@@ -3,13 +3,11 @@
 import config
 import numpy as np
 import numpy.random as random
-from model import GumbelAE, GaussianAE, \
-    ConvolutionalGumbelAE, GumbelAE2, GaussianGumbelAE, \
-    GaussianGumbelAE2, GaussianConvolutionalGumbelAE, ConvolutionalGumbelAE2, \
-    GaussianConvolutionalGumbelAE2
+from model import default_networks
 
 import keras.backend as K
 import tensorflow as tf
+
 
 float_formatter = lambda x: "%.5f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
@@ -21,11 +19,6 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return (2 / (epoch * (epoch+1))) * math.log(max/min)
 
-default_networks = {'gauss':GaussianAE,
-                    'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
-                    'fc2':GumbelAE2,'conv2':ConvolutionalGumbelAE2,
-                    'fcg':GaussianGumbelAE,'convg':GaussianConvolutionalGumbelAE,
-                    'fcg2':GaussianGumbelAE2, 'convg2': GaussianConvolutionalGumbelAE2,}
 encoder = 'fc'
 
 epoch = 1000
