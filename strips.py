@@ -21,18 +21,20 @@ def anneal_rate(epoch,min=0.1,max=5.0):
 
 encoder = 'fc'
 
-epoch = 1000
-batch_size = 2000
 lr = 0.001
+batch_size = 2000
+epoch = 1000
 max_temperature = 1.0
+min_temperature = 0.1
 def learn_model(path,train_data,test_data=None,network=None):
     if network is None:
         network = default_networks[encoder]
     ae = network(path)
     ae.train(train_data,
              epoch=epoch,
-             anneal_rate=anneal_rate(epoch,max=max_temperature),
+             anneal_rate=anneal_rate(epoch,min_temperature,max_temperature),
              max_temperature=max_temperature,
+             min_temperature=min_temperature,
              lr=lr,
              batch_size=batch_size,
              test_data=test_data,
@@ -43,7 +45,7 @@ def learn_model(path,train_data,test_data=None,network=None):
 def grid_search(path, train=None, test=None):
     network = default_networks[encoder]
     names      = ['layer','dropout','N']
-    parameters = [[4000],[0.4],[64]]
+    parameters = [[4000],[0.4],[36]]
     best_error = float('inf')
     best_params = None
     best_ae     = None
@@ -210,6 +212,8 @@ def dump_all_actions(ae,configs,trans_fn):
 
 ################################################################
 
+# note: lightsout has epoch 200
+
 learn_flag = True
 
 from plot import plot_ae
@@ -296,12 +300,13 @@ def hanoi10():
     train       = p.states(10,train_c)
     test        = p.states(10,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/hanoi_{}/".format(encoder), train, test)
+    ae = run(learn_flag,"samples/hanoi10_{}/".format(encoder), train, test)
     dump(ae, train,test,p.transitions(10,train_c,True))
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
 def hanoi4():
-    # 3000,0.4,N=64 worked best
+    global epoch
+    epoch = 10000
     import puzzles.hanoi as p
     configs = p.generate_configs(4)
     configs = np.array([ c for c in configs ])
@@ -312,11 +317,13 @@ def hanoi4():
     train       = p.states(4,train_c)
     test        = p.states(4,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/hanoi_{}/".format(encoder), train, test)
+    ae = run(learn_flag,"samples/hanoi4_{}/".format(encoder), train, test)
     dump(ae, train,test,p.transitions(4,train_c,True))
     dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
     
 def digital_lightsout():
+    global epoch
+    epoch = 300
     import puzzles.digital_lightsout as p
     print('generating configs...')
     configs = p.generate_configs(4)
