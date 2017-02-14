@@ -37,14 +37,16 @@ option = "blind"
 def latent_plan(init,goal,ae,mode = 'blind'):
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal.png")
 
-    np.savetxt("/tmp/problem.csv",ig_b.flatten().astype('int'),"%d")
+    d = echo_out(["mktemp","-d"]).splitlines()[0].decode('utf-8')
+    print(d)
+    np.savetxt(d+"/problem.csv",ig_b.flatten().astype('int'),"%d")
     try:
-        out = echo_out(["md5sum","/tmp/problem.csv",ae.local("problem.csv")])
+        out = echo_out(["md5sum",d+"/problem.csv",ae.local("problem.csv")])
         tokens = out.split()
         if tokens[0] != tokens[2]:
-            echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
+            echodo(["cp",d+"/problem.csv",ae.local("problem.csv")])
     except subprocess.CalledProcessError:
-        echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
+        echodo(["cp",d+"/problem.csv",ae.local("problem.csv")])
 
     action_type = "all"
         
