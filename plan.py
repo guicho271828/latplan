@@ -111,13 +111,25 @@ def run_lightsout(path, network, p):
     except PlanException as e:
         print(e)
 
-def run_hanoi(path, network, p):
+def run_hanoi10(path, network, p):
     from model import GumbelAE
     ae = default_networks[network](path)
     configs = np.array(list(p.generate_configs(10)))
     ig_c = [[0,0,0,0,0,0,0,0,0,0],
             [2,2,2,2,2,2,2,2,2,2]]
     ig = p.states(10,ig_c)
+    try:
+        latent_plan(*ig, ae, option)
+    except PlanException as e:
+        print(e)
+
+def run_hanoi4(path, network, p):
+    from model import GumbelAE
+    ae = default_networks[network](path)
+    configs = np.array(list(p.generate_configs(4)))
+    ig_c = [[0,0,0,0],
+            [2,2,2,2]]
+    ig = p.states(4,ig_c)
     try:
         latent_plan(*ig, ae, option)
     except PlanException as e:
