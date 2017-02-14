@@ -197,7 +197,7 @@ def dump_all_actions(ae,configs,trans_fn):
     loop = (l // batch) + 1
     try:
         print(ae.local("all_actions.csv"))
-        with open(ae.local("all_actions.csv"), 'ab') as f:
+        with open(ae.local("all_actions.csv"), 'wb') as f:
             for begin in range(0,loop*batch,batch):
                 end = begin + batch
                 print((begin,end,len(configs)))
