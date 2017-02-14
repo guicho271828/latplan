@@ -35,20 +35,25 @@ options = {
 option = "blind"
 
 def latent_plan(init,goal,ae,mode = 'blind'):
+    # temporary!
+    if os.path.exists(ae.local("noise.csv")):
+        raise PlanException("Don't run twice!")
     init = init.astype(float) + np.random.normal(0.0,0.3,init.shape)
     goal = init.astype(float) + np.random.normal(0.0,0.3,goal.shape)
     init = init.clip(0,1)
     goal = goal.clip(0,1)
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal_noise.png")
 
-    np.savetxt("/tmp/problem.csv",ig_b.flatten().astype('int'),"%d")
+    d = echo_out(["mktemp","-d"]).splitlines()[0].decode('utf-8')
+    print(d)
+    np.savetxt(d+"/noise.csv",ig_b.flatten().astype('int'),"%d")
     try:
-        out = echo_out(["md5sum","/tmp/problem.csv",ae.local("problem.csv")])
+        out = echo_out(["md5sum",d+"/noise.csv",ae.local("noise.csv")])
         tokens = out.split()
         if tokens[0] != tokens[2]:
-            echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
+            echodo(["cp",d+"/noise.csv",ae.local("noise.csv")])
     except subprocess.CalledProcessError:
-        echodo(["cp","/tmp/problem.csv",ae.local("problem.csv")])
+        echodo(["cp",d+"/noise.csv",ae.local("noise.csv")])
 
     action_type = "all"
         
