@@ -7,7 +7,9 @@ from .mnist import mnist
 x_train, y_train, _, _ = mnist()
 filters = [ np.equal(i,y_train) for i in range(10) ]
 imgs    = [ x_train[f] for f in filters ]
-panels  = np.array([ imgs[3].reshape((28,28)) for imgs in imgs ])
+panels  = np.array([ imgs[0].reshape((28,28)) for imgs in imgs ])
+
+panels[8] = imgs[8][3].reshape((28,28))
 base = 14
 stepy = panels[0].shape[0]//base
 stepx = panels[0].shape[1]//base
