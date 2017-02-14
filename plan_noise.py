@@ -35,8 +35,8 @@ options = {
 option = "blind"
 
 def latent_plan(init,goal,ae,mode = 'blind'):
-    init += np.random.uniform(0.0,1.0,init.shape)
-    goal += np.random.uniform(0.0,1.0,goal.shape)
+    init = init.astype(float) + np.random.normal(0.0,0.3,init.shape)
+    goal = init.astype(float) + np.random.normal(0.0,0.3,goal.shape)
     init = init.clip(0,1)
     goal = goal.clip(0,1)
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal_noise.png")
