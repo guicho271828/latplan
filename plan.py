@@ -95,7 +95,7 @@ def run_puzzle(path, network, p):
         latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
-    
+
 def run_lightsout(path, network, p):
     from model import GumbelAE
     ae = default_networks[network](path)
@@ -110,7 +110,7 @@ def run_lightsout(path, network, p):
         latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
-    
+
 def run_hanoi(path, network, p):
     from model import GumbelAE
     ae = default_networks[network](path)
