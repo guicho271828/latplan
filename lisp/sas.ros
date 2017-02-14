@@ -110,7 +110,8 @@ exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
        (time (apply #'main rest))))
     ((list* domain-csv init-goal)
      (make-sas (read-as-lists domain-csv)
-               (mapcar #'read-from-string init-goal)))))
+               (mapcar #'read-from-string init-goal))
+     t)))
 
 
 ;;; vim: set ft=lisp lisp:
