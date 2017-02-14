@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import tensorflow as tf
 import keras.backend as K
 tf.logging.set_verbosity(tf.logging.ERROR)
