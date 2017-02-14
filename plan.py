@@ -100,10 +100,10 @@ def run_lightsout(path, network, p):
     from model import GumbelAE
     ae = default_networks[network](path)
     configs = np.array(list(p.generate_configs(4)))
-    ig_c = [[0,0,1,0,
+    ig_c = [[0,1,0,0,
              0,1,0,0,
-             1,0,1,0,
-             1,0,1,0,],
+             0,0,1,1,
+             1,0,0,0,],
             np.zeros(16)]
     ig = p.states(4,ig_c)
     try:
