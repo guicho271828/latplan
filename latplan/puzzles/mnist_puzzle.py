@@ -7,7 +7,7 @@ from .mnist import mnist
 x_train, y_train, _, _ = mnist()
 filters = [ np.equal(i,y_train) for i in range(10) ]
 imgs    = [ x_train[f] for f in filters ]
-panels  = np.array([ imgs[0].reshape((28,28)) for imgs in imgs ])
+panels  = np.array([ imgs[2].reshape((28,28)) for imgs in imgs ])
 base = 14
 stepy = panels[0].shape[0]//base
 stepx = panels[0].shape[1]//base
@@ -69,12 +69,10 @@ if __name__ == '__main__':
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
         plt.savefig(name)
-    configs = generate_configs(6)
-    puzzles = generate(configs, 2, 3)
-    print(puzzles[10])
-    plot_image(puzzles[10],"mnist_puzzle.png")
-    plot_grid(puzzles[:36],"mnist_puzzles.png")
-    _transitions = transitions(2,3)
+    configs = list(generate_configs(9))[:36]
+    puzzles = generate(configs, 3, 3)
+    plot_grid(puzzles,"mnist_puzzles.png")
+    _transitions = transitions(3,3,configs)
     import numpy.random as random
     indices = random.randint(0,_transitions[0].shape[0],18)
     _transitions = _transitions[:,indices]
