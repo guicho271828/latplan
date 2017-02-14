@@ -103,12 +103,12 @@ class Network:
         self.net.compile(Adam(0.0001),bce)
         
     def bar_update(self, epoch, logs):
-        s = ""
+        ologs = {}
         for k in self.custom_log_functions:
-            s += "{}: {:5.3g}, ".format(k,self.custom_log_functions[k]())
-        for k in logs:
-            s += "{}: {:5.3g}, ".format(k,logs[k])
-        self.bar.update(epoch+1, stat=s)
+            ologs[k] = self.custom_log_functions[k]()
+        for k in {'loss','val_loss'}:
+            ologs[k] = logs[k]
+        self.bar.update(epoch+1, **ologs)
         
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer=Adam,lr=0.0001,test_data=None,save=True,report=True,
@@ -140,7 +140,9 @@ class Network:
                     progressbar.Timer(format='%(elapsed)s'),
                     progressbar.Bar(),
                     progressbar.AbsoluteETA(format='%(eta)s'), ' ',
-                    progressbar.DynamicMessage('stat')
+                    progressbar.DynamicMessage('tau'),
+                    progressbar.DynamicMessage('loss'),
+                    progressbar.DynamicMessage('val_loss'),
                 ]
             )
             self.net.compile(optimizer=o, loss=self.loss)
