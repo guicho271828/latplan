@@ -10,6 +10,8 @@ domain.pddl:
 	../../lisp/sas.bin -t actions.csv $(shell cat $<) > $@
 %_aug.sas: %.csv augmented.csv
 	../../lisp/sas.bin -t augmented.csv $(shell cat $<) > $@
+%_iter.sas: %.csv iter.csv
+	../../lisp/sas.bin -t iter.csv $(shell cat $<) > $@
 
 %.sasp: %.sas
 	../../downward/fast-downward.py --build release64 --preprocess $<
