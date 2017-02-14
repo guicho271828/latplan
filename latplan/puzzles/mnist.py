@@ -1,1 +1,1 @@
-/home/guicho/repos/neural/latent-planner2/mnist.py
+../mnist.py
