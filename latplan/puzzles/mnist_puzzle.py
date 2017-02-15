@@ -7,11 +7,13 @@ from .mnist import mnist
 x_train, y_train, _, _ = mnist()
 filters = [ np.equal(i,y_train) for i in range(10) ]
 imgs    = [ x_train[f] for f in filters ]
-panels  = np.array([ imgs[0].reshape((28,28)) for imgs in imgs ])
+panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
 
 panels[8] = imgs[8][3].reshape((28,28))
 panels[1] = imgs[1][3].reshape((28,28))
 panels.append(np.random.uniform(0,1,(28,28)))
+
+panels = np.array(panels)
 
 base = 14
 stepy = panels[0].shape[0]//base
