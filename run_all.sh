@@ -27,7 +27,7 @@ trap exit SIGINT
 # done
 
 for type in fc2 ; do
-    for task in digital_lightsout hanoi4 hanoi10 mnist_puzzle mandrill_puzzle lenna_puzzle ; do
+    for task in digital_lightsout hanoi4 hanoi10 mnist_puzzle mandrill_puzzle ; do
         for mode in learn_dump ; do
             ./strips.py $type $task $mode
             samples/sync.sh
