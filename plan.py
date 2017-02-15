@@ -59,7 +59,7 @@ def latent_plan(init,goal,ae,mode = 'blind'):
             # dummy pddl (text file with length 0)
             "domain.pddl",
             "problem_{}.sasp".format(action_type)])
-    echodo(["planner-scripts/limit.sh","-v","-t","3600",
+    echodo(["planner-scripts/limit.sh","-v",
             "-o",options[mode],
             "--","fd-sas-clean",
             ae.local("problem_{}.sasp".format(action_type))])
