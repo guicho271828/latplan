@@ -3,11 +3,11 @@
 import numpy as np
 from .lightsout import generate_configs, generate_random_configs, successors
 
-on = [[0, 0, 1, 0, 0, ],
+on = [[0, 0, 0, 0, 0, ],
       [0, 0, 1, 0, 0, ],
-      [1, 1, 1, 1, 1, ],
+      [0, 1, 1, 1, 0, ],
       [0, 0, 1, 0, 0, ],
-      [0, 0, 1, 0, 0, ],]
+      [0, 0, 0, 0, 0, ],]
                             
 off= [[0, 0, 0, 0, 0, ],
       [0, 0, 0, 0, 0, ],
@@ -34,12 +34,12 @@ def generate(configs):
                        x*base:(x+1)*base] = off
         # np.skew or np.XXX or any visual effect
         figure2 = np.zeros((dim*2,dim*2))
-        figure2[half:-half,half:-half] = figure
+        figure2[half:dim+half,half:dim+half] = figure
         figure3 = np.zeros((dim,dim))
         for x in range(-half,half):
             for y in range(-half,half):
                 r = math.sqrt(x*x+y*y)
-                rad = math.atan2(y,x) + math.pi  * (1-r)/half
+                rad = math.atan2(y,x) + math.pi  * (1-r)/half/6
                 p = r * np.array([math.cos(rad), math.sin(rad)])
                 px1 = math.floor(p[0])
                 py1 = math.floor(p[1])
