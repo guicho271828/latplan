@@ -31,3 +31,8 @@ done
 
 
 ./plan_iter.py blind 'run_puzzle    ( "samples/mnist_puzzle33p_fc2"         ,"fc2", import_module("puzzles.mnist_puzzle"             ) )' |& tee blind-mnist-iter
+
+
+
+
+./plan.py blind 'run_lightsout3 ( "samples/digital_lightsout_skewed3_fc" ,"fc",  import_module("puzzles.digital_lightsout_skewed" ) )' |& tee blind-lightsout-skewed3
