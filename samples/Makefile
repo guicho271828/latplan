@@ -1,5 +1,6 @@
 
-.PRECIOUS: %.sas %.sasp
+.PRECIOUS: %.sasp
+.SECONDARY: %.sas
 
 domain.pddl:
 	touch domain.pddl
