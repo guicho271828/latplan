@@ -14,5 +14,4 @@ domain.pddl:
 	../../lisp/sas.bin -t iter.csv $(shell cat $<) > $@
 
 %.sasp: %.sas
-	../../downward/fast-downward.py --build release64 --preprocess $<
-	mv output $@
+	../../downward/builds/release64/bin/preprocess < $< > $@
