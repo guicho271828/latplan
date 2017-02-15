@@ -3,22 +3,30 @@
 import numpy as np
 from .lightsout import generate_configs, generate_random_configs, successors
 
-on = [[0, 0, 0, 0, 0, ],
-      [0, 0, 1, 0, 0, ],
-      [0, 1, 1, 1, 0, ],
-      [0, 0, 1, 0, 0, ],
-      [0, 0, 0, 0, 0, ],]
+on = [[0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
+      [0, 1, 1, 1, 1, 1, 1, 1, 0, ],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],]
                             
-off= [[0, 0, 0, 0, 0, ],
-      [0, 0, 0, 0, 0, ],
-      [0, 0, 0, 0, 0, ],
-      [0, 0, 0, 0, 0, ],
-      [0, 0, 0, 0, 0, ],]
+off= [[0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],]
 
 def generate(configs):
     import math
     size = int(math.sqrt(len(configs[0])))
-    base = 5
+    base = 9
     dim = base*size
     half = dim//2
     def generate(config):
@@ -39,7 +47,7 @@ def generate(configs):
         for x in range(-half,half):
             for y in range(-half,half):
                 r = math.sqrt(x*x+y*y)
-                rad = math.atan2(y,x) + math.pi  * (1-r)/half/6
+                rad = math.atan2(y,x) + math.pi  * (1-r)/half/4
                 p = r * np.array([math.cos(rad), math.sin(rad)])
                 px1 = math.floor(p[0])
                 py1 = math.floor(p[1])
