@@ -52,7 +52,7 @@ def latent_plan(init,goal,ae,mode = 'blind'):
         
     # start planning
     plan_raw = ae.local("problem_{}.sasp.plan".format(action_type))
-    plan = ae.local("{}.plan".format(mode))
+    plan     = ae.local("{}-{}.plan".format(action_type,mode))
     echodo(["rm",plan])
     echodo(["make","-C","lisp","-j","1"])
     echodo(["make","-C",ae.path,"-f","../Makefile",
