@@ -179,6 +179,7 @@ class GumbelSoftmax:
             Dense(N * M),
             Reshape((N,M))])
         self.min = min
+        self.max = max
         self.anneal_rate = anneal_rate
         self.tau = K.variable(max, name="temperature")
         
@@ -208,7 +209,7 @@ class GumbelSoftmax:
         K.set_value(
             self.tau,
             np.max([self.min,
-                    K.get_value(self.tau) * np.exp(- self.anneal_rate * epoch)]))
+                    self.max * np.exp(- self.anneal_rate * epoch)]))
 
 class GaussianSample:
     count = 0
