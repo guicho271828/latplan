@@ -41,23 +41,23 @@ def generate(configs):
                 figure[y*base:(y+1)*base,
                        x*base:(x+1)*base] = off
         # np.skew or np.XXX or any visual effect
-        figure2 = np.zeros((dim*2,dim*2))
-        figure2[half:dim+half,half:dim+half] = figure
+        figure2 = np.zeros((dim*4,dim*4))
+        figure2[dim+half:2*dim+half,
+                dim+half:2*dim+half] = figure
         figure3 = np.zeros((dim*2,dim*2))
-        for x in range(-half,half):
-            for y in range(-half,half):
+        for x in range(-dim,dim):
+            for y in range(-dim,dim):
                 r = math.sqrt(x*x+y*y)
-                rad = math.atan2(y,x) + math.pi  * (1-r)/half/4
+                rad = math.atan2(y,x) + math.pi  * (1-r)/half/5
                 p = r * np.array([math.cos(rad), math.sin(rad)])
                 px1 = math.floor(p[0])
                 py1 = math.floor(p[1])
                 grid = np.array([[[px1,py1],[px1+1,py1],],
                                  [[px1,py1+1],[px1+1,py1+1],],])
                 w = (1 - np.prod(np.fabs(grid - p),axis=-1))/3
-                # print(np.sum(w))
                 
-                value = np.sum(w * figure2[py1+dim:py1+2+dim,px1+dim:px1+2+dim])
-                figure3[y+dim,x+dim] = value
+                value = np.sum(w * figure2[py1+2*dim:py1+2+2*dim,px1+2*dim:px1+2+2*dim])
+                figure3[y+dim,x+dim] = value*2
         return figure3
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim*2,dim*2)).clip(0,1)
 
