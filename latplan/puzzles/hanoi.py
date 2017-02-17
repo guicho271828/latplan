@@ -59,7 +59,7 @@ def successors(config):
 def generate1(config):
     l = len(config)
     base_disk_width = 5
-    figure = np.zeros([l*2,(l*2+base_disk_width)*3+2],dtype=np.int8)
+    figure = np.zeros([l*4,(l*2+base_disk_width)*3+2],dtype=np.int8)
     state = config_state(config)
     # print(l,figure.shape)
     # print(config)
@@ -72,10 +72,10 @@ def generate1(config):
         for j,disk in enumerate(tower):
             # print(j,disk,(l-j)*2)
             figure[
-                (l-j)*2-1,
+                (l-j)*4-3:(l-j)*4,
                 x_left + (l-disk) : x_right - (l-disk)] = 1
-            figure[(l-j)*2-2, x_left  + (l-disk)] = 1
-            figure[(l-j)*2-2, x_right - (l-disk) -1] = 1
+            # figure[(l-j)*2-2, x_left  + (l-disk)] = 1
+            # figure[(l-j)*2-2, x_right - (l-disk) -1] = 1
     return figure
 
 def generate(configs):
