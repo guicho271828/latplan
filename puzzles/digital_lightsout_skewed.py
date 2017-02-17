@@ -43,7 +43,7 @@ def generate(configs):
         # np.skew or np.XXX or any visual effect
         figure2 = np.zeros((dim*2,dim*2))
         figure2[half:dim+half,half:dim+half] = figure
-        figure3 = np.zeros((dim,dim))
+        figure3 = np.zeros((dim*2,dim*2))
         for x in range(-half,half):
             for y in range(-half,half):
                 r = math.sqrt(x*x+y*y)
@@ -57,9 +57,9 @@ def generate(configs):
                 # print(np.sum(w))
                 
                 value = np.sum(w * figure2[py1+dim:py1+2+dim,px1+dim:px1+2+dim])
-                figure3[y+half,x+half] = value
+                figure3[y+dim,x+dim] = value
         return figure3
-    return np.array([ generate(c) for c in configs ]).reshape((-1,dim,dim)).clip(0,1)
+    return np.array([ generate(c) for c in configs ]).reshape((-1,dim*2,dim*2)).clip(0,1)
 
 def states(size, configs=None):
     if configs is None:
