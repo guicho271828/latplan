@@ -319,16 +319,16 @@ def hanoi10():
 
 def hanoi4():
     global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[36]]
-    epoch = 10000
+    parameters = [[4000],[0.4],[30]]
+    epoch = 4000
     batch_size = 3500
     import puzzles.hanoi as p
     configs = p.generate_configs(4)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     print(len(configs))
-    train_c = configs[:int(len(configs)*0.8)]
-    test_c  = configs[int(len(configs)*0.8):]
+    train_c = configs
+    test_c  = configs
     train       = p.states(4,train_c)
     test        = p.states(4,test_c)
     print(len(configs),len(train),len(test))
