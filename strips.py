@@ -381,14 +381,14 @@ def digital_lightsout_skewed():
 def digital_lightsout_skewed3():
     global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[36]]
-    epoch = 10000
+    epoch = 1000
     batch_size = 3500
     import puzzles.digital_lightsout_skewed as p
     print('generating configs...')
     configs = p.generate_configs(3)
     random.shuffle(configs)
-    train_c = configs[:int(len(configs)*0.8)]
-    test_c  = configs[int(len(configs)*0.8):]
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs[int(len(configs)*0.9):]
     print('generating figures...')
     train       = p.states(3,train_c)
     test        = p.states(3,test_c)
