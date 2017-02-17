@@ -6,6 +6,7 @@
 ./plan.py blind 'run_puzzle    ( "samples/mandrill_puzzle33p_fc2"      ,"fc2", import_module("puzzles.mandrill_puzzle"          ) )' |& tee blind-mandrill 
 ./plan.py blind 'run_lightsout ( "samples/digital_lightsout_fc2"       ,"fc2", import_module("puzzles.digital_lightsout"        ) )' |& tee blind-lightsout
 ./plan.py blind 'run_lightsout ( "samples/digital_lightsout_skewed_fc" ,"fc",  import_module("puzzles.digital_lightsout_skewed" ) )' |& tee blind-lightsout-skewed
+./plan.py blind 'run_lightsout3 ( "samples/digital_lightsout_skewed3_fc" ,"fc",  import_module("puzzles.digital_lightsout_skewed" ) )' |& tee blind-lightsout-skewed3
 
 ################################################################
 
