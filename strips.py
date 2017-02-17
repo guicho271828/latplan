@@ -350,22 +350,24 @@ def digital_lightsout():
     dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
 
 def digital_lightsout_skewed():
+    global epoch
+    epoch = 300
     import puzzles.digital_lightsout_skewed as p
     print('generating configs...')
-    configs = p.generate_configs(4)
+    configs = p.generate_configs(3)
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
     print('generating figures...')
-    train       = p.states(4,train_c)
-    test        = p.states(4,test_c)
+    train       = p.states(3,train_c)
+    test        = p.states(3,test_c)
 
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/digital_lightsout_skewed_{}/".format(encoder), train, test)
     print('dumping actions ...')
-    dump(ae, train,test,p.transitions(4,train_c,True))
+    dump(ae, train,test,p.transitions(3,train_c,True))
     print('dumping all actions ...')
-    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
 
 def digital_lightsout_skewed3():
     import puzzles.digital_lightsout_skewed as p
