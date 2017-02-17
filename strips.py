@@ -44,7 +44,7 @@ def learn_model(path,train_data,test_data=None,network=None):
 
 
 names      = ['layer','dropout','N']
-parameters = [[4000],[0.4],[36]]
+parameters = [[],[],[]]
 
 def grid_search(path, train=None, test=None):
     network = default_networks[encoder]
@@ -233,10 +233,10 @@ def run(learn,*args, **kwargs):
 
 
 def mnist_puzzle():
-    global parameters
+    global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[49]]
-    # N=81 too much
-    # N=25
+    epoch = 1000
+    batch_size = 2000
     import puzzles.mnist_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -281,8 +281,10 @@ def lenna_puzzle():
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
 def mandrill_puzzle():
-    global parameters
+    global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[49]]
+    epoch = 1000
+    batch_size = 2000
     import puzzles.mandrill_puzzle as p
     configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
@@ -297,7 +299,10 @@ def mandrill_puzzle():
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
 def hanoi10():
-    # 3000,0.4,N=64 worked best
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[36]]
+    epoch = 400
+    batch_size = 3500
     import puzzles.hanoi as p
     configs = p.generate_configs(10)
     configs = np.array([ c for c in configs ])
@@ -313,8 +318,10 @@ def hanoi10():
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
 def hanoi4():
-    global epoch
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[36]]
     epoch = 10000
+    batch_size = 3500
     import puzzles.hanoi as p
     configs = p.generate_configs(4)
     configs = np.array([ c for c in configs ])
@@ -330,8 +337,10 @@ def hanoi4():
     dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
     
 def digital_lightsout():
-    global epoch
-    epoch = 300
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[36]]
+    epoch = 1000
+    batch_size = 2000
     import puzzles.digital_lightsout as p
     print('generating configs...')
     configs = p.generate_configs(4)
@@ -370,6 +379,10 @@ def digital_lightsout_skewed():
     dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
 
 def digital_lightsout_skewed3():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[36]]
+    epoch = 10000
+    batch_size = 3500
     import puzzles.digital_lightsout_skewed as p
     print('generating configs...')
     configs = p.generate_configs(3)
