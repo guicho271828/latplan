@@ -33,36 +33,46 @@ options = {
 }
 
 option = "blind"
+action_type = "all"
 
-def latent_plan(init,goal,ae,mode = 'blind'):
-    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal.png")
-
-    d = echo_out(["mktemp","-d"]).splitlines()[0].decode('utf-8')
-    print(d)
-    np.savetxt(d+"/problem.csv",ig_b.flatten().astype('int'),"%d")
-    try:
-        out = echo_out(["md5sum",d+"/problem.csv",ae.local("problem.csv")])
-        tokens = out.split()
-        if tokens[0] != tokens[2]:
-            echodo(["cp",d+"/problem.csv",ae.local("problem.csv")])
-    except subprocess.CalledProcessError:
-        echodo(["cp",d+"/problem.csv",ae.local("problem.csv")])
-
-    action_type = "all"
-        
-    # start planning
-    plan_raw = ae.local("problem_{}.sasp.plan".format(action_type))
-    plan     = ae.local("{}-{}.plan".format(action_type,mode))
-    echodo(["rm",plan])
+def preprocess(digest,ae,init,goal):
+    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),digest+"-init-goal")
+    np.savetxt(ae.local(digest+".csv"),ig_b.flatten().astype('int'),"%d")
     echodo(["make","-C","lisp","-j","1"])
     echodo(["make","-C",ae.path,"-f","../Makefile",
             # dummy pddl (text file with length 0)
             "domain.pddl",
-            "problem_{}.sasp".format(action_type)])
+            "{}_{}.sasp".format(digest,action_type)])
+
+def latent_plan(init,goal,ae,mode = 'blind'):
+    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init-goal")
+    echodo(["rm",ae.local("init-goal.png")])
+
+    bits = ig_b.flatten().astype('int')
+    import hashlib
+    m = hashlib.md5()
+    m.update(str(bits).encode())
+    digest = m.hexdigest()
+    lock = ae.local(digest+".lock")
+
+    import fcntl
+    try:
+        with open(lock) as f:
+            fcntl.flock(f, fcntl.LOCK_SH)
+    except IOError:
+        with open(path,'wb') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            preprocess(digest,ae,init,goal)
+
+    ###### do planning #############################################
+    plan_raw = ae.local("{}_{}.sasp.plan".format(digest,action_type))
+    plan     = ae.local("{}-{}-{}.plan".format(digest,action_type,mode))
+    echodo(["rm","-f",plan,plan_raw])
     echodo(["planner-scripts/limit.sh","-v",
             "-o",options[mode],
             "--","fd-sas-clean",
-            ae.local("problem_{}.sasp".format(action_type))])
+            ae.local("{}_{}.sasp".format(digest,action_type))])
+    echodo(["rm", ae.local("{}_{}.sasp.log".format(digest,action_type))])
     if not os.path.exists(plan_raw):
         raise PlanException("no plan found")
     echodo(["mv",plan_raw,plan])
@@ -74,8 +84,10 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     numbers = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     print(numbers)
     plan_images = ae.decode_binary(numbers)
-    plot_grid(plan_images,path=ae.local('{}-{}.png'.format(action_type,mode)))
-    plot_grid(plan_images.round(),path=ae.local('{}-{}-rounded.png'.format(action_type,mode)))
+    plot_grid(plan_images,
+              path=ae.local('{}-{}-{}.png'.format(digest,action_type,mode)))
+    plot_grid(plan_images.round(),
+              path=ae.local('{}-{}-{}-rounded.png'.format(digest,action_type,mode)))
 
 from model import default_networks
 
