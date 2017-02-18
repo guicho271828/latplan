@@ -33,13 +33,13 @@ options = {
 }
 
 option = "blind"
-
+sigma = 0.3
 def latent_plan(init,goal,ae,mode = 'blind'):
     # temporary!
     if os.path.exists(ae.local("noise.csv")):
         raise PlanException("Don't run twice!")
-    init = init.astype(float) + np.random.normal(0.0,0.3,init.shape)
-    goal = goal.astype(float) + np.random.normal(0.0,0.3,goal.shape)
+    init = init.astype(float) + np.random.normal(0.0,sigma,init.shape)
+    goal = goal.astype(float) + np.random.normal(0.0,sigma,goal.shape)
     init = init.clip(0,1)
     goal = goal.clip(0,1)
     ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal_noise.png")
@@ -150,6 +150,7 @@ if __name__ == '__main__':
     from importlib import import_module
     sys.argv.pop(0)
     option = sys.argv.pop(0)
+    sigma = sys.argv.pop(0)
     eval(sys.argv[0])
     echodo(["samples/sync.sh"])
     
