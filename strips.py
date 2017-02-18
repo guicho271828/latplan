@@ -20,6 +20,9 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     return math.log(max/min) / epoch
 
 encoder = 'fc'
+mode = 'learn_dump'
+modes = {'learn':True,'learn_dump':True,'dump':False}
+learn_flag = True
 
 lr = 0.0001
 batch_size = 2000
@@ -215,8 +218,6 @@ def dump_all_actions(ae,configs,trans_fn):
 ################################################################
 
 # note: lightsout has epoch 200
-
-learn_flag = True
 
 from plot import plot_ae
 
@@ -651,7 +652,7 @@ def random_mnist_counter():
     dump(ae, train,test)
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
-modes = {'learn':True,'learn_dump':True,'dump':False}
+
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 1:
