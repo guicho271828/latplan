@@ -49,6 +49,7 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     echodo(["rm",ae.local("init-goal.png")])
 
     bits = ig_b.flatten().astype('int')
+    print("md5 source: ",str(bits)," ",str(bits).encode())
     import hashlib
     m = hashlib.md5()
     m.update(str(bits).encode())
@@ -58,6 +59,7 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     import fcntl
     try:
         with open(lock) as f:
+            print("lockfile found!")
             fcntl.flock(f, fcntl.LOCK_SH)
     except FileNotFoundError:
         with open(lock,'wb') as f:
