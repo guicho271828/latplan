@@ -96,7 +96,7 @@ from model import default_networks
 def select(data,num):
     return data[np.random.randint(0,data.shape[0],num)]
 
-def run_puzzle(path, network, p):
+def run_puzzle(path, network, p, init=0):
     from model import GumbelAE
     ae = default_networks[network](path)
     configs = np.array(list(p.generate_configs(9)))
@@ -104,7 +104,16 @@ def run_puzzle(path, network, p):
         return np.array([
             [i for i,x in enumerate(panels) if x == p]
             for p in range(9)]).reshape(-1)
-    ig_c = [convert([8,0,6,5,4,7,2,3,1]),
+    initial_configs = [
+        # from Reinfield '93
+        convert([8,0,6,5,4,7,2,3,1]), # the second instance with the longest optimal solution
+        convert([8,7,6,0,4,1,2,5,3]), # the first instance with the longest optimal solution
+        convert([8,5,6,7,2,3,4,1,0]), # the first instance with the most solutions
+        convert([8,5,4,7,6,3,2,1,0]), # the second instance with the most solutions
+        convert([8,6,7,2,5,4,3,0,1]), # the "wrong"? hardest eight-puzzle from
+        convert([6,4,7,8,5,0,3,2,1]), # w01fe.com/blog/2009/01/the-hardest-eight-puzzle-instances-take-31-moves-to-solve/
+    ]
+    ig_c = [initial_configs[init],
             convert([0,1,2,3,4,5,6,7,8])]
     ig = p.states(3,3,ig_c)
     try:
