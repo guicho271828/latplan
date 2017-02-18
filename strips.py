@@ -300,8 +300,8 @@ def mandrill_puzzle():
 
 def hanoi10():
     global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[36]]
-    epoch = 400
+    parameters = [[4000],[0.4],[49]]
+    epoch = 10000
     batch_size = 3500
     import puzzles.hanoi as p
     configs = p.generate_configs(10)
