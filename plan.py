@@ -59,8 +59,8 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     try:
         with open(lock) as f:
             fcntl.flock(f, fcntl.LOCK_SH)
-    except IOError:
-        with open(path,'wb') as f:
+    except FileNotFoundError:
+        with open(lock,'wb') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             preprocess(digest,ae,init,goal)
 
