@@ -56,10 +56,29 @@ def successors(config):
                     succ.append(state_config(copy))
     return succ
 
+from .mnist import mnist
+x_train, y_train, _, _ = mnist()
+filters = [ np.equal(i,y_train) for i in range(10) ]
+imgs    = [ x_train[f] for f in filters ]
+panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
+
+panels[8] = imgs[8][3].reshape((28,28))
+panels[1] = imgs[1][3].reshape((28,28))
+panels.append(np.random.uniform(0,1,(28,28)))
+
+panels = np.array(panels)
+
+base = 14
+stepy = panels[0].shape[0]//base
+stepx = panels[0].shape[1]//base
+panels = panels[:,::stepy,::stepx][:,:base,:base].round()
+
 def generate1(config):
     l = len(config)
-    base_disk_width = 5
-    figure = np.zeros([l*4,(l*2+base_disk_width)*3+2],dtype=np.int8)
+    base_disk_width = 14
+    disk_inc = 1
+    disk_height = 14
+    figure = np.ones([l*disk_height,(l*2*disk_inc+base_disk_width)*3+2],dtype=np.int8)
     state = config_state(config)
     # print(l,figure.shape)
     # print(config)
@@ -67,13 +86,18 @@ def generate1(config):
     for i, tower in enumerate(state):
         tower.reverse()
         # print(i,tower)
-        x_left  = (l*2+base_disk_width)*i     +   i
-        x_right = (l*2+base_disk_width)*(i+1) + (i+1) - 1
+        x_left  = (l*2*disk_inc+base_disk_width)*i     +   i
+        x_right = (l*2*disk_inc+base_disk_width)*(i+1) + (i+1) - 1
         for j,disk in enumerate(tower):
             # print(j,disk,(l-j)*2)
             figure[
-                (l-j)*4-3:(l-j)*4,
-                x_left + (l-disk) : x_right - (l-disk)] = 1
+                (l-j-1)*disk_height+1:(l-j)*disk_height,
+                x_left + (l-disk)*disk_inc : x_right - (l-disk)*disk_inc] = 0
+            figure[
+                (l-j-1)*disk_height:(l-j)*disk_height,
+                x_left + l*disk_inc + (base_disk_width-base)//2 : \
+                x_right - l*disk_inc - (base_disk_width-base)//2] = panels[disk]
+            
             # figure[(l-j)*2-2, x_left  + (l-disk)] = 1
             # figure[(l-j)*2-2, x_right - (l-disk) -1] = 1
     return figure

@@ -250,7 +250,7 @@ class AE(Network):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
-            Dropout(self.parameters['dropout']),
+            # Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu', bias=False),
             # this BN may be initially bad for val_loss, but is ok for longer epochs
             BN(),
@@ -382,9 +382,10 @@ class GumbelAE(AE):
             _bs = bs.reshape((-1,l1,l1))
         else:
             l2 = math.ceil(root)
-            size = l1*l2
-            _zs = np.concatenate((zs,np.ones((zs.shape[0],size-N))),axis=1).reshape((-1,l1,l2))
-            _bs = np.concatenate((bs,np.ones((bs.shape[0],size-N))),axis=1).reshape((-1,l1,l2))
+            size = l2*l2
+            print(root,size,N)
+            _zs = np.concatenate((zs,np.ones((zs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
+            _bs = np.concatenate((bs,np.ones((bs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
         images = []
         from plot import plot_grid
         for seq in zip(xs, _zs, ys, _bs, bys):
