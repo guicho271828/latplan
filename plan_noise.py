@@ -33,43 +33,53 @@ options = {
 }
 
 option = "blind"
+action_type = "all"
 sigma = 0.3
-def latent_plan(init,goal,ae,mode = 'blind'):
-    # temporary!
-    if os.path.exists(ae.local("noise.csv")):
-        raise PlanException("Don't run twice!")
-    init = init.astype(float) + np.random.normal(0.0,sigma,init.shape)
-    goal = goal.astype(float) + np.random.normal(0.0,sigma,goal.shape)
-    init = init.clip(0,1)
-    goal = goal.clip(0,1)
-    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init_goal_noise.png")
-
-    d = echo_out(["mktemp","-d"]).splitlines()[0].decode('utf-8')
-    print(d)
-    np.savetxt(d+"/noise.csv",ig_b.flatten().astype('int'),"%d")
-    try:
-        out = echo_out(["md5sum",d+"/noise.csv",ae.local("noise.csv")])
-        tokens = out.split()
-        if tokens[0] != tokens[2]:
-            echodo(["cp",d+"/noise.csv",ae.local("noise.csv")])
-    except subprocess.CalledProcessError:
-        echodo(["cp",d+"/noise.csv",ae.local("noise.csv")])
-
-    action_type = "all"
-        
-    # start planning
-    plan_raw = ae.local("noise_{}.sasp.plan".format(action_type))
-    plan     = ae.local("noise-{}-{}.plan".format(action_type,mode))
-    echodo(["rm",plan])
+def preprocess(digest,ae,ig_b):
+    np.savetxt(ae.local(digest+".csv"),ig_b.flatten().astype('int'),"%d")
     echodo(["make","-C","lisp","-j","1"])
     echodo(["make","-C",ae.path,"-f","../Makefile",
             # dummy pddl (text file with length 0)
             "domain.pddl",
-            "noise_{}.sasp".format(action_type)])
-    echodo(["planner-scripts/limit.sh","-v","-t","3600",
+            "{}_{}.sasp".format(digest,action_type)])
+
+def latent_plan(init,goal,ae,mode = 'blind'):
+    init = init.astype(float) + np.random.normal(0.0,sigma,init.shape)
+    goal = goal.astype(float) + np.random.normal(0.0,sigma,goal.shape)
+    init = init.clip(0,1)
+    goal = goal.clip(0,1)
+    
+    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),"init-goal")
+    echodo(["rm",ae.local("init-goal.png")])
+
+    bits = ig_b.flatten().astype('int')
+    print("md5 source: ",str(bits)," ",str(bits).encode())
+    import hashlib
+    m = hashlib.md5()
+    m.update(str(bits).encode())
+    digest = m.hexdigest()
+    lock = ae.local(digest+".lock")
+
+    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),digest+("-init-goal-{}.png".format(sigma)))
+    import fcntl
+    try:
+        with open(lock) as f:
+            print("lockfile found!")
+            fcntl.flock(f, fcntl.LOCK_SH)
+    except FileNotFoundError:
+        with open(lock,'wb') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            preprocess(digest,ae,ig_b)
+
+    ###### do planning #############################################
+    plan_raw = ae.local("{}_{}.sasp.plan".format(digest,action_type))
+    plan     = ae.local("{}-{}-{}-{}.plan".format(digest,action_type,mode,sigma))
+    echodo(["rm","-f",plan,plan_raw])
+    echodo(["planner-scripts/limit.sh","-v",
             "-o",options[mode],
             "--","fd-sas-clean",
-            ae.local("noise_{}.sasp".format(action_type))])
+            ae.local("{}_{}.sasp".format(digest,action_type))])
+    echodo(["rm", ae.local("{}_{}.sasp.log".format(digest,action_type))])
     if not os.path.exists(plan_raw):
         raise PlanException("no plan found")
     echodo(["mv",plan_raw,plan])
@@ -81,8 +91,10 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     numbers = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     print(numbers)
     plan_images = ae.decode_binary(numbers)
-    plot_grid(plan_images,path=ae.local('{}-{}-noise.png'.format(action_type,mode)))
-    plot_grid(plan_images.round(),path=ae.local('{}-{}-rounded-noise.png'.format(action_type,mode)))
+    plot_grid(plan_images,
+              path=ae.local('{}-{}-{}-{}.png'.format(digest,action_type,mode,sigma)))
+    plot_grid(plan_images.round(),
+              path=ae.local('{}-{}-{}-{}-rounded.png'.format(digest,action_type,mode,sigma)))
 
 from model import default_networks
 
@@ -120,6 +132,20 @@ def run_lightsout(path, network, p):
     except PlanException as e:
         print(e)
 
+def run_lightsout3(path, network, p):
+    from model import GumbelAE
+    ae = default_networks[network](path)
+    configs = np.array(list(p.generate_configs(3)))
+    ig_c = [[0,0,0,
+             1,1,1,
+             1,0,1,],
+            np.zeros(9)]
+    ig = p.states(3,ig_c)
+    try:
+        latent_plan(*ig, ae, option)
+    except PlanException as e:
+        print(e)
+
 def run_hanoi10(path, network, p):
     from model import GumbelAE
     ae = default_networks[network](path)
@@ -147,10 +173,11 @@ def run_hanoi4(path, network, p):
 
 if __name__ == '__main__':
     import sys
+    print(sys.argv)
     from importlib import import_module
     sys.argv.pop(0)
     option = sys.argv.pop(0)
-    sigma = sys.argv.pop(0)
+    sigma = eval(sys.argv.pop(0))
     eval(sys.argv[0])
     echodo(["samples/sync.sh"])
     
