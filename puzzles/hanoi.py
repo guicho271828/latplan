@@ -73,7 +73,6 @@ stepy = panels[0].shape[0]//base
 stepx = panels[0].shape[1]//base
 panels = panels[:,::stepy,::stepx][:,:base,:base].round()
 
-
 patterns = [
     [[0,0,0,0,0,0,0,0,],
      [0,0,0,0,0,0,0,0,],
@@ -83,22 +82,6 @@ patterns = [
      [0,0,0,0,0,0,0,0,],
      [0,0,0,0,0,0,0,0,],
      [0,0,0,0,0,0,0,0,],],
-    [[1,0,0,0,1,0,0,0,],
-     [0,1,0,0,0,1,0,0,],
-     [0,0,1,0,0,0,1,0,],
-     [0,0,0,1,0,0,0,1,],
-     [1,0,0,0,1,0,0,0,],
-     [0,1,0,0,0,1,0,0,],
-     [0,0,1,0,0,0,1,0,],
-     [0,0,0,1,0,0,0,1,],],
-    [[0,0,0,1,0,0,0,1,],
-     [0,0,1,0,0,0,1,0,],
-     [0,1,0,0,0,1,0,0,],
-     [1,0,0,0,1,0,0,0,],
-     [0,0,0,1,0,0,0,1,],
-     [0,0,1,0,0,0,1,0,],
-     [0,1,0,0,0,1,0,0,],
-     [1,0,0,0,1,0,0,0,],],
     [[1,1,0,0,1,1,0,0,],
      [1,1,0,0,1,1,0,0,],
      [0,0,1,1,0,0,1,1,],
@@ -107,14 +90,30 @@ patterns = [
      [1,1,0,0,1,1,0,0,],
      [0,0,1,1,0,0,1,1,],
      [0,0,1,1,0,0,1,1,],],
+    [[1,0,0,0,1,0,0,0,],
+     [0,1,0,0,0,1,0,0,],
+     [0,0,1,0,0,0,1,0,],
+     [0,0,0,1,0,0,0,1,],
+     [1,0,0,0,1,0,0,0,],
+     [0,1,0,0,0,1,0,0,],
+     [0,0,1,0,0,0,1,0,],
+     [0,0,0,1,0,0,0,1,],],
     [[0,0,0,0,0,0,0,0,],
      [0,1,1,1,0,0,0,0,],
-     [0,1,0,1,0,0,0,0,],
+     [0,1,1,1,0,0,0,0,],
      [0,1,1,1,0,0,0,0,],
      [0,0,0,0,1,1,1,0,],
-     [0,0,0,0,1,0,1,0,],
+     [0,0,0,0,1,1,1,0,],
      [0,0,0,0,1,1,1,0,],
      [0,0,0,0,0,0,0,0,],],
+    [[0,0,0,1,0,0,0,1,],
+     [0,0,1,0,0,0,1,0,],
+     [0,1,0,0,0,1,0,0,],
+     [1,0,0,0,1,0,0,0,],
+     [0,0,0,1,0,0,0,1,],
+     [0,0,1,0,0,0,1,0,],
+     [0,1,0,0,0,1,0,0,],
+     [1,0,0,0,1,0,0,0,],],
     [[0,0,0,1,1,0,0,0,],
      [0,0,1,0,0,1,0,0,],
      [0,1,0,0,0,0,1,0,],
@@ -189,11 +188,15 @@ patterns = [
      [0,0,1,1,1,1,0,0,],],
 ]
 
+patterns = np.array(patterns)
+
 def generate1(config):
     l = len(config)
-    base_disk_width = 8
-    disk_inc = 4
-    disk_height = 8
+    disk_size = 8
+    disk_inc = disk_size // 2
+    disk_height = disk_size
+    base_disk_width_factor = 2
+    base_disk_width = disk_size * base_disk_width_factor
     figure = np.ones([l*disk_height,(l*2*disk_inc+base_disk_width)*3+2],dtype=np.int8)
     state = config_state(config)
     # print(l,figure.shape)
@@ -207,15 +210,10 @@ def generate1(config):
         for j,disk in enumerate(tower):
             # print(j,disk,(l-j)*2)
             figure[
-                (l-j-1)*disk_height+1:(l-j)*disk_height,
-                x_left + (l-disk)*disk_inc : x_right - (l-disk)*disk_inc] = 0
-            figure[
                 (l-j-1)*disk_height:(l-j)*disk_height,
-                x_left + l*disk_inc + (base_disk_width-base)//2 : \
-                x_right - l*disk_inc - (base_disk_width-base)//2] = patterns[disk]
-            
-            # figure[(l-j)*2-2, x_left  + (l-disk)] = 1
-            # figure[(l-j)*2-2, x_right - (l-disk) -1] = 1
+                x_left + (l-disk)*disk_inc : x_right - (l-disk)*disk_inc] \
+                = 0
+                # = np.tile(patterns[disk],(1,disk+base_disk_width_factor))
     return figure
 
 def generate(configs):
