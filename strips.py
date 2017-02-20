@@ -25,7 +25,7 @@ lr = 0.0001
 batch_size = 2000
 epoch = 1000
 max_temperature = 2.0
-min_temperature = 0.2
+min_temperature = 0.3
 def learn_model(path,train_data,test_data=None,network=None):
     if network is None:
         network = default_networks[encoder]
@@ -357,8 +357,8 @@ def hanoi3():
 
 def hanoi4():
     global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[30]]
-    epoch = 2000
+    parameters = [[4000],[0.4],[30,]]
+    epoch = 3000
     batch_size = 1000
     import puzzles.hanoi as p
     configs = p.generate_configs(4)
