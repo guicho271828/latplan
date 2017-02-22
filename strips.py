@@ -21,10 +21,10 @@ def anneal_rate(epoch,min=0.1,max=5.0):
 
 encoder = 'fc'
 
-lr = 0.001
+lr = 0.0001
 batch_size = 2000
 epoch = 1000
-max_temperature = 1.0
+max_temperature = 2.0
 min_temperature = 0.1
 def learn_model(path,train_data,test_data=None,network=None):
     if network is None:
@@ -317,10 +317,10 @@ def hanoi10():
     dump(ae, train,test,p.transitions(10,train_c,True))
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
-def hanoi4():
+def lhanoi4():
     global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[30]]
-    epoch = 4000
+    parameters = [[4000],[0.4],[25]]
+    epoch = 500
     batch_size = 3500
     import puzzles.hanoi as p
     configs = p.generate_configs(4)
@@ -335,6 +335,235 @@ def hanoi4():
     ae = run(learn_flag,"samples/hanoi4_{}/".format(encoder), train, test)
     dump(ae, train,test,p.transitions(4,train_c,True))
     dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+
+def hanoi3():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(3)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(3,train_c)
+    test        = p.states(3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi3_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(3,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
+
+def hanoi4():
+    global parameters,epoch,batch_size
+    parameters = [[6000],[0.4],[29]]
+    epoch = 10000
+    batch_size = 1000
+    import puzzles.hanoi as p
+    configs = p.generate_configs(4)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(4,train_c)
+    test        = p.states(4,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi4_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(4,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+
+def hanoi5():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(5)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(5,train_c)
+    test        = p.states(5,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi5_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(5,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(5,configs))
+
+def hanoi6():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(6)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(6,train_c)
+    test        = p.states(6,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi6_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(6,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
+
+def hanoi7():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(7)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(7,train_c)
+    test        = p.states(7,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi7_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(7,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(7,configs))
+
+def hanoi8():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(8)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(8,train_c)
+    test        = p.states(8,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi8_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(8,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(8,configs))
+
+def hanoi9():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(9,train_c)
+    test        = p.states(9,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi9_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(9,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(9,configs))
+
+def xhanoi5():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(5)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(5,train_c)
+    test        = p.states(5,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi5_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(5,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(5,configs))
+
+def xhanoi6():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(6)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(6,train_c)
+    test        = p.states(6,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi6_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(6,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
+
+def xhanoi7():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(7)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(7,train_c)
+    test        = p.states(7,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi7_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(7,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(7,configs))
+
+def xhanoi8():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(8)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(8,train_c)
+    test        = p.states(8,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi8_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(8,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(8,configs))
+
+def xhanoi9():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(9,train_c)
+    test        = p.states(9,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi9_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(9,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(9,configs))
+
     
 def digital_lightsout():
     global parameters,epoch,batch_size
