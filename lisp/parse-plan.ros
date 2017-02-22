@@ -44,4 +44,5 @@ exec ros -Q -- $0 "$@"
                      (ematch action
                        ((list (symbol :name (and name (string* #\A))))
                         (map 'list (compose #'read-from-string #'string)
-                             (subseq name 1)))))))))
+                             (subseq name 1))))))))
+  t)

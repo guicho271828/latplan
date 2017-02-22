@@ -1,7 +1,37 @@
 #!/usr/bin/env python3
 
 import numpy as np
+from .puzzle import generate_configs, successors
 
+def generate(configs, width, height):
+    assert width*height <= 16
+    base_width = 5
+    base_height = 6
+    dim_x = base_width*width
+    dim_y = base_height*height
+    def generate(config):
+        figure = np.zeros((dim_y,dim_x))
+        for digit,pos in enumerate(config):
+            x = pos % width
+            y = pos // width
+            figure[y*base_height:(y+1)*base_height,
+                   x*base_width:(x+1)*base_width] = panels[digit]
+        return figure
+    return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
+
+def states(width, height, configs=None):
+    digit = width * height
+    if configs is None:
+        configs = generate_configs(digit)
+    return generate(configs,width,height)
+
+def transitions(width, height, configs=None):
+    digit = width * height
+    if configs is None:
+        configs = generate_configs(digit)
+    transitions = np.array([ generate([c1,c2],width,height)
+                             for c1 in configs for c2 in successors(c1,width,height) ])
+    return np.einsum('ab...->ba...',transitions)
 
 panels = [
     [[0, 0, 0, 0, 0,],
@@ -102,89 +132,6 @@ panels = [
      [0, 0, 1, 0, 0,],],
 ]
 
-def generate_configs(digit=9):
-    import itertools
-    return itertools.permutations(range(digit))
-
-def generate_puzzle(configs, width, height):
-    assert width*height <= 16
-    base_width = 5
-    base_height = 6
-    dim_x = base_width*width
-    dim_y = base_height*height
-    def generate(config):
-        figure = np.zeros((dim_y,dim_x))
-        for digit,pos in enumerate(config):
-            x = pos % width
-            y = pos // width
-            figure[y*base_height:(y+1)*base_height,
-                   x*base_width:(x+1)*base_width] = panels[digit]
-        return figure
-    return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
-
-def successors(config,width,height):
-    pos = config[0]
-    x = pos % width
-    y = pos // width
-    succ = []
-    try:
-        if x != 0:
-            dir=1
-            c = list(config)
-            other = next(i for i,_pos in enumerate(c) if _pos == pos-1)
-            c[0] -= 1
-            c[other] += 1
-            succ.append(c)
-        if x != width-1:
-            dir=2
-            c = list(config)
-            other = next(i for i,_pos in enumerate(c) if _pos == pos+1)
-            c[0] += 1
-            c[other] -= 1
-            succ.append(c)
-        if y != 0:
-            dir=3
-            c = list(config)
-            other = next(i for i,_pos in enumerate(c) if _pos == pos-width)
-            c[0] -= width
-            c[other] += width
-            succ.append(c)
-        if y != height-1:
-            dir=4
-            c = list(config)
-            other = next(i for i,_pos in enumerate(c) if _pos == pos+width)
-            c[0] += width
-            c[other] -= width
-            succ.append(c)
-        return succ
-    except StopIteration:
-        board = np.zeros((height,width))
-        for i in range(height*width):
-            _pos = config[i]
-            _x = _pos % width
-            _y = _pos // width
-            board[_y,_x] = i
-        print(board)
-        print(succ)
-        print(dir)
-        print((c,x,y,width,height))
-
-def config_transitions(configs):
-    return [ (c1,c2) for c2 in successors(c1) for c1 in configs ]
-
-def states(width, height, configs=None):
-    digit = width * height
-    if configs is None:
-        configs = generate_configs(digit)
-    return generate_puzzle(configs,width,height)
-
-def transitions(width, height, configs=None):
-    digit = width * height
-    if configs is None:
-        configs = generate_configs(digit)
-    transitions = np.array([ generate_puzzle([c1,c2],width,height)
-                             for c1 in configs for c2 in successors(c1,width,height) ])
-    return np.einsum('ab...->ba...',transitions)
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
@@ -206,10 +153,10 @@ if __name__ == '__main__':
             ax.get_yaxis().set_visible(False)
         plt.savefig(name)
     configs = generate_configs(6)
-    puzzles = generate_puzzle(configs, 2, 3)
+    puzzles = generate(configs, 2, 3)
     print(puzzles[10])
-    plot_image(puzzles[10],"samples/puzzle.png")
-    plot_grid(puzzles[:36],"samples/puzzles.png")
+    plot_image(puzzles[10],"digital_puzzle.png")
+    plot_grid(puzzles[:36],"digital_puzzles.png")
     _transitions = transitions(2,3)
     import numpy.random as random
     indices = random.randint(0,_transitions[0].shape[0],18)
@@ -219,4 +166,5 @@ if __name__ == '__main__':
         np.einsum('ba...->ab...',_transitions) \
           .reshape((-1,)+_transitions.shape[2:])
     print(transitions_for_show.shape)
-    plot_grid(transitions_for_show,"samples/puzzle_transitions.png")
+    plot_grid(transitions_for_show,"digital_puzzle_transitions.png")
+

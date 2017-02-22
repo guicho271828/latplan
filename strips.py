@@ -2,10 +2,12 @@
 
 import config
 import numpy as np
-from model import GumbelAE, ConvolutionalGumbelAE
+import numpy.random as random
+from model import default_networks
 
 import keras.backend as K
 import tensorflow as tf
+
 
 float_formatter = lambda x: "%.5f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
@@ -15,28 +17,45 @@ def curry(fn,*args1,**kwargs1):
 
 def anneal_rate(epoch,min=0.1,max=5.0):
     import math
-    return (2 / (epoch * (epoch+1))) * math.log(max/min)
+    return math.log(max/min) / epoch
 
-def learn_model(path,train_data,test_data=None,network=GumbelAE):
+encoder = 'fc'
+mode = 'learn_dump'
+modes = {'learn':True,'learn_dump':True,'dump':False}
+learn_flag = True
+
+lr = 0.0001
+batch_size = 2000
+epoch = 1000
+max_temperature = 2.0
+min_temperature = 0.1
+def learn_model(path,train_data,test_data=None,network=None):
+    if network is None:
+        network = default_networks[encoder]
     ae = network(path)
     ae.train(train_data,
-             epoch=1000,
-             # epoch=500,
-             # epoch=200,
-             anneal_rate=anneal_rate(1000),
-             batch_size=4000,
+             epoch=epoch,
+             anneal_rate=anneal_rate(epoch,min_temperature,max_temperature),
+             max_temperature=max_temperature,
+             min_temperature=min_temperature,
+             lr=lr,
+             batch_size=batch_size,
              test_data=test_data,
              report=False 
     )
     return ae
 
-def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE):
-    names      = ['layer','dropout']
-    parameters = [[2000],[0.4],]
+
+names      = ['layer','dropout','N']
+parameters = [[],[],[]]
+
+def grid_search(path, train=None, test=None):
+    network = default_networks[encoder]
     best_error = float('inf')
     best_params = None
     best_ae     = None
     results = []
+    print("Network: {}".format(network))
     try:
         import itertools
         for params in itertools.product(*parameters):
@@ -44,8 +63,9 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
             print("Testing model with parameters={}".format(params_dict))
             ae = learn_model(path, train, test,
                              network=curry(network, parameters=params_dict))
-            error = ae.autoencoder.evaluate(test,test,batch_size=4000,verbose=0)
-            results.append((error,)+params)
+            error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
+            results.append({'error':error,'epoch':epoch,'batch_size':batch_size,
+                            **params_dict})
             print("Evaluation result for {} : error = {}".format(params_dict,error))
             print("Current results:\n{}".format(results),flush=True)
             if error < best_error:
@@ -58,33 +78,16 @@ def grid_search(path, train=None, test=None , transitions=None, network=GumbelAE
     finally:
         print(results)
     best_ae.save()
-    with open(best_ae.local("grid_search.log"), 'w') as f:
+    with open(best_ae.local("grid_search.log"), 'a') as f:
         import json
+        f.write("\n")
         json.dump(results, f)
     return best_ae,best_params,best_error
-
-# all_bitarray = np.unpackbits(np.arange(2**8, dtype=np.uint8).reshape((2**8,1)),axis=1)
-# 
-# def binary_counter(bitnum):           # 25
-#     if bitnum > 8:              # yes
-#         nextbitnum = bitnum - 8 # 17
-#         for i in range(2**8):
-#             for lowerbits in binary_counter(nextbitnum):
-#                 yield np.concatenate((all_bitarray[i],lowerbits),axis=0)
-#     else:
-#         bitarray = all_bitarray[0:2**bitnum,8-bitnum:8]
-#         for v in bitarray:
-#             yield v
 
 def flip(bv1,bv2):
     "bv1,bv2: integer 1D vector, whose values are 0 or 1"
     iv1 = np.packbits(bv1,axis=-1)
     iv2 = np.packbits(bv2,axis=-1)
-    # print(iv1,iv2)
-    # print(np.bitwise_xor(iv1,iv2))
-    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1))
-    # print(np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1).shape)
-    # print(bv1.shape)
     return \
         np.unpackbits(np.bitwise_xor(iv1,iv2),axis=-1)[:, :bv1.shape[-1]]
 
@@ -169,11 +172,13 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
 def bce(x,y):
     return K.mean(K.binary_crossentropy(x,y),axis=(1,2))
 
-# def bce(x,y):
-#     x_sym = K.placeholder(shape=x.shape)
-#     y_sym = K.placeholder(shape=y.shape)
-#     diff_sym = K.mean(K.binary_crossentropy(x_sym,y_sym),axis=(1,2))
-#     return K.function([x_sym,y_sym],[diff_sym])([x,y])[0]
+
+def dump(ae, train=None, test=None , transitions=None, **kwargs):
+    if test is not None:
+        plot_ae(ae,select(test,12),"autoencoding_test.png")
+    plot_ae(ae,select(train,12),"autoencoding_train.png")
+    if transitions is not None:
+        dump_actions(ae,transitions)
 
 def dump_actions(ae,transitions,threshold=0.):
     orig, dest = transitions[0], transitions[1]
@@ -182,124 +187,487 @@ def dump_actions(ae,transitions,threshold=0.):
     actions = np.concatenate((orig_b,dest_b), axis=1)
     print(ae.local("actions.csv"))
     np.savetxt(ae.local("actions.csv"),actions,"%d")
-    actions = np.concatenate(
-        augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.09), axis=1)
-    print(ae.local("augmented.csv"))
-    np.savetxt(ae.local("augmented.csv"),actions,"%d")
+    # actions = np.concatenate(
+    #     augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
+    # print(ae.local("augmented.csv"))
+    # np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
-def dump(ae, path, train=None, test=None , transitions=None, **kwargs):
-    if test is not None:
-        plot_ae(ae,select(test,12),"autoencoding_test.png")
-    plot_ae(ae,select(train,12),"autoencoding_train.png")
-    if transitions is not None:
-        dump_actions(ae,transitions)
+def dump_all_actions(ae,configs,trans_fn):
+    if 'dump' not in mode:
+        return
+    l = len(configs)
+    batch = 10000
+    loop = (l // batch) + 1
+    try:
+        print(ae.local("all_actions.csv"))
+        with open(ae.local("all_actions.csv"), 'wb') as f:
+            for begin in range(0,loop*batch,batch):
+                end = begin + batch
+                print((begin,end,len(configs)))
+                transitions = trans_fn(configs[begin:end])
+                orig, dest = transitions[0], transitions[1]
+                orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
+                dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
+                actions = np.concatenate((orig_b,dest_b), axis=1)
+                np.savetxt(f,actions,"%d")
+    except AttributeError:
+        print("this AE does not support dumping")
+    except KeyboardInterrupt:
+        print("dump stopped")
 
 ################################################################
+
+# note: lightsout has epoch 200
 
 from plot import plot_ae
 
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
-if __name__ == '__main__':
-    import numpy.random as random
-    from trace import trace
-    def run(learn,*args, **kwargs):
-        if learn:
-            ae, _, _ = grid_search(*args, **kwargs)
-        else:
-            ae = (lambda network=GumbelAE,**kwargs:network)(**kwargs)(args[0]).load()
-            # ==network(path)
-        dump(ae, *args, **kwargs)
-    
-    # import counter
-    # run("samples/counter_model/",
-    #     counter.states(),
-    #     None,
-    #     counter.transitions(n=1000))
-    # run("samples/counter_modelc/",
-    #     counter.states(),
-    #     None,
-    #     counter.transitions(n=1000),
-    #     network=ConvolutionalGumbelAE)
-    # print( "################################################################")
-    # import puzzle
-    # run("samples/puzzle22_model/",
-    #     puzzle.states(2,2).repeat(10,0),
-    #     None,
-    #     puzzle.transitions(2,2))
-    # run("samples/puzzle22_modelc/",
-    #     puzzle.states(2,2).repeat(10,0),
-    #     None,
-    #     puzzle.transitions(2,2),
-    #     network=ConvolutionalGumbelAE)
-    # print( "################################################################") 
-    # import mnist_puzzle
-    # run("samples/mnist_puzzle22_model/",
-    #     mnist_puzzle.states(2,2).repeat(10,0),
-    #     None,
-    #     mnist_puzzle.transitions(2,2))
-    # run("samples/mnist_puzzle22_modelc/",
-    #     mnist_puzzle.states(2,2).repeat(10,0),
-    #     None,
-    #     mnist_puzzle.transitions(2,2),
-    #     network=ConvolutionalGumbelAE) 
-    # print( "################################################################") 
-    # import puzzle
-    # run("samples/puzzle32_model/",
-    #     puzzle.states(3,2).repeat(10,0),
-    #     None,
-    #     puzzle.transitions(3,2))
-    # run("samples/puzzle32_modelc/",
-    #     puzzle.states(3,2).repeat(10,0),
-    #     None,
-    #     puzzle.transitions(3,2),
-    #     network=ConvolutionalGumbelAE)
-    
-    # import puzzle
-    # all_states = puzzle.states(3,2)
-    # filter = random.choice([True, True, True, True, False, False, False,  False],
-    #                        all_states.shape[0])
-    # print(filter)
-    # inv_filter = np.invert(filter)
-    # run("samples/puzzle32p_model/",
-    #     all_states[filter].repeat(10,0),
-    #     all_states[inv_filter],
-    #     puzzle.transitions(3,2))
-    # ################################################################
-    # import mnist_puzzle
-    # run("samples/mnist_puzzle32_model/",
-    #     mnist_puzzle.states(3,2).repeat(10,0),
-    #     None,
-    #     mnist_puzzle.transitions(3,2))
-    # run("samples/mnist_puzzle32_modelc/",
-    #     mnist_puzzle.states(3,2).repeat(10,0),
-    #     None,
-    #     mnist_puzzle.transitions(3,2),
-    #     network=ConvolutionalGumbelAE) 
+def run(learn,*args, **kwargs):
+    if learn:
+        ae, _, _ = grid_search(*args, **kwargs)
+    else:
+        ae = default_networks[encoder](args[0]).load()
+        ae.summary()
+    return ae
 
-    # import mnist_puzzle
-    # all_states = mnist_puzzle.states(3,2)
-    # filter = random.choice([True, False, False, False, False, False, False,  False],
-    #                        all_states.shape[0])
-    # inv_filter = np.invert(filter)
-    # print(len(all_states),len(all_states[filter]),len(all_states[inv_filter]))
-    # run("samples/mnist_puzzle32p_model/",
-    #     all_states[filter].repeat(40,0),
-    #     all_states[inv_filter],
-    #     mnist_puzzle.transitions(3,2))
 
-    import mnist_puzzle
-    configs = mnist_puzzle.generate_configs(9)
+def mnist_puzzle():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 1000
+    batch_size = 2000
+    import puzzles.mnist_puzzle as p
+    configs = p.generate_configs(9)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
-    train       = mnist_puzzle.states(3,3,train_c)
-    test        = mnist_puzzle.states(3,3,test_c)
-    transitions = mnist_puzzle.transitions(3,3,train_c)
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
     print(len(configs),len(train),len(test))
-    run(True,"samples/mnist_puzzle33p_model/", train, test, transitions)
+    ae = run(learn_flag,"samples/mnist_puzzle33p_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(3,3,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
 
-# Dropout is useful for avoiding the overfitting, but requires larger epochs
-# Too short epochs may result in underfitting
+def random_mnist_puzzle():
+    import puzzles.random_mnist_puzzle as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/random_mnist_puzzle33p_{}/".format(encoder), train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def lenna_puzzle():
+    global parameters
+    parameters = [[4000],[0.4],[49]]
+    import puzzles.lenna_puzzle as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/lenna_puzzle33p_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(3,3,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def mandrill_puzzle():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 1000
+    batch_size = 2000
+    import puzzles.mandrill_puzzle as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(3,3,train_c)
+    test        = p.states(3,3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/mandrill_puzzle33p_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(3,3,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+
+def hanoi10():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 10000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(10)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(10,train_c)
+    test        = p.states(10,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi10_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(10,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
+
+def lhanoi4():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[25]]
+    epoch = 500
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(4)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(4,train_c)
+    test        = p.states(4,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi4_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(4,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+
+def hanoi3():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(3)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(3,train_c)
+    test        = p.states(3,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi3_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(3,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
+
+def hanoi4():
+    global parameters,epoch,batch_size
+    parameters = [[6000],[0.4],[29]]
+    epoch = 10000
+    batch_size = 1000
+    import puzzles.hanoi as p
+    configs = p.generate_configs(4)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(4,train_c)
+    test        = p.states(4,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi4_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(4,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+
+def hanoi5():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(5)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(5,train_c)
+    test        = p.states(5,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi5_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(5,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(5,configs))
+
+def hanoi6():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(6)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(6,train_c)
+    test        = p.states(6,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi6_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(6,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
+
+def hanoi7():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(7)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(7,train_c)
+    test        = p.states(7,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi7_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(7,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(7,configs))
+
+def hanoi8():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(8)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(8,train_c)
+    test        = p.states(8,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi8_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(8,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(8,configs))
+
+def hanoi9():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[30]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(9,train_c)
+    test        = p.states(9,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/hanoi9_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(9,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(9,configs))
+
+def xhanoi5():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(5)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs
+    test_c  = configs
+    train       = p.states(5,train_c)
+    test        = p.states(5,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi5_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(5,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(5,configs))
+
+def xhanoi6():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(6)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(6,train_c)
+    test        = p.states(6,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi6_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(6,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(6,configs))
+
+def xhanoi7():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(7)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(7,train_c)
+    test        = p.states(7,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi7_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(7,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(7,configs))
+
+def xhanoi8():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(8)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs
+    train       = p.states(8,train_c)
+    test        = p.states(8,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi8_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(8,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(8,configs))
+
+def xhanoi9():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[64]]
+    epoch = 4000
+    batch_size = 3500
+    import puzzles.hanoi as p
+    configs = p.generate_configs(9)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    print(len(configs))
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(9,train_c)
+    test        = p.states(9,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/xhanoi9_{}/".format(encoder), train, test)
+    dump(ae, train,test,p.transitions(9,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(9,configs))
+
+    
+def digital_lightsout():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[36]]
+    epoch = 1000
+    batch_size = 2000
+    import puzzles.digital_lightsout as p
+    print('generating configs...')
+    configs = p.generate_configs(4)
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    print('generating figures...')
+    train       = p.states(4,train_c)
+    test        = p.states(4,test_c)
+
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/digital_lightsout_{}/".format(encoder), train, test)
+    print('dumping actions ...')
+    dump(ae, train,test,p.transitions(4,train_c,True))
+    print('dumping all actions ...')
+    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+
+def digital_lightsout_skewed():
+    global epoch
+    epoch = 300
+    import puzzles.digital_lightsout_skewed as p
+    print('generating configs...')
+    configs = p.generate_configs(3)
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    print('generating figures...')
+    train       = p.states(3,train_c)
+    test        = p.states(3,test_c)
+
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/digital_lightsout_skewed_{}/".format(encoder), train, test)
+    print('dumping actions ...')
+    dump(ae, train,test,p.transitions(3,train_c,True))
+    print('dumping all actions ...')
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
+
+def digital_lightsout_skewed3():
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[36]]
+    epoch = 1000
+    batch_size = 3500
+    import puzzles.digital_lightsout_skewed as p
+    print('generating configs...')
+    configs = p.generate_configs(3)
+    random.shuffle(configs)
+    train_c = configs[:int(len(configs)*0.9)]
+    test_c  = configs[int(len(configs)*0.9):]
+    print('generating figures...')
+    train       = p.states(3,train_c)
+    test        = p.states(3,test_c)
+
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/digital_lightsout_skewed3_{}/".format(encoder), train, test)
+    print('dumping actions ...')
+    dump(ae, train,test,p.transitions(3,train_c,True))
+    print('dumping all actions ...')
+    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
+
+def mnist_counter():
+    import puzzles.mnist_counter as p
+    configs = np.repeat(p.generate_configs(10),10000,axis=0)
+    states = p.states(10,configs)
+    train       = states[:int(len(states)*(0.8))]
+    test        = states[int(len(states)*(0.8)):]
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/mnist_counter_{}/".format(encoder), train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
+
+def random_mnist_counter():
+    import puzzles.random_mnist_counter as p
+    configs = np.repeat(p.generate_configs(10),10000,axis=0)
+    states = p.states(10,configs)
+    train       = states[:int(len(states)*(0.8))]
+    test        = states[int(len(states)*(0.8)):]
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/random_mnist_counter_{}/".format(encoder), train, test)
+    dump(ae, train,test)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
+
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) == 1:
+        print({ k for k in default_networks})
+        gs = globals()
+        print({ k for k in gs if hasattr(gs[k], '__call__')})
+        print({k for k in modes})
+    else:
+        print('args:',sys.argv)
+        encoder = sys.argv[1]
+        if encoder not in default_networks:
+            raise ValueError("invalid encoder!: {}".format(sys.argv))
+        task = sys.argv[2]
+        mode = sys.argv[3]
+        if mode not in modes:
+            raise ValueError("invalid mode!: {}".format(sys.argv))
+        learn_flag = modes[mode]
+        globals()[task]()
