@@ -20,7 +20,7 @@ import mnist_puzzle
 
 if __name__ == '__main__':
     
-    ae = GumbelAE("samples/mnist_puzzle33p_model/").load()
+    ae = GumbelAE("samples/mnist_puzzle33_model/").load()
 
     
     configs1 = [[0, 1, 2, 3, 4, 5, 6, 7, 8, ],
