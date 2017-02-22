@@ -1,0 +1,13 @@
+#!/bin/bash
+
+h=blind
+s=0.$1
+name=$h-gaussian-lightout-skewed3-$s
+
+cat > $name.sh <<EOF
+#!/bin/bash
+./plan_noise.py $h $s gaussian 'run_lightsout3 ( "samples/digital_lightsout_skewed3_fc"       ,"fc", import_module("puzzles.digital_lightsout_skewed"        ) )' |& tee \$(dirname \$0)/$name.log
+EOF
+
+chmod +x $name.sh
+
