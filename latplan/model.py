@@ -250,7 +250,7 @@ class AE(Network):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
-            # Dropout(self.parameters['dropout']),
+            Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu', bias=False),
             # this BN may be initially bad for val_loss, but is ok for longer epochs
             BN(),
