@@ -110,73 +110,70 @@ def latent_plan(init,goal,ae,mode = 'blind'):
 
 from model import default_networks
 
-def select(data,num):
-    return data[np.random.randint(0,data.shape[0],num)]
-
-def run_puzzle(path, network, p):
+def run_puzzle(path, network, p, init=0):
     from model import GumbelAE
+    size = 3
     ae = default_networks[network](path)
-    configs = np.array(list(p.generate_configs(9)))
+    configs = np.array(list(p.generate_configs(size*size)))
     def convert(panels):
         return np.array([
             [i for i,x in enumerate(panels) if x == p]
-            for p in range(9)]).reshape(-1)
-    ig_c = [convert([8,0,6,5,4,7,2,3,1]),
+            for p in range(size*size)]).reshape(-1)
+    initial_configs = [
+        # from Reinfield '93
+        convert([8,0,6,5,4,7,2,3,1]), # the second instance with the longest optimal solution
+        convert([8,7,6,0,4,1,2,5,3]), # the first instance with the longest optimal solution
+        convert([8,5,6,7,2,3,4,1,0]), # the first instance with the most solutions
+        convert([8,5,4,7,6,3,2,1,0]), # the second instance with the most solutions
+        convert([8,6,7,2,5,4,3,0,1]), # the "wrong"? hardest eight-puzzle from
+        convert([6,4,7,8,5,0,3,2,1]), # w01fe.com/blog/2009/01/the-hardest-eight-puzzle-instances-take-31-moves-to-solve/
+    ]
+    ig_c = [initial_configs[init],
             convert([0,1,2,3,4,5,6,7,8])]
-    ig = p.states(3,3,ig_c)
+    ig = p.states(size,size,ig_c)
     try:
         latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
 
 def run_lightsout(path, network, p):
+    size = 4
     from model import GumbelAE
     ae = default_networks[network](path)
-    configs = np.array(list(p.generate_configs(4)))
+    configs = np.array(list(p.generate_configs(size)))
     ig_c = [[0,1,0,0,
              0,1,0,0,
              0,0,1,1,
              1,0,0,0,],
-            np.zeros(16)]
-    ig = p.states(4,ig_c)
+            np.zeros(size*size)]
+    ig = p.states(size,ig_c)
     try:
         latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
 
 def run_lightsout3(path, network, p):
+    size = 3
     from model import GumbelAE
     ae = default_networks[network](path)
-    configs = np.array(list(p.generate_configs(3)))
+    configs = np.array(list(p.generate_configs(size)))
     ig_c = [[0,0,0,
              1,1,1,
              1,0,1,],
-            np.zeros(9)]
-    ig = p.states(3,ig_c)
+            np.zeros(size*size)]
+    ig = p.states(size,ig_c)
     try:
         latent_plan(*ig, ae, option)
     except PlanException as e:
         print(e)
 
-def run_hanoi10(path, network, p):
+def run_hanoi(path, network, p, disks=4):
     from model import GumbelAE
     ae = default_networks[network](path)
-    configs = np.array(list(p.generate_configs(10)))
-    ig_c = [[0,0,0,0,0,0,0,0,0,0],
-            [2,2,2,2,2,2,2,2,2,2]]
-    ig = p.states(10,ig_c)
-    try:
-        latent_plan(*ig, ae, option)
-    except PlanException as e:
-        print(e)
-
-def run_hanoi4(path, network, p):
-    from model import GumbelAE
-    ae = default_networks[network](path)
-    configs = np.array(list(p.generate_configs(4)))
-    ig_c = [[0,0,0,0],
-            [2,2,2,2]]
-    ig = p.states(4,ig_c)
+    configs = np.array(list(p.generate_configs(disks)))
+    ig_c = np.zeros((2,disks),dtype=np.int8)
+    ig_c[1,:] = 2
+    ig = p.states(disks,ig_c)
     try:
         latent_plan(*ig, ae, option)
     except PlanException as e:
