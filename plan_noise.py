@@ -190,6 +190,7 @@ if __name__ == '__main__':
     sys.argv.pop(0)
     option = sys.argv.pop(0)
     sigma = eval(sys.argv.pop(0))
+    noise_type = sys.argv.pop(0)
     eval(sys.argv[0])
     echodo(["samples/sync.sh"])
     
