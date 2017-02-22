@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from puzzle import generate_configs
+from .puzzle import generate_configs, successors
+from .split_image import split_image
+import os
 
-from mnist import mnist
-x_train, y_train, _, _ = mnist()
-filters = [ np.equal(i,y_train) for i in range(10) ]
-imgs    = [ x_train[f] for f in filters ]
-panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
+panels = None
 
-def generate_mnist_puzzle(configs, width, height):
+base = 21
+
+def generate(configs, width, height):
+    global panels
+    if panels is None:
+        panels  = split_image(os.path.join(os.path.dirname(__file__), "mandrill.bmp"),width,height)
+        stepy = panels[0].shape[0]//base
+        stepx = panels[0].shape[1]//base
+        panels = panels[:,::stepy,::stepx][:,:base,:base].round()
     assert width*height <= 9
-    base_width = 28
-    base_height = 28
-    dim_x = base_width*width
-    dim_y = base_height*height
+    dim_x = base*width
+    dim_y = base*height
     def generate(config):
         figure = np.zeros((dim_y,dim_x))
         for digit,pos in enumerate(config):
             x = pos % width
             y = pos // width
-            figure[y*base_height:(y+1)*base_height,
-                   x*base_width:(x+1)*base_width] = panels[digit]
+            figure[y*(base):(y+1)*(base),
+                   x*(base):(x+1)*(base)] = panels[digit]
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
@@ -29,10 +33,9 @@ def states(width, height, configs=None):
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
-    return generate_mnist_puzzle(configs,width,height)
+    return generate(configs,width,height)
 
 def transitions(width, height, configs=None, one_per_state=False):
-    from puzzle import successors
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
@@ -41,11 +44,11 @@ def transitions(width, height, configs=None, one_per_state=False):
             index = np.random.randint(0,len(thing))
             return thing[index]
         transitions = np.array([
-            generate_mnist_puzzle(
+            generate(
                 [c1,pickone(successors(c1,width,height))],width,height)
             for c1 in configs ])
     else:
-        transitions = np.array([ generate_mnist_puzzle([c1,c2],width,height)
+        transitions = np.array([ generate([c1,c2],width,height)
                                  for c1 in configs for c2 in successors(c1,width,height) ])
     return np.einsum('ab...->ba...',transitions)
 
@@ -69,10 +72,10 @@ if __name__ == '__main__':
             ax.get_yaxis().set_visible(False)
         plt.savefig(name)
     configs = generate_configs(6)
-    puzzles = generate_mnist_puzzle(configs, 2, 3)
+    puzzles = generate(configs, 2, 3)
     print(puzzles[10])
-    plot_image(puzzles[10],"samples/mnist_puzzle.png")
-    plot_grid(puzzles[:36],"samples/mnist_puzzles.png")
+    plot_image(puzzles[10],"lenna_puzzle.png")
+    plot_grid(puzzles[:36],"lenna_puzzles.png")
     _transitions = transitions(2,3)
     import numpy.random as random
     indices = random.randint(0,_transitions[0].shape[0],18)
@@ -82,5 +85,5 @@ if __name__ == '__main__':
         np.einsum('ba...->ab...',_transitions) \
           .reshape((-1,)+_transitions.shape[2:])
     print(transitions_for_show.shape)
-    plot_grid(transitions_for_show,"samples/mnist_puzzle_transitions.png")
+    plot_grid(transitions_for_show,"lenna_puzzle_transitions.png")
 
