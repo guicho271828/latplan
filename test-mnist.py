@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import numpy as np
 
+"""
+A script for just plotting the mnist images
+""" 
+
 from mnist import mnist
 x_train, y_train, _, _ = mnist()
 filters = [ np.equal(i,y_train) for i in range(10) ]
