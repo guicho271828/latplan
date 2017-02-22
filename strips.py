@@ -233,72 +233,77 @@ def run(learn,*args, **kwargs):
     return ae
 
 
-def mnist_puzzle():
+def mnist_puzzle(width=3,height=3):
     global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[49]]
     epoch = 1000
     batch_size = 2000
     import puzzles.mnist_puzzle as p
-    configs = p.generate_configs(9)
+    configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
-    train       = p.states(3,3,train_c)
-    test        = p.states(3,3,test_c)
+    train       = p.states(width,height,train_c)
+    test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mnist_puzzle33p_{}/".format(encoder), train, test)
-    dump(ae, train,test,p.transitions(3,3,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+    ae = run(learn_flag,"samples/mnist_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    dump(ae, train,test,p.transitions(width,height,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
 
-def random_mnist_puzzle():
-    import puzzles.random_mnist_puzzle as p
-    configs = p.generate_configs(9)
-    configs = np.array([ c for c in configs ])
-    random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    train       = p.states(3,3,train_c)
-    test        = p.states(3,3,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/random_mnist_puzzle33p_{}/".format(encoder), train, test)
-    dump(ae, train,test)
-    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
-
-def lenna_puzzle():
-    global parameters
+def random_mnist_puzzle(width=3,height=3):
+    global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[49]]
-    import puzzles.lenna_puzzle as p
-    configs = p.generate_configs(9)
+    epoch = 1000
+    batch_size = 2000
+    import puzzles.mnist_puzzle as p
+    configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
-    train       = p.states(3,3,train_c)
-    test        = p.states(3,3,test_c)
+    train       = p.states(width,height,train_c)
+    test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/lenna_puzzle33p_{}/".format(encoder), train, test)
-    dump(ae, train,test,p.transitions(3,3,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
+    ae = run(learn_flag,"samples/random_mnist_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    dump(ae, train,test,p.transitions(width,height,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
 
-def mandrill_puzzle():
+def lenna_puzzle(width=3,height=3):
+    global parameters,epoch,batch_size
+    parameters = [[4000],[0.4],[49]]
+    epoch = 1000
+    batch_size = 2000
+    import puzzles.lenna_puzzle as p
+    configs = p.generate_configs(width*height)
+    configs = np.array([ c for c in configs ])
+    random.shuffle(configs)
+    train_c = configs[:12000]
+    test_c  = configs[12000:13000]
+    train       = p.states(width,height,train_c)
+    test        = p.states(width,height,test_c)
+    print(len(configs),len(train),len(test))
+    ae = run(learn_flag,"samples/lenna_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    dump(ae, train,test,p.transitions(width,height,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
+
+def mandrill_puzzle(width=3,height=3):
     global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[49]]
     epoch = 1000
     batch_size = 2000
     import puzzles.mandrill_puzzle as p
-    configs = p.generate_configs(9)
+    configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
-    train       = p.states(3,3,train_c)
-    test        = p.states(3,3,test_c)
+    train       = p.states(width,height,train_c)
+    test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mandrill_puzzle33p_{}/".format(encoder), train, test)
-    dump(ae, train,test,p.transitions(3,3,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(3,3,configs))
-
+    ae = run(learn_flag,"samples/mandrill_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    dump(ae, train,test,p.transitions(width,height,train_c,True))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
 
 def hanoi(disks=4):
     global parameters,epoch,batch_size
@@ -338,69 +343,48 @@ def xhanoi(disks=4):
     dump(ae, train,test,p.transitions(disks,train_c,True))
     dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs))
 
-def digital_lightsout():
+def digital_lightsout(size=4):
     global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[36]]
     epoch = 1000
     batch_size = 2000
     import puzzles.digital_lightsout as p
     print('generating configs...')
-    configs = p.generate_configs(4)
+    configs = p.generate_configs(size)
     random.shuffle(configs)
     train_c = configs[:12000]
     test_c  = configs[12000:13000]
     print('generating figures...')
-    train       = p.states(4,train_c)
-    test        = p.states(4,test_c)
+    train       = p.states(size,train_c)
+    test        = p.states(size,test_c)
 
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/digital_lightsout_{}/".format(encoder), train, test)
+    ae = run(learn_flag,"samples/digital_lightsout_{}_{}/".format(size,encoder), train, test)
     print('dumping actions ...')
-    dump(ae, train,test,p.transitions(4,train_c,True))
+    dump(ae, train,test,p.transitions(size,train_c,True))
     print('dumping all actions ...')
-    dump_all_actions(ae,configs,lambda configs: p.transitions(4,configs))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(size,configs))
 
-def digital_lightsout_skewed():
-    global epoch
-    epoch = 300
-    import puzzles.digital_lightsout_skewed as p
-    print('generating configs...')
-    configs = p.generate_configs(3)
-    random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    print('generating figures...')
-    train       = p.states(3,train_c)
-    test        = p.states(3,test_c)
-
-    print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/digital_lightsout_skewed_{}/".format(encoder), train, test)
-    print('dumping actions ...')
-    dump(ae, train,test,p.transitions(3,train_c,True))
-    print('dumping all actions ...')
-    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
-
-def digital_lightsout_skewed3():
+def digital_lightsout_skewed(size=3):
     global parameters,epoch,batch_size
     parameters = [[4000],[0.4],[36]]
     epoch = 1000
     batch_size = 3500
     import puzzles.digital_lightsout_skewed as p
     print('generating configs...')
-    configs = p.generate_configs(3)
+    configs = p.generate_configs(size)
     random.shuffle(configs)
     train_c = configs[:int(len(configs)*0.9)]
     test_c  = configs[int(len(configs)*0.9):]
     print('generating figures...')
-    train       = p.states(3,train_c)
-    test        = p.states(3,test_c)
-
+    train       = p.states(size,train_c)
+    test        = p.states(size,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/digital_lightsout_skewed3_{}/".format(encoder), train, test)
+    ae = run(learn_flag,"samples/digital_lightsout_skewed_{}_{}/".format(size,encoder), train, test)
     print('dumping actions ...')
-    dump(ae, train,test,p.transitions(3,train_c,True))
+    dump(ae, train,test,p.transitions(size,train_c,True))
     print('dumping all actions ...')
-    dump_all_actions(ae,configs,lambda configs: p.transitions(3,configs))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(size,configs))
 
 def mnist_counter():
     import puzzles.mnist_counter as p
@@ -443,4 +427,4 @@ if __name__ == '__main__':
         if mode not in modes:
             raise ValueError("invalid mode!: {}".format(mode))
         learn_flag = modes[mode]
-        globals()[task](*sys.argv)
+        globals()[task](*map(eval,sys.argv))
