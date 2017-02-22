@@ -35,6 +35,9 @@ options = {
 option = "blind"
 action_type = "all"
 sigma = 0.3
+noise_type = "gaussian"
+noise_types = {"gaussian", "salt"}
+
 def preprocess(digest,ae,ig_b):
     np.savetxt(ae.local(digest+".csv"),ig_b.flatten().astype('int'),"%d")
     echodo(["make","-C","lisp","-j","1"])
@@ -44,8 +47,17 @@ def preprocess(digest,ae,ig_b):
             "{}_{}.sasp".format(digest,action_type)])
 
 def latent_plan(init,goal,ae,mode = 'blind'):
-    init = init.astype(float) + np.random.normal(0.0,sigma,init.shape)
-    goal = goal.astype(float) + np.random.normal(0.0,sigma,goal.shape)
+    if noise_type not in noise_types:
+        raise Error("invalid noise type: {}, should be in {}".format(noise_type,noise_types))
+    if noise_type is "gaussian":
+        init = init.astype(float) + np.random.normal(0.0,sigma,init.shape)
+        goal = goal.astype(float) + np.random.normal(0.0,sigma,goal.shape)
+    if noise_type is "salt":
+        noise = np.random.uniform(0.0,1.0,init.shape)
+        noise = np.floor(noise + sigma)
+        init = init.astype(float) + noise
+        goal = goal.astype(float) + noise
+
     init = init.clip(0,1)
     goal = goal.clip(0,1)
     
