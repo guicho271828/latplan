@@ -35,8 +35,7 @@ options = {
 option = "blind"
 action_type = "all"
 
-def preprocess(digest,ae,init,goal):
-    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),digest+"-init-goal")
+def preprocess(digest,ae,ig_b):
     np.savetxt(ae.local(digest+".csv"),ig_b.flatten().astype('int'),"%d")
     echodo(["make","-C","lisp","-j","1"])
     echodo(["make","-C",ae.path,"-f","../Makefile",
@@ -56,6 +55,7 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     digest = m.hexdigest()
     lock = ae.local(digest+".lock")
 
+    ig_x, ig_z, ig_y, ig_b, ig_by = plot_ae(ae,np.array([init,goal]),digest+"-init-goal")
     import fcntl
     try:
         with open(lock) as f:
@@ -64,7 +64,7 @@ def latent_plan(init,goal,ae,mode = 'blind'):
     except FileNotFoundError:
         with open(lock,'wb') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
-            preprocess(digest,ae,init,goal)
+            preprocess(digest,ae,ig_b)
 
     ###### do planning #############################################
     plan_raw = ae.local("{}_{}.sasp.plan".format(digest,action_type))
