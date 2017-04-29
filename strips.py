@@ -180,27 +180,27 @@ def dump(ae, train=None, test=None , transitions=None, **kwargs):
     if transitions is not None:
         dump_actions(ae,transitions)
 
-def dump_actions(ae,transitions,threshold=0.):
+def dump_actions(ae,transitions,threshold=0.,name="actions.csv"):
     orig, dest = transitions[0], transitions[1]
     orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
     dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
     actions = np.concatenate((orig_b,dest_b), axis=1)
-    print(ae.local("actions.csv"))
-    np.savetxt(ae.local("actions.csv"),actions,"%d")
+    print(ae.local(name))
+    np.savetxt(ae.local(name),actions,"%d")
     # actions = np.concatenate(
     #     augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
     # print(ae.local("augmented.csv"))
     # np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
-def dump_all_actions(ae,configs,trans_fn):
+def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv"):
     if 'dump' not in mode:
         return
     l = len(configs)
     batch = 10000
     loop = (l // batch) + 1
     try:
-        print(ae.local("all_actions.csv"))
-        with open(ae.local("all_actions.csv"), 'wb') as f:
+        print(ae.local(name))
+        with open(ae.local(name), 'wb') as f:
             for begin in range(0,loop*batch,batch):
                 end = begin + batch
                 print((begin,end,len(configs)))
