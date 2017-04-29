@@ -323,6 +323,7 @@ def hanoi(disks=4):
     ae = run(learn_flag,"samples/hanoi{}_{}/".format(disks,encoder), train, test)
     dump(ae, train,test,p.transitions(disks,train_c,True))
     dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs))
+    dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs), name="all_actions2.csv")
 
 def xhanoi(disks=4):
     global parameters,epoch,batch_size
