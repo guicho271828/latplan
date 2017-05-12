@@ -11,9 +11,11 @@ from keras import objectives
 from keras.datasets import mnist
 from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
-from keras.objectives import mse
-from keras.callbacks import LambdaCallback
+from keras.objectives import mse, mae
+from keras.callbacks import LambdaCallback, LearningRateScheduler
 from keras.regularizers import activity_l2, activity_l1
+from keras.layers.advanced_activations import LeakyReLU
+import tensorflow as tf
 
 def flatten(x):
     if K.ndim(x) >= 3:
@@ -113,8 +115,28 @@ class Network:
         ologs = {}
         for k in self.custom_log_functions:
             ologs[k] = self.custom_log_functions[k]()
-        for k in {'loss','val_loss'}:
-            ologs[k] = logs[k]
+        for k in logs:
+            if len(k) > 5:
+                ologs[k[-5:]] = logs[k]
+            else:
+                ologs[k] = logs[k]
+
+        if not hasattr(self,'bar'):
+            import progressbar
+            widgets = [
+                progressbar.Timer(format='%(elapsed)s'),
+                ' ', progressbar.Counter(), 
+                progressbar.Bar(),
+                progressbar.AbsoluteETA(format='%(eta)s'), ' ',
+            ]
+            keys = []
+            for k in ologs:
+                keys.append(k)
+            keys.sort()
+            for k in keys:
+                widgets.append(progressbar.DynamicMessage(k))
+                widgets.append(' ')
+            self.bar = progressbar.ProgressBar(max_value=self.max_epoch, widgets=widgets)
         self.bar.update(epoch+1, **ologs)
         
     def train(self,train_data,
@@ -140,18 +162,7 @@ class Network:
             test_data_to = [ test_data_to for l in self.loss ]
         validation = (test_data,test_data_to) if test_data is not None else None
         try:
-            import progressbar
-            self.bar = progressbar.ProgressBar(
-                max_value=epoch,
-                widgets=[
-                    progressbar.Timer(format='%(elapsed)s'),
-                    progressbar.Bar(),
-                    progressbar.AbsoluteETA(format='%(eta)s'), ' ',
-                    progressbar.DynamicMessage('tau'),
-                    progressbar.DynamicMessage('loss'),
-                    progressbar.DynamicMessage('val_loss'),
-                ]
-            )
+            self.max_epoch = epoch
             self.net.compile(optimizer=o, loss=self.loss)
             self.net.fit(
                 train_data, train_data_to,
@@ -175,6 +186,13 @@ class Network:
                train_data_to=None,
                test_data_to=None):
         pass
+
+def anneal_rate(epoch,min=0.1,max=5.0):
+    import math
+    return math.log(max/min) / epoch
+
+def take_true(y_cat):
+    return tf.slice(y_cat,[0,0,0],[-1,-1,1])
 
 class GumbelSoftmax:
     count = 0
@@ -211,11 +229,28 @@ class GumbelSoftmax:
         log_q = K.log(q + 1e-20)
         return - K.mean(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
                         axis=tuple(range(1,len(K.int_shape(logits)))))
+    
     def cool(self, epoch, logs):
         K.set_value(
             self.tau,
             np.max([self.min,
                     self.max * np.exp(- self.anneal_rate * epoch)]))
+
+class SimpleGumbelSoftmax(GumbelSoftmax):
+    "unlinke GumbelSoftmax, it does not have layers."
+    count = 0
+    def __init__(self,min,max,anneal_rate):
+        self.min = min
+        self.anneal_rate = anneal_rate
+        self.tau = K.variable(max, name="temperature")
+    
+    def __call__(self,prev):
+        if hasattr(self,'logits'):
+            raise ValueError('do not reuse the same GumbelSoftmax; reuse GumbelSoftmax.layers')
+        SimpleGumbelSoftmax.count += 1
+        c = SimpleGumbelSoftmax.count-1
+        self.logits = prev
+        return Lambda(self.call,name="simplegumbel_{}".format(c))(prev)
 
 class GaussianSample:
     count = 0
@@ -487,9 +522,6 @@ class GumbelAE2(GumbelAE):
         gs2 = GumbelSoftmax(data_dim,2,self.min_temperature,self.max_temperature,self.anneal_rate)
         y_cat = gs2(y_logit)
         
-        def take_true(y_cat):
-            import tensorflow as tf
-            return tf.slice(y_cat,[0,0,0],[-1,-1,1])
         y = Reshape(input_shape)(Lambda(take_true)(y_cat))
             
         z2 = Input(shape=(N,M))
@@ -597,9 +629,6 @@ class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
         gumbel3 = GumbelSoftmax(data_dim,2, self.min_temperature, self.max_temperature, self.anneal_rate)
         gumbel3.layers = gumbel2.layers
         gauss   = GaussianSample(G)
-        def take_true(y_cat):
-            import tensorflow as tf
-            return tf.slice(y_cat,[0,0,0],[-1,-1,1])
         _decoder = self.build_decoder(input_shape)
         
         z_cat      = gumbel1(pre_encoded)
@@ -644,146 +673,41 @@ class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
 
 class GaussianConvolutionalGumbelAE(GaussianGumbelAE,ConvolutionalGumbelAE):
     pass
+
 class ConvolutionalGumbelAE2(ConvolutionalGumbelAE,GumbelAE2):
     pass
+
 class GaussianConvolutionalGumbelAE2(GaussianGumbelAE2,ConvolutionalGumbelAE):
     pass
 
 # state/action discriminator ####################################################
 
-class Discriminator(Network):
-    def __init__(self,path,parameters={}):
-        super().__init__(path,parameters)
-        self.min_temperature = 0.1
-        self.max_temperature = 5.0
-        self.anneal_rate = 0.0003
-    def build_encoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        return [Reshape((data_dim,)),
-                Dense(self.parameters['layer'], activation='relu', bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu', bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(2)]
-    def _build(self,input_shape):
-        data_dim = np.prod(input_shape)
-        print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
-        x = Input(shape=input_shape)
-        logits = Sequential(self.build_encoder(input_shape))(x)
-        gs = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
-        z = gs(logits)
-        z3 = Lambda(lambda z:K.round(z))(z)
-
-        def loss(x, y):
-            kl_loss = gs.loss(logits)
-            reconstruction_loss = bce(x,y)
-            return reconstruction_loss + kl_loss
-        
-        self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
-        self.loss = loss
-        self.net = Model(x, z)
-        self.net_binary = Model(x, z3)
-    def _save(self):
-        super()._save()
-        self.net.save_weights(self.local("net.h5"))
-    def _load(self):
-        super()._load()
-        self.net.load_weights(self.local("net.h5"))
-    def report(self,train_data,
-               epoch=200,batch_size=1000,optimizer=Adam(0.001),
-               test_data=None,
-               train_data_to=None,
-               test_data_to=None,):
-        test_data     = train_data if test_data is None else test_data
-        train_data_to = train_data if train_data_to is None else train_data_to
-        test_data_to  = test_data  if test_data_to is None else test_data_to
-        opts = {'verbose':0,'batch_size':batch_size}
-        def test_both(msg, fn): 
-            print(msg.format(fn(train_data,train_data_to)))
-            if test_data is not None:
-                print((msg+" (validation)").format(fn(test_data,test_data_to)))
-        self.net.compile(optimizer=optimizer, loss=bce)
-        test_both("BCE: {}",
-                  lambda data, data_to: self.net.evaluate(data,data_to,**opts))
-        self.net_binary.compile(optimizer=optimizer, loss=bce)
-        test_both("Binary BCE: {}",
-                  lambda data, data_to: self.net_binary.evaluate(data,data_to,**opts))
-        return self
-    def discriminate(self,data,**kwargs):
-        self.load()
-        return self.net.predict(data,**kwargs)
-    def discriminate_binary(self,data,**kwargs):
-        return self.discriminate(data,**kwargs)[:,0]
-    def summary(self,verbose=False):
-        self.net.summary()
-        return self
-    
 def wrap(x,y,**kwargs):
     "wrap arbitrary operation"
     return Lambda(lambda x:y,**kwargs)(x)
 
-class ActionDiscriminator(Discriminator):
+class ActionDiscriminator(Network):
     def __init__(self,path,parameters={}):
         super().__init__(path,parameters)
+
     def _build(self,input_shape):
-        # Assume a batch of 2N-bit binary vectors.
-        # First N bit is a predecessor, last N bit is a successor.
         x = Input(shape=input_shape)
         N = input_shape[0] // 2
-        import tensorflow as tf
-        pre_T = tf.slice(x,[0,0],[-1,N],name="pre_t")
-        suc_T = tf.slice(x,[0,N],[-1,-1],name="suc_t")
-        pre_F, suc_F = 1 - pre_T, 1 - suc_T
-        TT, TF = pre_T * suc_T, pre_T * suc_F
-        FT, FF = pre_F * suc_T, pre_F * suc_F
-        _T, _F = suc_T, suc_F
-        EQ = TT + FF
-        strips_category = tf.stack((TT,TF,FT,FF,_T,_F,EQ),axis=-1)
-        strips_category = K.reshape(strips_category,(-1,N,7,1))
-        strips_category = wrap(x,strips_category)
-        self._strips = Model(x, strips_category)
-        
-        valid = self.parameters['valid']
-        invalid = self.parameters['invalid']
-        a = valid + invalid
 
-        # gs1 = GumbelSoftmax(self.min_temperature,self.max_temperature,self.anneal_rate)
-        # vars_bernoulli = gs1(vars_logits) # [-1,N,a,2]
-        # vars = K.squeeze(tf.slice(vars_bernoulli,[0,0,0,0],[-1,N,a,1]),3)
-        # vars = wrap(vars_bernoulli,vars) # [-1,N,a]
-        # # note: gumbel-softmax is softmax as well, so it returns a probability too.
-        # self.callbacks.append(LambdaCallback(on_epoch_end=gs1.cool))
-        # self.custom_log_functions['tau'] = lambda: K.get_value(gs1.tau)
-        # def loss_gum(x, y):
-        #     return gs1.loss(vars_logits)
-
-        score = Sequential([
-            LocallyConnected2D(a,1,7),
-            Reshape((N,a))]
-        )(strips_category)
-        variables = Activation("sigmoid")(score)
-        self._variables = Model(x, variables)
-        
-        def prod1(x,axis):
-            l = K.ndim(x)
-            origin = [ 0 for i in range(l) ]
-            slice = [ -1 for i in range(l) ]
-            slice[axis] = 1
-            return tf.squeeze(tf.slice(tf.cumprod(x,axis=axis,reverse=True),origin,slice),[axis])
-        actions = prod1(variables,1)
-        actions = wrap(variables,actions) # [-1, a]
-        self._actions = Model(x, actions)
-
-        valid_actions   = tf.slice(actions,[0,0],    [-1,valid])
-        invalid_actions = tf.slice(actions,[0,valid],[-1,invalid])
-        actions_any = K.sum(valid_actions,axis=1,keepdims=True)
-        actions_any = wrap(actions,actions_any)
+        actions_any = Sequential([
+            Dense(N*7,activation="relu"),
+            BN(),
+            Dropout(0.4),
+            Dense(N*7,activation="relu"),
+            BN(),
+            Dropout(0.4),
+            Dense(1,activation="sigmoid")
+        ])(x)
         self._actions_any = Model(x, actions_any)
 
-        self.loss = bce
+        def loss(x,y):
+            return bce(x,y)
+        self.loss = loss
         self.net = Model(x, actions_any)
         
     def _save(self):
@@ -793,38 +717,28 @@ class ActionDiscriminator(Discriminator):
         super()._load()
         self.net.load_weights(self.local("net.h5"))
     def report(self,train_data,
-               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               epoch=200,
+               batch_size=1000,optimizer=Adam(0.001),
                test_data=None,
                train_data_to=None,
                test_data_to=None,):
-        test_data     = train_data if test_data is None else test_data
-        train_data_to = train_data if train_data_to is None else train_data_to
-        test_data_to  = test_data  if test_data_to is None else test_data_to
         opts = {'verbose':0,'batch_size':batch_size}
         def test_both(msg, fn): 
             print(msg.format(fn(train_data,train_data_to)))
             if test_data is not None:
                 print((msg+" (validation)").format(fn(test_data,test_data_to)))
-        self.net.compile(optimizer=optimizer, loss=bce)
-        test_both("BCE: {}",
+        self.net.compile(optimizer=optimizer, loss=mae)
+        test_both("MAE: {}",
                   lambda data, data_to: self.net.evaluate(data,data_to,**opts))
         return self
-    def strips(self,data,**kwargs):
-        self.load()
-        return self._strips.predict(data,**kwargs)
-    def variables(self,data,**kwargs):
-        self.load()
-        return self._variables.predict(data,**kwargs)
-    def actions(self,data,**kwargs):
-        self.load()
-        return self._actions.predict(data,**kwargs)
     def discriminate(self,data,**kwargs):
         self.load()
         return self._actions_any.predict(data,**kwargs)
     def summary(self,verbose=False):
         self.net.summary()
         return self
-    
+
+
 def main ():
     import matplotlib.pyplot as plt
     import shlex, subprocess
