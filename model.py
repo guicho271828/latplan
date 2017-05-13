@@ -85,6 +85,7 @@ class Network:
         return p.join(self.path,path)
     
     def save(self):
+        print("Saving to {}".format(self.local('')))
         self._save()
         return self
     
