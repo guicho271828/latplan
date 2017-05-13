@@ -738,6 +738,52 @@ class ActionDiscriminator(Network):
         self.net.summary()
         return self
 
+class GumbelAETan(GumbelAE):
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        return [
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'], activation='relu', bias=False),
+            # this BN may be initially bad for val_loss, but is ok for longer epochs
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'], activation='relu'),
+            # BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(data_dim, activation='tanh'),
+            Reshape(input_shape),]
+    def _build(self,input_shape):
+        data_dim = np.prod(input_shape)
+        print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
+        M, N = self.parameters['M'], self.parameters['N']
+        x = Input(shape=input_shape)
+        x_flat = flatten(x)
+        pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
+        print(Model(x,pre_encoded))
+        gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
+        z = gs(pre_encoded)
+        z_flat = flatten(z)
+        _decoder = self.build_decoder(input_shape)
+        y  = Sequential(_decoder)(z_flat)
+        
+        z2 = Input(shape=(N,M))
+        z2_flat = flatten(z2)
+        y2 = Sequential(_decoder)(z2_flat)
+
+        def loss(x, y):
+            kl_loss = gs.loss()
+            reconstruction_loss = mse(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                                      K.reshape(y,(K.shape(x)[0],data_dim,)))
+            return reconstruction_loss + kl_loss
+
+        self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
+        self.loss = loss
+        self.encoder     = Model(x, z)
+        self.decoder     = Model(z2, y2)
+        self.net = Model(x, y)
+        self.autoencoder = self.net
+
 
 def main ():
     import matplotlib.pyplot as plt
