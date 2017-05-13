@@ -15,6 +15,12 @@ from keras.objectives import mse
 from keras.callbacks import LambdaCallback
 from keras.regularizers import activity_l2, activity_l1
 
+def flatten(x):
+    if K.ndim(x) >= 3:
+        return Flatten()(x)
+    else:
+        return x
+    
 def Print():
     def printer(x):
         print(x)
@@ -193,8 +199,7 @@ class GumbelSoftmax:
             raise ValueError('do not reuse the same GumbelSoftmax; reuse GumbelSoftmax.layers')
         GumbelSoftmax.count += 1
         c = GumbelSoftmax.count-1
-        if K.ndim(prev) >= 3:
-            prev = Flatten()(prev)
+        prev = flatten(prev)
         logits = self.layers(prev)
         self.logits = logits
         return Lambda(self.call,name="gumbel_{}".format(c))(logits)
@@ -225,8 +230,7 @@ class GaussianSample:
     def __call__(self,prev):
         GaussianSample.count += 1
         c = GaussianSample.count-1
-        if K.ndim(prev) >= 3:
-            prev = Flatten()(prev)
+        prev = flatten(prev)
         mean    = Dense(self.G,name="gmean_{}".format(c))(prev)
         log_var = Dense(self.G,name="glogvar_{}".format(c))(prev)
         self.mean, self.log_var = mean, log_var
@@ -329,17 +333,17 @@ class GumbelAE(AE):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N = self.parameters['M'], self.parameters['N']
         x = Input(shape=input_shape)
-        x_flat = Flatten()(x)
+        x_flat = flatten(x)
         pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
         print(Model(x,pre_encoded))
         gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
         z = gs(pre_encoded)
-        z_flat = Flatten()(z)
+        z_flat = flatten(z)
         _decoder = self.build_decoder(input_shape)
         y  = Sequential(_decoder)(z_flat)
         
         z2 = Input(shape=(N,M))
-        z2_flat = Flatten()(z2)
+        z2_flat = flatten(z2)
         y2 = Sequential(_decoder)(z2_flat)
 
         def loss(x, y):
@@ -404,7 +408,7 @@ class GaussianAE(AE):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         G = self.parameters['G']
         x = Input(shape=input_shape)
-        x_flat = Flatten()(x)
+        x_flat = flatten(x)
         pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
         gauss  = GaussianSample(G)
         z = gauss (pre_encoded)
@@ -466,11 +470,11 @@ class GumbelAE2(GumbelAE):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N = self.parameters['M'], self.parameters['N']
         x = Input(shape=input_shape)
-        x_flat = Flatten()(x)
+        x_flat = flatten(x)
         pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
         gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
         z = gs(pre_encoded)
-        z_flat = Flatten()(z)
+        z_flat = flatten(z)
         _decoder = self.build_decoder(input_shape)
         y_logit  = Sequential(_decoder)(z_flat)
         gs2 = GumbelSoftmax(data_dim,2,self.min_temperature,self.max_temperature,self.anneal_rate)
@@ -482,7 +486,7 @@ class GumbelAE2(GumbelAE):
         y = Reshape(input_shape)(Lambda(take_true)(y_cat))
             
         z2 = Input(shape=(N,M))
-        z2_flat = Flatten()(z2)
+        z2_flat = flatten(z2)
         y2_logit = Sequential(_decoder)(z2_flat)
         gs3 = GumbelSoftmax(data_dim,2,self.min_temperature,self.max_temperature,self.anneal_rate)
         gs3.layers = gs2.layers
@@ -517,7 +521,7 @@ class ConvolutionalGumbelAE(GumbelAE):
                               activation='relu',border_mode='same', bias=False),
                 Dropout(self.parameters['dropout']),
                 BN(),
-                Flatten(),]
+                flatten,]
 
 class GaussianGumbelAE(GumbelAE):
     def __init__(self,path,parameters={}):
@@ -530,7 +534,7 @@ class GaussianGumbelAE(GumbelAE):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N, G = self.parameters['M'], self.parameters['N'], self.parameters['G'], 
         x = Input(shape=input_shape)
-        x_flat = Flatten()(x)
+        x_flat = flatten(x)
         pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
         gumbel = GumbelSoftmax(N,M,
                                self.min_temperature,
@@ -539,14 +543,14 @@ class GaussianGumbelAE(GumbelAE):
         gauss  = GaussianSample(G)
         z_cat   = gumbel(pre_encoded)
         z_gauss = gauss (pre_encoded)
-        z_cat_flat = Flatten()(z_cat)
+        z_cat_flat = flatten(z_cat)
         z = merge([z_cat_flat, z_gauss], mode='concat')
         _decoder = self.build_decoder(input_shape)
         y  = Sequential(_decoder)(z)
 
         z_gzero = Input(shape=(G,))
         z2_cat  = Input(shape=(N,M))
-        z2_cat_flat = Flatten()(z2_cat)
+        z2_cat_flat = flatten(z2_cat)
         z2 = Lambda(K.concatenate)([z2_cat_flat, z_gzero])
         y2 = Sequential(_decoder)(z2)
         
@@ -578,7 +582,7 @@ class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
         M, N, G = self.parameters['M'], self.parameters['N'], self.parameters['G'], 
         x = Input(shape=input_shape)
-        x_flat = Flatten()(x)
+        x_flat = flatten(x)
         pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
 
         gumbel1 = GumbelSoftmax(N,M,        self.min_temperature, self.max_temperature, self.anneal_rate)
@@ -592,7 +596,7 @@ class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
         _decoder = self.build_decoder(input_shape)
         
         z_cat      = gumbel1(pre_encoded)
-        z_cat_flat = Flatten()(z_cat)
+        z_cat_flat = flatten(z_cat)
         z_gauss    = gauss  (pre_encoded)
         z_flat     = merge([z_cat_flat, z_gauss], mode='concat')
 
@@ -605,7 +609,7 @@ class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
             
         z2_gzero = Input(shape=(G,))
         z2_cat   = Input(shape=(N,M))
-        z2_cat_flat = Flatten()(z2_cat)
+        z2_cat_flat = flatten(z2_cat)
         # z2_flat = merge([z2_cat_flat, z_gzero], mode='concat')
         z2_flat = Lambda(K.concatenate)([z2_cat_flat, z2_gzero])
         y2 = Sequential([
