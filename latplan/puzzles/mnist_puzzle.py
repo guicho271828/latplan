@@ -12,6 +12,8 @@ panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
 panels[8] = imgs[8][3].reshape((28,28))
 panels[1] = imgs[1][3].reshape((28,28))
 panels.append(np.random.uniform(0,1,(28,28)))
+panels.append(np.zeros((28,28)))
+panels.append(np.ones((28,28))*255)
 
 panels = np.array(panels)
 
@@ -26,7 +28,7 @@ def generate(configs, width, height):
     dim_y = base*height
     def generate(config):
         figure = np.zeros((dim_y,dim_x))
-        for digit,pos in enumerate(config):
+        for pos,digit in enumerate(config):
             x = pos % width
             y = pos // width
             figure[y*base:(y+1)*base,
@@ -63,6 +65,7 @@ if __name__ == '__main__':
         plt.figure(figsize=(6,6))
         plt.imshow(a,interpolation='nearest',cmap='gray',)
         plt.savefig(name)
+    
     def plot_grid(images,name="plan.png"):
         import matplotlib.pyplot as plt
         l = len(images)
@@ -76,6 +79,7 @@ if __name__ == '__main__':
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
         plt.savefig(name)
+    
     configs = list(generate_configs(9))[:36]
     puzzles = generate(configs, 3, 3)
     plot_grid(puzzles,"mnist_puzzles.png")
@@ -89,4 +93,11 @@ if __name__ == '__main__':
           .reshape((-1,)+_transitions.shape[2:])
     print(transitions_for_show.shape)
     plot_grid(transitions_for_show,"mnist_puzzle_transitions.png")
+    
+    dummy = [[0, 1, 2, 3, 4, 5, 6, 7, 8],
+             [9, 9, 9, 9, 9, 9, 9, 9, 9],
+             [10, 10, 10, 10, 10, 10, 10, 10, 10],
+             [11, 11, 11, 11, 11, 11, 11, 11, 11],
+             [12, 12, 12, 12, 12, 12, 12, 12, 12]]
+    plot_grid(generate(dummy, 3, 3),"mnist_puzzles_dummy.png")
 
