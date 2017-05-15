@@ -21,7 +21,7 @@ def generate(configs, width, height):
     dim_y = base*height
     def generate(config):
         figure = np.zeros((dim_y,dim_x))
-        for digit,pos in enumerate(config):
+        for pos,digit in enumerate(config):
             x = pos % width
             y = pos // width
             figure[y*(base):(y+1)*(base),
