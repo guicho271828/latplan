@@ -50,6 +50,7 @@ names      = ['layer','dropout','N']
 parameters = [[],[],[]]
 
 def grid_search(path, train=None, test=None):
+    # perform a random trials on possible combinations
     network = default_networks[encoder]
     best_error = float('inf')
     best_params = None
@@ -58,7 +59,10 @@ def grid_search(path, train=None, test=None):
     print("Network: {}".format(network))
     try:
         import itertools
-        for params in itertools.product(*parameters):
+        all_params = list(itertools.product(*parameters))
+        random.shuffle(all_params)
+        print(all_params)
+        for params in all_params:
             params_dict = { k:v for k,v in zip(names,params) }
             print("Testing model with parameters={}".format(params_dict))
             ae = learn_model(path, train, test,
