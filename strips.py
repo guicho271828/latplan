@@ -201,7 +201,7 @@ def dump_actions(ae,transitions,threshold=0.,name="actions.csv"):
     # print(ae.local("augmented.csv"))
     # np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
-def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv"):
+def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     if 'dump' not in mode:
         return
     l = len(configs)
@@ -210,15 +210,16 @@ def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv"):
     try:
         print(ae.local(name))
         with open(ae.local(name), 'wb') as f:
-            for begin in range(0,loop*batch,batch):
-                end = begin + batch
-                print((begin,end,len(configs)))
-                transitions = trans_fn(configs[begin:end])
-                orig, dest = transitions[0], transitions[1]
-                orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
-                dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
-                actions = np.concatenate((orig_b,dest_b), axis=1)
-                np.savetxt(f,actions,"%d")
+            for i in range(repeat):
+                for begin in range(0,loop*batch,batch):
+                    end = begin + batch
+                    print((begin,end,len(configs)))
+                    transitions = trans_fn(configs[begin:end])
+                    orig, dest = transitions[0], transitions[1]
+                    orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
+                    dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
+                    actions = np.concatenate((orig_b,dest_b), axis=1)
+                    np.savetxt(f,actions,"%d")
     except AttributeError:
         print("this AE does not support dumping")
     except KeyboardInterrupt:
