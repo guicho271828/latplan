@@ -24,30 +24,32 @@ mode = 'learn_dump'
 modes = {'learn':True,'learn_dump':True,'dump':False}
 learn_flag = True
 
-lr = 0.0001
-batch_size = 2000
-epoch = 1000
-max_temperature = 2.0
-min_temperature = 0.1
-def learn_model(path,train_data,test_data=None,network=None):
+# default values
+default_parameters = {
+    'lr'              : 0.0001,
+    'batch_size'      : 2000,
+    'epoch'           : 1000,
+    'max_temperature' : 2.0,
+    'min_temperature' : 0.1,
+}
+parameters = {}
+
+def learn_model(path,train_data,test_data=None,network=None,params_dict={}):
     if network is None:
         network = default_networks[encoder]
     ae = network(path)
+    training_parameters = default_parameters.copy()
+    for key, _ in training_parameters.items():
+        if key in params_dict:
+            training_parameters[key] = params_dict[key]
     ae.train(train_data,
-             epoch=epoch,
-             anneal_rate=anneal_rate(epoch,min_temperature,max_temperature),
-             max_temperature=max_temperature,
-             min_temperature=min_temperature,
-             lr=lr,
-             batch_size=batch_size,
+             anneal_rate=anneal_rate(training_parameters['epoch'],
+                                     training_parameters['min_temperature'],
+                                     training_parameters['max_temperature']),
              test_data=test_data,
-             report=False 
-    )
+             report=False,
+             **training_parameters,)
     return ae
-
-
-names      = ['layer','dropout','N']
-parameters = [[],[],[]]
 
 def grid_search(path, train=None, test=None):
     # perform a random trials on possible combinations
@@ -59,19 +61,22 @@ def grid_search(path, train=None, test=None):
     print("Network: {}".format(network))
     try:
         import itertools
-        all_params = list(itertools.product(*parameters))
+        names  = [ k for k, _ in parameters.items()]
+        values = [ v for _, v in parameters.items()]
+        all_params = list(itertools.product(*values))
         random.shuffle(all_params)
-        print(all_params)
+        [ print(r) for r in all_params]
         for params in all_params:
             params_dict = { k:v for k,v in zip(names,params) }
             print("Testing model with parameters={}".format(params_dict))
             ae = learn_model(path, train, test,
-                             network=curry(network, parameters=params_dict))
+                             network=curry(network, parameters=params_dict),
+                             params_dict=params_dict)
             error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
-            results.append({'error':error,'epoch':epoch,'batch_size':batch_size,
-                            **params_dict})
+            results.append({'error':error, **params_dict})
             print("Evaluation result for {} : error = {}".format(params_dict,error))
-            print("Current results:\n{}".format(results),flush=True)
+            print("Current results:")
+            [ print(r) for r in results]
             if error < best_error:
                 print("Found a better parameter {}: error:{} old-best:{}".format(
                     params_dict,error,best_error))
@@ -238,10 +243,14 @@ def run(learn,*args, **kwargs):
 
 
 def mnist_puzzle(width=3,height=3):
-    global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[49]]
-    epoch = 1000
-    batch_size = 2000
+    global parameters
+    parameters = {
+        'layer'      :[4000],#[400,4000],
+        'dropout'    :[0.4], #[0.1,0.4],
+        'N'          :[49],  #[25,49],
+        'epoch'      :[1000],
+        'batch_size' :[2000]
+    }
     import puzzles.mnist_puzzle as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
@@ -256,10 +265,14 @@ def mnist_puzzle(width=3,height=3):
     dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
 
 def random_mnist_puzzle(width=3,height=3):
-    global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[49]]
-    epoch = 1000
-    batch_size = 2000
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[49],
+        'epoch'      :[1000],
+        'batch_size' :[2000]
+    }
     import puzzles.mnist_puzzle as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
@@ -274,10 +287,14 @@ def random_mnist_puzzle(width=3,height=3):
     dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
 
 def lenna_puzzle(width=3,height=3):
-    global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[49]]
-    epoch = 1000
-    batch_size = 2000
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[49],
+        'epoch'      :[1000],
+        'batch_size' :[2000]
+    }
     import puzzles.lenna_puzzle as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
@@ -292,10 +309,14 @@ def lenna_puzzle(width=3,height=3):
     dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
 
 def mandrill_puzzle(width=3,height=3):
-    global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[49]]
-    epoch = 1000
-    batch_size = 2000
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[49],
+        'epoch'      :[1000],
+        'batch_size' :[2000]
+    }
     import puzzles.mandrill_puzzle as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
@@ -310,10 +331,14 @@ def mandrill_puzzle(width=3,height=3):
     dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
 
 def hanoi(disks=4):
-    global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[49]]
-    epoch = 1000
-    batch_size = 3500
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[49],
+        'epoch'      :[1000],
+        'batch_size' :[3500]
+    }
     import puzzles.hanoi as p
     configs = p.generate_configs(disks)
     configs = np.array([ c for c in configs ])
@@ -330,10 +355,14 @@ def hanoi(disks=4):
     dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs), name="all_actions2.csv")
 
 def xhanoi(disks=4):
-    global parameters,epoch,batch_size
-    parameters = [[6000],[0.4],[29]]
-    epoch = 10000
-    batch_size = 3500
+    global parameters
+    parameters = {
+        'layer'      :[6000],
+        'dropout'    :[0.4],
+        'N'          :[29],
+        'epoch'      :[10000],
+        'batch_size' :[3500]
+    }
     import puzzles.hanoi as p
     configs = p.generate_configs(disks)
     configs = np.array([ c for c in configs ])
@@ -349,10 +378,14 @@ def xhanoi(disks=4):
     dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs))
 
 def digital_lightsout(size=4):
-    global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[36]]
-    epoch = 1000
-    batch_size = 2000
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[36],
+        'epoch'      :[1000],
+        'batch_size' :[2000]
+    }
     import puzzles.digital_lightsout as p
     print('generating configs...')
     configs = p.generate_configs(size)
@@ -371,10 +404,14 @@ def digital_lightsout(size=4):
     dump_all_actions(ae,configs,lambda configs: p.transitions(size,configs))
 
 def digital_lightsout_skewed(size=3):
-    global parameters,epoch,batch_size
-    parameters = [[4000],[0.4],[36]]
-    epoch = 1000
-    batch_size = 3500
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[36],
+        'epoch'      :[1000],
+        'batch_size' :[3500]
+    }
     import puzzles.digital_lightsout_skewed as p
     print('generating configs...')
     configs = p.generate_configs(size)
@@ -392,6 +429,14 @@ def digital_lightsout_skewed(size=3):
     dump_all_actions(ae,configs,lambda configs: p.transitions(size,configs))
 
 def mnist_counter():
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[36],
+        'epoch'      :[1000],
+        'batch_size' :[3500]
+    }
     import puzzles.mnist_counter as p
     configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
@@ -403,6 +448,14 @@ def mnist_counter():
     dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
 
 def random_mnist_counter():
+    global parameters
+    parameters = {
+        'layer'      :[4000],
+        'dropout'    :[0.4],
+        'N'          :[36],
+        'epoch'      :[1000],
+        'batch_size' :[3500]
+    }
     import puzzles.random_mnist_counter as p
     configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
