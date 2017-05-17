@@ -383,7 +383,7 @@ def digital_lightsout(size=4):
     parameters = {
         'layer'      :[4000],
         'dropout'    :[0.4],
-        'N'          :[36],
+        'N'          :[49],
         'epoch'      :[1000],
         'batch_size' :[2000]
     }
@@ -409,9 +409,9 @@ def digital_lightsout_skewed(size=3):
     parameters = {
         'layer'      :[4000],
         'dropout'    :[0.4],
-        'N'          :[36],
+        'N'          :[49],
         'epoch'      :[1000],
-        'batch_size' :[3500]
+        'batch_size' :[2000]
     }
     import puzzles.digital_lightsout_skewed as p
     print('generating configs...')
