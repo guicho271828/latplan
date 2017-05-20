@@ -222,8 +222,8 @@ def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
                     print((begin,end,len(configs)))
                     transitions = trans_fn(configs[begin:end])
                     orig, dest = transitions[0], transitions[1]
-                    orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
-                    dest_b = ae.encode_binary(dest,batch_size=6000).round().astype(int)
+                    orig_b = ae.encode_binary(orig,batch_size=1000).round().astype(int)
+                    dest_b = ae.encode_binary(dest,batch_size=1000).round().astype(int)
                     actions = np.concatenate((orig_b,dest_b), axis=1)
                     np.savetxt(f,actions,"%d")
     except AttributeError:
@@ -245,7 +245,7 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
                     end = begin + batch
                     print((begin,end,len(configs)))
                     states = states_fn(configs[begin:end])
-                    states_b = ae.encode_binary(states,batch_size=6000).round().astype(int)
+                    states_b = ae.encode_binary(states,batch_size=1000).round().astype(int)
                     np.savetxt(f,states_b,"%d")
     except AttributeError:
         print("this AE does not support dumping")
@@ -274,13 +274,15 @@ def mnist_puzzle(width=3,height=3):
     global parameters
     parameters = {
         'layer'      :[2000],# [400,4000],
-        'dropout'    :[0.2], #[0.1,0.4],
-        'N'          :[36],  #[25,49],
-        'batch_size' :[2000],
+        'clayer'     :[16],# [400,4000],
+        'dropout'    :[0.4], #[0.1,0.4],
+        'N'          :[28],  #[25,49],
         'dropout_z'  :[False],
-        'full_epoch' :[300],
-        # quick eval
-        'epoch'      :[300],
+        'activation' : ['tanh'],
+        'full_epoch' :[1000],
+        'epoch'      :[500],
+        'batch_size' :[2000],
+        'lr'         :[0.001],
     }
     import puzzles.mnist_puzzle as p
     configs = p.generate_configs(width*height)
@@ -324,14 +326,16 @@ def random_mnist_puzzle(width=3,height=3):
 def lenna_puzzle(width=3,height=3):
     global parameters
     parameters = {
-        'layer'      :[2000],# [400,4000],
-        'dropout'    :[0.2], #[0.1,0.4],
-        'N'          :[36],  #[25,49],
-        'batch_size' :[2000],
+        'layer'      :[1000],# [400,4000],
+        'clayer'     :[4],# [400,4000],
+        'dropout'    :[0.1], #[0.1,0.4],
+        'N'          :[36],  #[25,49],   # learn correctly with 36 bits; not with lower bits
         'dropout_z'  :[False],
-        'full_epoch' :[300],
-        # quick eval
-        'epoch'      :[300],
+        'activation' : ['tanh'],
+        'full_epoch' :[1000],
+        'epoch'      :[500],
+        'batch_size' :[2000],
+        'lr'         :[0.001],
     }
     import puzzles.lenna_puzzle as p
     configs = p.generate_configs(width*height)
@@ -351,13 +355,15 @@ def mandrill_puzzle(width=3,height=3):
     global parameters
     parameters = {
         'layer'      :[2000],# [400,4000],
-        'dropout'    :[0.2], #[0.1,0.4],
-        'N'          :[36],  #[25,49],
-        'batch_size' :[2000],
+        'clayer'     :[16],# [400,4000],
+        'dropout'    :[0.4], #[0.1,0.4],
+        'N'          :[28],  #[25,49],
         'dropout_z'  :[False],
-        'full_epoch' :[300],
-        # quick eval
-        'epoch'      :[300],
+        'activation' : ['tanh'],
+        'full_epoch' :[1000],
+        'epoch'      :[500],
+        'batch_size' :[2000],
+        'lr'         :[0.0001],
     }
     import puzzles.mandrill_puzzle as p
     configs = p.generate_configs(width*height)
@@ -572,11 +578,16 @@ def xhanoi(disks=4):
 def digital_lightsout(size=4):
     global parameters
     parameters = {
-        'layer'      :[4000],
-        'dropout'    :[0.4],
-        'N'          :[49],
-        'epoch'      :[1000],
-        'batch_size' :[2000]
+        'layer'      :[2000],# [400,4000],
+        'clayer'     :[16],# [400,4000],
+        'dropout'    :[0.4], #[0.1,0.4],
+        'N'          :[28],  #[25,49],
+        'dropout_z'  :[False],
+        'activation' : ['tanh'],
+        'full_epoch' :[1000],
+        'epoch'      :[500],
+        'batch_size' :[2000],
+        'lr'         :[0.001],
     }
     import puzzles.digital_lightsout as p
     print('generating configs...')
