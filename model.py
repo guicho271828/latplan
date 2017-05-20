@@ -552,15 +552,20 @@ class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
-                Convolution2D(9,3,3,subsample=(3,3),
-                              activation='relu',border_mode='same', bias=False),
+                Convolution2D(self.parameters['clayer'],3,3,
+                              activation=self.parameters['activation'],border_mode='same', bias=False),
                 Dropout(self.parameters['dropout']),
                 BN(),
-                Convolution2D(81,3,3,subsample=(3,3),
-                              activation='relu',border_mode='same', bias=False),
+                MaxPooling2D((2,2)),
+                Convolution2D(self.parameters['clayer'],3,3,
+                              activation=self.parameters['activation'],border_mode='same', bias=False),
                 Dropout(self.parameters['dropout']),
                 BN(),
-                flatten,]
+                MaxPooling2D((2,2)),
+                flatten,
+                Dense(self.parameters['layer'], activation=self.parameters['activation'], bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),]
 
 class GaussianGumbelAE(GumbelAE):
     def __init__(self,path,parameters={}):
