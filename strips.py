@@ -52,7 +52,7 @@ def learn_model(path,train_data,test_data=None,network=None,params_dict={}):
     return ae
 
 def grid_search(path, train=None, test=None):
-    # perform a random trials on possible combinations
+    # perform random trials on possible combinations
     network = default_networks[encoder]
     best_error = float('inf')
     best_params = None
@@ -93,6 +93,7 @@ def grid_search(path, train=None, test=None):
         json.dump(results, f)
     return best_ae,best_params,best_error
 
+# flip, ... augment_neighbors is currently unused
 def flip(bv1,bv2):
     "bv1,bv2: integer 1D vector, whose values are 0 or 1"
     iv1 = np.packbits(bv1,axis=-1)
@@ -196,6 +197,7 @@ def dump_actions(ae,transitions,threshold=0.,name="actions.csv"):
     actions = np.concatenate((orig_b,dest_b), axis=1)
     print(ae.local(name))
     np.savetxt(ae.local(name),actions,"%d")
+
     # actions = np.concatenate(
     #     augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
     # print(ae.local("augmented.csv"))
