@@ -231,6 +231,27 @@ def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     except KeyboardInterrupt:
         print("dump stopped")
 
+def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
+    if 'dump' not in mode:
+        return
+    l = len(configs)
+    batch = 10000
+    loop = (l // batch) + 1
+    try:
+        print(ae.local(name))
+        with open(ae.local(name), 'wb') as f:
+            for i in range(repeat):
+                for begin in range(0,loop*batch,batch):
+                    end = begin + batch
+                    print((begin,end,len(configs)))
+                    states = states_fn(configs[begin:end])
+                    states_b = ae.encode_binary(states,batch_size=6000).round().astype(int)
+                    np.savetxt(f,states_b,"%d")
+    except AttributeError:
+        print("this AE does not support dumping")
+    except KeyboardInterrupt:
+        print("dump stopped")
+
 ################################################################
 
 # note: lightsout has epoch 200
@@ -274,6 +295,8 @@ def mnist_puzzle(width=3,height=3):
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
+    dump_all_states(ae,configs[:13000],lambda configs: p.states(width,height,configs),"states.csv")
+    dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
 def random_mnist_puzzle(width=3,height=3):
     global parameters
