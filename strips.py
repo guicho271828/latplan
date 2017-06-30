@@ -28,6 +28,7 @@ learn_flag = True
 default_parameters = {
     'lr'              : 0.0001,
     'batch_size'      : 2000,
+    'full_epoch'      : 1000,
     'epoch'           : 1000,
     'max_temperature' : 2.0,
     'min_temperature' : 0.1,
@@ -43,7 +44,7 @@ def learn_model(path,train_data,test_data=None,network=None,params_dict={}):
         if key in params_dict:
             training_parameters[key] = params_dict[key]
     ae.train(train_data,
-             anneal_rate=anneal_rate(training_parameters['epoch'],
+             anneal_rate=anneal_rate(training_parameters['full_epoch'],
                                      training_parameters['min_temperature'],
                                      training_parameters['max_temperature']),
              test_data=test_data,
@@ -66,24 +67,30 @@ def grid_search(path, train=None, test=None):
         all_params = list(itertools.product(*values))
         random.shuffle(all_params)
         [ print(r) for r in all_params]
-        for params in all_params:
+        for i,params in enumerate(all_params):
+            config.reload_session()
             params_dict = { k:v for k,v in zip(names,params) }
-            print("Testing model with parameters={}".format(params_dict))
+            print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), params_dict))
             ae = learn_model(path, train, test,
                              network=curry(network, parameters=params_dict),
                              params_dict=params_dict)
             error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
             results.append({'error':error, **params_dict})
-            print("Evaluation result for {} : error = {}".format(params_dict,error))
+            print("Evaluation result for:\n{}\nerror = {}".format(params_dict,error))
             print("Current results:")
+            results.sort(key=lambda result: result['error'])
             [ print(r) for r in results]
             if error < best_error:
-                print("Found a better parameter {}: error:{} old-best:{}".format(
+                print("Found a better parameter:\n{}\nerror:{} old-best:{}".format(
                     params_dict,error,best_error))
+                dump_autoencoding_image(ae,test,train)
+                del best_ae
                 best_params = params_dict
                 best_error = error
                 best_ae = ae
-        print("Best parameter {}: error:{}".format(best_params,best_error))
+            else:
+                del ae
+        print("Best parameter:\n{}\nerror: {}".format(best_params,best_error))
     finally:
         print(results)
     best_ae.save()
@@ -93,7 +100,7 @@ def grid_search(path, train=None, test=None):
         json.dump(results, f)
     return best_ae,best_params,best_error
 
-# flip, ... augment_neighbors is currently unused
+# flip, ... dump_actions is currently unused
 def flip(bv1,bv2):
     "bv1,bv2: integer 1D vector, whose values are 0 or 1"
     iv1 = np.packbits(bv1,axis=-1)
@@ -173,7 +180,7 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
                 else:
                     failed_bv.append(bv)
             if not some:
-                print("No more augmentation, stopped")
+                print("No more augmentation, stopped\n")
                 break
     except KeyboardInterrupt:
         print("augmentation stopped")
@@ -181,15 +188,7 @@ def augment_neighbors(ae, distance, bs1, bs2, threshold=0.,max_diff=None):
 
 def bce(x,y):
     return K.mean(K.binary_crossentropy(x,y),axis=(1,2))
-
-
-def dump(ae, train=None, test=None , transitions=None, **kwargs):
-    if test is not None:
-        plot_ae(ae,select(test,12),"autoencoding_test.png")
-    plot_ae(ae,select(train,12),"autoencoding_train.png")
-    if transitions is not None:
-        dump_actions(ae,transitions)
-
+        
 def dump_actions(ae,transitions,threshold=0.,name="actions.csv"):
     orig, dest = transitions[0], transitions[1]
     orig_b = ae.encode_binary(orig,batch_size=6000).round().astype(int)
@@ -198,11 +197,16 @@ def dump_actions(ae,transitions,threshold=0.,name="actions.csv"):
     print(ae.local(name))
     np.savetxt(ae.local(name),actions,"%d")
 
-    # actions = np.concatenate(
-    #     augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
-    # print(ae.local("augmented.csv"))
-    # np.savetxt(ae.local("augmented.csv"),actions,"%d")
+    actions = np.concatenate(
+        augment_neighbors(ae,bce,orig_b,dest_b,threshold=0.001), axis=1)
+    print(ae.local("augmented.csv"))
+    np.savetxt(ae.local("augmented.csv"),actions,"%d")
 
+# This is used
+def dump_autoencoding_image(ae,test,train):
+    plot_ae(ae,select(test,12),"autoencoding_test.png")
+    plot_ae(ae,select(train,12),"autoencoding_train.png")
+    
 def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     if 'dump' not in mode:
         return
@@ -264,8 +268,9 @@ def mnist_puzzle(width=3,height=3):
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/mnist_puzzle{}{}_{}/".format(width,height,encoder), train, test)
-    dump(ae, train,test,p.transitions(width,height,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
 
 def random_mnist_puzzle(width=3,height=3):
     global parameters
@@ -276,7 +281,7 @@ def random_mnist_puzzle(width=3,height=3):
         'epoch'      :[1000],
         'batch_size' :[2000]
     }
-    import puzzles.mnist_puzzle as p
+    import puzzles.random_mnist_puzzle as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -286,9 +291,10 @@ def random_mnist_puzzle(width=3,height=3):
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/random_mnist_puzzle{}{}_{}/".format(width,height,encoder), train, test)
-    dump(ae, train,test,p.transitions(width,height,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
-
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
+    
 def lenna_puzzle(width=3,height=3):
     global parameters
     parameters = {
@@ -308,8 +314,9 @@ def lenna_puzzle(width=3,height=3):
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/lenna_puzzle{}{}_{}/".format(width,height,encoder), train, test)
-    dump(ae, train,test,p.transitions(width,height,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
 
 def mandrill_puzzle(width=3,height=3):
     global parameters
@@ -330,8 +337,9 @@ def mandrill_puzzle(width=3,height=3):
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/mandrill_puzzle{}{}_{}/".format(width,height,encoder), train, test)
-    dump(ae, train,test,p.transitions(width,height,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(width,height,configs))
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
 
 def hanoi(disks=4):
     global parameters
@@ -353,9 +361,9 @@ def hanoi(disks=4):
     test        = p.states(disks,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/hanoi{}_{}/".format(disks,encoder), train, test)
-    dump(ae, train,test,p.transitions(disks,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs), name="all_actions2.csv")
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),)
 
 def xhanoi(disks=4):
     global parameters
@@ -377,8 +385,9 @@ def xhanoi(disks=4):
     test        = p.states(disks,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/xhanoi{}_{}/".format(disks,encoder), train, test)
-    dump(ae, train,test,p.transitions(disks,train_c,True))
-    dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs))
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),)
 
 def digital_lightsout(size=4):
     global parameters
@@ -401,10 +410,9 @@ def digital_lightsout(size=4):
 
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/digital_lightsout_{}_{}/".format(size,encoder), train, test)
-    print('dumping actions ...')
-    dump(ae, train,test,p.transitions(size,train_c,True))
-    print('dumping all actions ...')
-    dump_all_actions(ae,configs,lambda configs: p.transitions(size,configs))
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(size,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
 
 def digital_lightsout_skewed(size=3):
     global parameters
@@ -426,10 +434,9 @@ def digital_lightsout_skewed(size=3):
     test        = p.states(size,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/digital_lightsout_skewed_{}_{}/".format(size,encoder), train, test)
-    print('dumping actions ...')
-    dump(ae, train,test,p.transitions(size,train_c,True))
-    print('dumping all actions ...')
-    dump_all_actions(ae,configs,lambda configs: p.transitions(size,configs))
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs))
 
 def mnist_counter():
     global parameters
@@ -447,8 +454,9 @@ def mnist_counter():
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/mnist_counter_{}/".format(encoder), train, test)
-    dump(ae, train,test)
-    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
 
 def random_mnist_counter():
     global parameters
@@ -466,9 +474,9 @@ def random_mnist_counter():
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/random_mnist_counter_{}/".format(encoder), train, test)
-    dump(ae, train,test)
-    dump_all_actions(ae,configs,lambda configs: p.transitions(10,configs))
-
+    dump_autoencoding_image(ae,test,train)
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
 
 if __name__ == '__main__':
     import sys
