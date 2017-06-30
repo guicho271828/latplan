@@ -738,6 +738,33 @@ class ActionDiscriminator(Network):
         self.net.summary()
         return self
 
+class StateDiscriminator(ActionDiscriminator):
+    def __init__(self,path,parameters={}):
+        super().__init__(path,parameters)
+
+    def _build(self,input_shape):
+        x = Input(shape=input_shape)
+        N = input_shape[0] // 2
+
+        actions_any = Sequential([
+            Dense(self.parameters['layer'],activation=self.parameters['activation']),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'],activation=self.parameters['activation']),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'],activation=self.parameters['activation']),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(1,activation="sigmoid")
+        ])(x)
+        self._actions_any = Model(x, actions_any)
+
+        def loss(x,y):
+            return bce(x,y)
+        self.loss = loss
+        self.net = Model(x, actions_any)
+    
 class GumbelAETan(GumbelAE):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
