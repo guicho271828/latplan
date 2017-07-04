@@ -136,7 +136,7 @@ if __name__ == '__main__':
     # test if the learned action is correct
 
     actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=int)
-    ae = default_networks['fc2'](directory).load()
+    ae = default_networks['conv2'](directory).load()
     N = ae.parameters["N"]
     print("valid",actions_valid.shape)
     discriminator.report(actions_valid,  train_data_to=np.ones((len(actions_valid),)))
