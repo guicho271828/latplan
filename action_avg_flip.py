@@ -11,24 +11,22 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 
 ################################################################
 
-GAN = model.ActionGan
-
 np.set_printoptions(threshold=np.inf)
 
+def main(path):
+    data = np.loadtxt(path,dtype=np.int8)
 
-if __name__ == '__main__':
-    import numpy.random as random
-    from trace import trace
-
-    data = np.loadtxt("samples/mnist_puzzle33_fc2/all_actions.csv",dtype=np.int8)
-    
-    pre, suc = data[:,:49], data[:,49:]
+    N = data.shape[1]//2
+    pre, suc = data[:,:N], data[:,N:]
 
     abs_diff = np.sum(np.abs(pre-suc),axis=1)
 
-    hist = np.histogram(abs_diff,49,(0,49))
+    hist = np.histogram(abs_diff,N,(0,N))
 
-    print(hist)
+    print(hist[0])
 
+if __name__ == '__main__':
+    import sys
+    main(sys.argv[1])
 
     # 13 bit flips at most
