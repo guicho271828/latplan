@@ -547,6 +547,22 @@ class GumbelAE2(GumbelAE):
         self.decoder     = Model(z2, y2)
         self.net = Model(x, y)
         self.autoencoder = self.net
+        y2_downsample = Sequential([
+            Reshape((*input_shape,1)),
+            MaxPooling2D((2,2))
+            ])(y2)
+        shape = K.int_shape(y2_downsample)[1:3]
+        self.decoder_downsample = Model(z2, Reshape(shape)(y2_downsample))
+
+    def decode_downsample(self,data,**kwargs):
+        self.load()
+        return self.decoder_downsample.predict(data,**kwargs)
+
+    def decode_downsample_binary(self,data,**kwargs):
+        M, N = self.parameters['M'], self.parameters['N']
+        assert M == 2, "M={}, not 2".format(M)
+        return self.decode_downsample(np.stack((data,1-data),axis=-1),**kwargs)
+
 
 class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
