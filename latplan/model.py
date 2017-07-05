@@ -409,7 +409,7 @@ class GumbelAE(AE):
         assert M == 2, "M={}, not 2".format(M)
         return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
 
-    def plot(self,data,path):
+    def plot(self,data,path,verbose=False):
         self.load()
         xs = data
         zs = self.encode_binary(xs)
@@ -426,14 +426,14 @@ class GumbelAE(AE):
         else:
             l2 = math.ceil(root)
             size = l2*l2
-            print(root,size,N)
+            print(root,size,N) if verbose else None
             _zs = np.concatenate((zs,np.ones((zs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
             _bs = np.concatenate((bs,np.ones((bs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
         images = []
         from plot import plot_grid
         for seq in zip(xs, _zs, ys, _bs, bys):
             images.extend(seq)
-        plot_grid(images, path=self.local(path))
+        plot_grid(images, path=self.local(path), verbose=verbose)
         return xs,zs,ys,bs,bys
 
 class GaussianAE(AE):

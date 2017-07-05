@@ -25,7 +25,7 @@ def fix_image(image,dims=None):
 
 import math
 
-def plot_grid(images,w=10,path="plan.png"):
+def plot_grid(images,w=10,path="plan.png",verbose=False):
     import matplotlib.pyplot as plt
     l = 0
     images = fix_images(images)
@@ -40,10 +40,10 @@ def plot_grid(images,w=10,path="plan.png"):
             TypeError("Invalid dimensions for image data: image={}".format(np.array(image).shape))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-    print(path)
+    print(path) if verbose else None
     plt.savefig(path)
 
-def plot_grid2(images,w=10,path="plan.png"):
+def plot_grid2(images,w=10,path="plan.png",verbose=False):
     import matplotlib.pyplot as plt
     images = fix_images(images)
     l = images.shape[0]
@@ -52,7 +52,7 @@ def plot_grid2(images,w=10,path="plan.png"):
     m_shape = (margin + np.array(images.shape[1:]))
     all_shape = m_shape * np.array((h,w))
     figure = np.ones(all_shape)
-    print(images.shape,h,w,m_shape,figure.shape)
+    print(images.shape,h,w,m_shape,figure.shape) if verbose else None
     for y in range(h):
         for x in range(w):
             begin = m_shape * np.array((y,x))
@@ -62,7 +62,7 @@ def plot_grid2(images,w=10,path="plan.png"):
                 figure[begin[0]:end[0],begin[1]:end[1]] = images[y*w+x]
     plt.figure(figsize=all_shape[::-1] * 0.01)
     plt.imshow(figure,interpolation='nearest',cmap='gray',)
-    print(path)
+    print(path) if verbose else None
     plt.savefig(path)
 
 def plot_ae(ae,data,path):
