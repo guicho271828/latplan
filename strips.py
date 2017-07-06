@@ -252,11 +252,14 @@ def run(learn,*args, **kwargs):
 def mnist_puzzle(width=3,height=3):
     global parameters
     parameters = {
-        'layer'      :[4000],#[400,4000],
-        'dropout'    :[0.4], #[0.1,0.4],
-        'N'          :[49],  #[25,49],
-        'epoch'      :[1000],
-        'batch_size' :[2000]
+        'layer'      :[2000],# [400,4000],
+        'dropout'    :[0.2], #[0.1,0.4],
+        'N'          :[36],  #[25,49],
+        'batch_size' :[2000],
+        'dropout_z'  :[False],
+        'full_epoch' :[300],
+        # quick eval
+        'epoch'      :[300],
     }
     import puzzles.mnist_puzzle as p
     configs = p.generate_configs(width*height)
@@ -298,11 +301,14 @@ def random_mnist_puzzle(width=3,height=3):
 def lenna_puzzle(width=3,height=3):
     global parameters
     parameters = {
-        'layer'      :[4000],
-        'dropout'    :[0.4],
-        'N'          :[49],
-        'epoch'      :[1000],
-        'batch_size' :[2000]
+        'layer'      :[2000],# [400,4000],
+        'dropout'    :[0.2], #[0.1,0.4],
+        'N'          :[36],  #[25,49],
+        'batch_size' :[2000],
+        'dropout_z'  :[False],
+        'full_epoch' :[300],
+        # quick eval
+        'epoch'      :[300],
     }
     import puzzles.lenna_puzzle as p
     configs = p.generate_configs(width*height)
@@ -321,11 +327,14 @@ def lenna_puzzle(width=3,height=3):
 def mandrill_puzzle(width=3,height=3):
     global parameters
     parameters = {
-        'layer'      :[4000],
-        'dropout'    :[0.4],
-        'N'          :[49],
-        'epoch'      :[1000],
-        'batch_size' :[2000]
+        'layer'      :[2000],# [400,4000],
+        'dropout'    :[0.2], #[0.1,0.4],
+        'N'          :[36],  #[25,49],
+        'batch_size' :[2000],
+        'dropout_z'  :[False],
+        'full_epoch' :[300],
+        # quick eval
+        'epoch'      :[300],
     }
     import puzzles.mandrill_puzzle as p
     configs = p.generate_configs(width*height)

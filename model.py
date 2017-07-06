@@ -159,7 +159,7 @@ class Network:
                 shuffle=True, validation_data=validation, verbose=False,
                 callbacks=self.callbacks)
         except KeyboardInterrupt:
-            print("learning stopped")
+            print("learning stopped\n")
         self.loaded = True
         if report:
             self.report(train_data,
@@ -245,6 +245,9 @@ class GaussianSample:
 class AE(Network):
     def build_encoder(self,input_shape):
         return [GaussianNoise(0.1),
+                Dense(self.parameters['layer'], activation='relu', bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
                 Dense(self.parameters['layer'], activation='relu', bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),
@@ -457,9 +460,12 @@ class GumbelAE2(GumbelAE):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
-            Dropout(self.parameters['dropout']),
+            *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []) ,
             Dense(self.parameters['layer'], activation='relu', bias=False),
             # this BN may be initially bad for val_loss, but is ok for longer epochs
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'], activation='relu'),
             BN(),
             Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu'),
