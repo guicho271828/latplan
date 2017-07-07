@@ -10,9 +10,4 @@
 learn/events*
 /mnist_model/
 /old/
-/samples/counter_model/
-/samples/puzzle_model/
-/samples/mnist_puzzle_model/
-/samples/puzzle3_model/
-/samples/puzzle3p_model/
 *.bin
