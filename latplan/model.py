@@ -18,7 +18,6 @@ from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse, mae
 from keras.callbacks import LambdaCallback, LearningRateScheduler
-from keras.regularizers import activity_l2, activity_l1
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 
@@ -176,7 +175,7 @@ class Network:
             self.net.compile(optimizer=o, loss=self.loss)
             self.net.fit(
                 train_data, train_data_to,
-                nb_epoch=epoch, batch_size=batch_size,
+                epochs=epoch, batch_size=batch_size,
                 shuffle=True, validation_data=validation, verbose=False,
                 callbacks=self.callbacks)
         except KeyboardInterrupt:
@@ -578,17 +577,17 @@ class ConvolutionalGumbelAE(GumbelAE):
         return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
                 Convolution2D(self.parameters['clayer'],3,3,
-                              activation=self.parameters['activation'],border_mode='same', bias=False),
+                              activation=self.parameters['activation'],border_mode='same', use_bias=False),
                 Dropout(self.parameters['dropout']),
                 BN(),
                 MaxPooling2D((2,2)),
                 Convolution2D(self.parameters['clayer'],3,3,
-                              activation=self.parameters['activation'],border_mode='same', bias=False),
+                              activation=self.parameters['activation'],border_mode='same', use_bias=False),
                 Dropout(self.parameters['dropout']),
                 BN(),
                 MaxPooling2D((2,2)),
                 flatten,
-                Dense(self.parameters['layer'], activation=self.parameters['activation'], bias=False),
+                Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['N']*self.parameters['M']),]
