@@ -591,6 +591,43 @@ class ConvolutionalGumbelAE(GumbelAE):
                 BN(),
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['N']*self.parameters['M']),]
+    
+class Convolutional2GumbelAE(ConvolutionalGumbelAE):
+    def build_decoder(self,input_shape):
+        "this function did not converge well. sigh"
+        data_dim = np.prod(input_shape)
+        last_convolution = 1 + np.array(input_shape) // 4
+        first_convolution = last_convolution * 4
+        diff = tuple(first_convolution - input_shape)
+        crop = [[0,0],[0,0]]
+        for i in range(2):
+            if diff[i] % 2 == 0:
+                for j in range(2):
+                    crop[i][j] = diff[i] // 2
+            else:
+                crop[i][0] = diff[i] // 2
+                crop[i][1] = diff[i] // 2 + 1
+        crop = ((crop[0][0],crop[0][1]),(crop[1][0],crop[1][1]))
+        print(last_convolution,first_convolution,diff,crop)
+        
+        return [*([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Dense(np.prod(last_convolution) * self.parameters['clayer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Reshape((*last_convolution, self.parameters['clayer'])),
+                UpSampling2D((2,2)),
+                Deconvolution2D(self.parameters['clayer'],3,3,
+                                activation='relu',border_mode='same', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                UpSampling2D((2,2)),
+                Deconvolution2D(1,3,3,
+                                activation='sigmoid',border_mode='same'),
+                Cropping2D(crop),
+                Reshape(input_shape),]
 
 class GaussianGumbelAE(GumbelAE):
     def __init__(self,path,parameters={}):
