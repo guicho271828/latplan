@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+Networks named like XXX2 uses gumbel softmax for the output layer too,
+assuming the input/output image is binarized
+"""
+
 import numpy as np
 from functools import reduce
-from keras.layers import Input, Dense, Dropout, Convolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D, merge
+from keras.layers import Input, Dense, Dropout, Convolution2D, Deconvolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D, merge
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 from keras.optimizers import Adam
@@ -16,6 +21,11 @@ from keras.callbacks import LambdaCallback, LearningRateScheduler
 from keras.regularizers import activity_l2, activity_l1
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
+
+# utilities ###############################################################
+def wrap(x,y,**kwargs):
+    "wrap arbitrary operation"
+    return Lambda(lambda x:y,**kwargs)(x)
 
 def flatten(x):
     if K.ndim(x) >= 3:
@@ -277,6 +287,7 @@ class GaussianSample:
             1 + self.log_var - K.square(self.mean) - K.exp(self.log_var),
             axis=-1)
 
+# Network mixins ################################################################
 class AE(Network):
     def build_encoder(self,input_shape):
         return [GaussianNoise(0.1),
@@ -563,7 +574,6 @@ class GumbelAE2(GumbelAE):
         assert M == 2, "M={}, not 2".format(M)
         return self.decode_downsample(np.stack((data,1-data),axis=-1),**kwargs)
 
-
 class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
@@ -634,6 +644,7 @@ class GaussianGumbelAE(GumbelAE):
             data,
             np.zeros((data.shape[0],self.parameters['G']))],**kwargs)
 
+# mixin classes ###############################################################
 # Now effectively 3 subclasses; GumbelSoftmax in the output, Convolution, Gaussian.
 # there are 4 more results of mixins:
 class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
@@ -702,11 +713,6 @@ class GaussianConvolutionalGumbelAE2(GaussianGumbelAE2,ConvolutionalGumbelAE):
     pass
 
 # state/action discriminator ####################################################
-
-def wrap(x,y,**kwargs):
-    "wrap arbitrary operation"
-    return Lambda(lambda x:y,**kwargs)(x)
-
 class ActionDiscriminator(Network):
     def __init__(self,path,parameters={}):
         super().__init__(path,parameters)
