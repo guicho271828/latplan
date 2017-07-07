@@ -211,7 +211,7 @@ class GumbelSoftmax:
         self.N = N
         self.M = M
         self.layers = Sequential([
-            Dense(N * M),
+            # Dense(N * M),
             Reshape((N,M))])
         self.min = min
         self.max = max
@@ -299,7 +299,8 @@ class AE(Network):
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['layer'], activation='relu', bias=False),
                 BN(),
-                Dropout(self.parameters['dropout']),]
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['N']*self.parameters['M']),]
     
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
@@ -516,7 +517,8 @@ class GumbelAE2(GumbelAE):
             Dropout(self.parameters['dropout']),
             Dense(self.parameters['layer'], activation='relu'),
             # BN(),
-            Dropout(self.parameters['dropout']),]
+            Dropout(self.parameters['dropout']),
+            Dense(data_dim*2),]
     
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
@@ -539,7 +541,6 @@ class GumbelAE2(GumbelAE):
         z2_flat = flatten(z2)
         y2_logit = Sequential(_decoder)(z2_flat)
         gs3 = GumbelSoftmax(data_dim,2,self.min_temperature,self.max_temperature,self.anneal_rate)
-        gs3.layers = gs2.layers
         y2_cat = gs3(y2_logit)
         y2 = Reshape(input_shape)(Lambda(take_true)(y2_cat))
         
@@ -591,7 +592,8 @@ class ConvolutionalGumbelAE(GumbelAE):
                 flatten,
                 Dense(self.parameters['layer'], activation=self.parameters['activation'], bias=False),
                 BN(),
-                Dropout(self.parameters['dropout']),]
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['N']*self.parameters['M']),]
 
 class GaussianGumbelAE(GumbelAE):
     def __init__(self,path,parameters={}):
@@ -659,7 +661,6 @@ class GaussianGumbelAE2(GumbelAE2,GaussianGumbelAE):
         gumbel1 = GumbelSoftmax(N,M,        self.min_temperature, self.max_temperature, self.anneal_rate)
         gumbel2 = GumbelSoftmax(data_dim,2, self.min_temperature, self.max_temperature, self.anneal_rate)
         gumbel3 = GumbelSoftmax(data_dim,2, self.min_temperature, self.max_temperature, self.anneal_rate)
-        gumbel3.layers = gumbel2.layers
         gauss   = GaussianSample(G)
         _decoder = self.build_decoder(input_shape)
         
