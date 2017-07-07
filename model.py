@@ -289,33 +289,6 @@ class GaussianSample:
 
 # Network mixins ################################################################
 class AE(Network):
-    def build_encoder(self,input_shape):
-        return [GaussianNoise(0.1),
-                Dense(self.parameters['layer'], activation='relu', bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu', bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu', bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['N']*self.parameters['M']),]
-    
-    def build_decoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        return [
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu', bias=False),
-            # this BN may be initially bad for val_loss, but is ok for longer epochs
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu'),
-            # BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(data_dim, activation='sigmoid'),
-            Reshape(input_shape),]
-
     def _save(self):
         super()._save()
         self.encoder.save_weights(self.local("encoder.h5"))
@@ -369,6 +342,32 @@ class AE(Network):
         return self
 
 class GumbelAE(AE):
+    def build_encoder(self,input_shape):
+        return [GaussianNoise(0.1),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['N']*self.parameters['M']),]
+    
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        return [
+            *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(data_dim, activation='sigmoid'),
+            Reshape(input_shape),]
+
     def __init__(self,path,parameters={}):
         if 'N' not in parameters:
             parameters['N'] = 25
@@ -508,15 +507,14 @@ class GumbelAE2(GumbelAE):
         data_dim = np.prod(input_shape)
         return [
             *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []) ,
-            Dense(self.parameters['layer'], activation='relu', bias=False),
-            # this BN may be initially bad for val_loss, but is ok for longer epochs
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
             BN(),
             Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu'),
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
             BN(),
             Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu'),
-            # BN(),
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            BN(),
             Dropout(self.parameters['dropout']),
             Dense(data_dim*2),]
     
