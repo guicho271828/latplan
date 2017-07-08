@@ -58,7 +58,7 @@ if __name__ == '__main__':
     
     
 """
-
+XXX not viable because state discriminator is not working.
 * Summary:
 
 Dump all actions classified as valid by a discriminator.

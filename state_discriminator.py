@@ -173,6 +173,8 @@ if __name__ == '__main__':
     
 """
 
+This is a wrong attempt; the better the SAE compression, the less the "invalid" states.
+
 * Summary:
 Input: a subset of valid states and random bitstrings (invalid states)
 Output: a function that returns 0/1 for a state

@@ -61,6 +61,8 @@ if __name__ == '__main__':
     
     
 """
+XXX not viable.
+
 
 * Summary:
 
