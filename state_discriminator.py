@@ -132,17 +132,17 @@ if __name__ == '__main__':
 
     global parameters
     parameters = {
-        'layer'      :[1000],# [400,4000],
-        'dropout'    :[0.4], #[0.1,0.4],
+        'layer'      :[300],# [400,4000],
+        'dropout'    :[0.1], #[0.1,0.4],
         'batch_size' :[1000],
         'full_epoch' :[1000],
         'activation' :['tanh'],
         # quick eval
         'epoch'      :[50],
-        'lr'         :[0.001],
+        'lr'         :[0.0001],
     }
     
-    train = False
+    train = True
     if train:
         discriminator,_,_ = grid_search(directory_sd, train_in, train_out, test_in, test_out)
     else:
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     # test if the learned action is correct
 
     states_valid = np.loadtxt("{}/all_states.csv".format(directory),dtype=int)
-    ae = default_networks['conv2'](directory).load()
+    ae = default_networks['fc'](directory).load()
     N = ae.parameters["N"]
     print("valid",states_valid.shape)
 

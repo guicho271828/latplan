@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import ConvolutionalGumbelAE2, default_networks
+from model import default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -18,7 +18,7 @@ def main():
         sys.exit("{} [directory]".format(sys.argv[0]))
 
     directory = sys.argv[1]
-    ae = ConvolutionalGumbelAE2(directory).load()
+    ae = default_networks['fc'](directory).load()
 
     print("loading {}".format("{}/generated_states.csv".format(directory)), end='...', flush=True)
     states = np.loadtxt(ae.local("generated_states.csv"),dtype=np.uint8)
