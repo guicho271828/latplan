@@ -204,8 +204,8 @@ def dump_actions(ae,transitions,threshold=0.,name="actions.csv"):
 
 # This is used
 def dump_autoencoding_image(ae,test,train):
-    plot_ae(ae,select(test,12),"autoencoding_test.png")
-    plot_ae(ae,select(train,12),"autoencoding_train.png")
+    ae.plot(select(test,12),"autoencoding_test.png",verbose=True)
+    ae.plot(select(train,12),"autoencoding_train.png",verbose=True)
     
 def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     if 'dump' not in mode:
