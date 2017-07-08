@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # test if the learned action is correct
 
     states_valid = np.loadtxt("{}/all_states.csv".format(directory),dtype=int)
-    ae = default_networks['conv2'](directory).load()
+    ae = default_networks['fc'](directory).load()
     N = ae.parameters["N"]
     print("valid",states_valid.shape)
 

@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import ConvolutionalGumbelAE2, default_networks
+from model import default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -24,11 +24,11 @@ def main():
         sys.exit("{} [directory]".format(sys.argv[0]))
 
     directory = sys.argv[1]
-    ae = ConvolutionalGumbelAE2(directory).load()
+    ae = default_networks['fc'](directory).load()
     name = "generated_states.csv"
     
     N = ae.parameters['N']
-    lowbit  = 21
+    lowbit  = 18
     highbit = N - lowbit
     print("batch size: {}".format(2**lowbit))
     
