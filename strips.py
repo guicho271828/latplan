@@ -272,7 +272,7 @@ parameters = {
     'layer'      :[2000],# [400,4000],
     'clayer'     :[16],# [400,4000],
     'dropout'    :[0.4], #[0.1,0.4],
-    'N'          :[25],  #[25,49],
+    'N'          :[36],  #[25,49],
     'dropout_z'  :[False],
     'activation' : ['tanh'],
     'full_epoch' :[500],
