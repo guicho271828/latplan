@@ -19,15 +19,15 @@ def random_walk(init_c,length,successor_fn):
         current = suc
     return current
 
-def mnist_puzzle(steps, N):
-    import puzzles.mnist_puzzle as p
+def puzzle_mnist(steps, N):
+    import puzzles.puzzle_mnist as p
     for i in range(N):
         print(random_walk([0,1,2,3,4,5,6,7,8], steps, lambda config: p.successors(config,3,3)))
 
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 4:
-        print("Usage : ", sys.argv[0], ["mnist_puzzle"], "steps", "N")
+        print("Usage : ", sys.argv[0], puzzle_["mnist"], "steps", "N")
     else:
         print('args:',sys.argv)
         task = sys.argv[1]
