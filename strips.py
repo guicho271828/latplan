@@ -3,7 +3,7 @@
 import config
 import numpy as np
 import numpy.random as random
-from model import default_networks
+from latplan.model import default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -255,8 +255,6 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
 ################################################################
 
 # note: lightsout has epoch 200
-
-from plot import plot_ae
 
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
