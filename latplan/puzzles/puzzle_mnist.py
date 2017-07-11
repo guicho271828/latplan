@@ -1,33 +1,40 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from .puzzle import generate_configs, successors
-from .split_image import split_image
-import os
+from .model.puzzle import generate_configs, successors
 
-panels = None
+from ..util.mnist import mnist
+x_train, y_train, _, _ = mnist()
+filters = [ np.equal(i,y_train) for i in range(10) ]
+imgs    = [ x_train[f] for f in filters ]
+panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
+
+panels[8] = imgs[8][3].reshape((28,28))
+panels[1] = imgs[1][3].reshape((28,28))
+panels.append(np.random.uniform(0,1,(28,28)))
+panels.append(np.zeros((28,28)))
+panels.append(np.ones((28,28))*255)
+
+panels = np.array(panels)
+
+base = 14
+stepy = panels[0].shape[0]//base
+stepx = panels[0].shape[1]//base
+panels = panels[:,::stepy,::stepx][:,:base,:base].round()
 
 def generate(configs, width, height):
-    global panels
-    if panels is None:
-        panels  = split_image(os.path.join(os.path.dirname(__file__), "spider.png"),width,height)
-        stepy = panels[0].shape[0]//28
-        stepx = panels[0].shape[1]//28
-        panels = panels[:,::stepy,::stepx][:,:28,:28].round()
     assert width*height <= 9
-    base_width = 28
-    base_height = 28
-    dim_x = base_width*width
-    dim_y = base_height*height
+    dim_x = base*width
+    dim_y = base*height
     def generate(config):
-        figure = np.zeros((dim_y+height-1,dim_x+width-1))
+        figure = np.zeros((dim_y,dim_x))
         for pos,digit in enumerate(config):
             x = pos % width
             y = pos // width
-            figure[y*(base+1):(y+1)*(base+1)-1,
-                   x*(base+1):(x+1)*(base+1)-1] = panels[digit]
+            figure[y*base:(y+1)*base,
+                   x*base:(x+1)*base] = panels[digit]
         return figure
-    return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y+height-1,dim_x+width-1))
+    return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
 def states(width, height, configs=None):
     digit = width * height
@@ -58,6 +65,7 @@ if __name__ == '__main__':
         plt.figure(figsize=(6,6))
         plt.imshow(a,interpolation='nearest',cmap='gray',)
         plt.savefig(name)
+    
     def plot_grid(images,name="plan.png"):
         import matplotlib.pyplot as plt
         l = len(images)
@@ -71,12 +79,11 @@ if __name__ == '__main__':
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
         plt.savefig(name)
-    configs = generate_configs(6)
-    puzzles = generate(configs, 2, 3)
-    print(puzzles[10])
-    plot_image(puzzles[10],"spider_puzzle.png")
-    plot_grid(puzzles[:36],"spider_puzzles.png")
-    _transitions = transitions(2,3)
+    
+    configs = list(generate_configs(9))[:36]
+    puzzles = generate(configs, 3, 3)
+    plot_grid(puzzles,"mnist_puzzles.png")
+    _transitions = transitions(3,3,configs)
     import numpy.random as random
     indices = random.randint(0,_transitions[0].shape[0],18)
     _transitions = _transitions[:,indices]
@@ -85,5 +92,12 @@ if __name__ == '__main__':
         np.einsum('ba...->ab...',_transitions) \
           .reshape((-1,)+_transitions.shape[2:])
     print(transitions_for_show.shape)
-    plot_grid(transitions_for_show,"spider_puzzle_transitions.png")
+    plot_grid(transitions_for_show,"mnist_puzzle_transitions.png")
+    
+    dummy = [[0, 1, 2, 3, 4, 5, 6, 7, 8],
+             [9, 9, 9, 9, 9, 9, 9, 9, 9],
+             [10, 10, 10, 10, 10, 10, 10, 10, 10],
+             [11, 11, 11, 11, 11, 11, 11, 11, 11],
+             [12, 12, 12, 12, 12, 12, 12, 12, 12]]
+    plot_grid(generate(dummy, 3, 3),"mnist_puzzles_dummy.png")
 

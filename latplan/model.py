@@ -430,7 +430,7 @@ class GumbelAE(AE):
             _zs = np.concatenate((zs,np.ones((zs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
             _bs = np.concatenate((bs,np.ones((bs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
         images = []
-        from plot import plot_grid
+        from .util.plot import plot_grid
         for seq in zip(xs, _zs, ys, _bs, bys):
             images.extend(seq)
         plot_grid(images, path=self.local(path), verbose=verbose)

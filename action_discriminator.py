@@ -12,9 +12,6 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 
 ################################################################
 
-
-from plot import plot_ae
-
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
@@ -131,7 +128,6 @@ def grid_search(path, train_in, train_out, test_in, test_out):
 
 if __name__ == '__main__':
     import numpy.random as random
-    from trace import trace
 
     import sys
     if len(sys.argv) == 1:

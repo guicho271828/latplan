@@ -101,7 +101,6 @@ def grid_search(path, train_in, train_out, test_in, test_out):
 
 if __name__ == '__main__':
     import numpy.random as random
-    from trace import trace
 
     import sys
     if len(sys.argv) == 1:
