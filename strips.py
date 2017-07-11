@@ -281,8 +281,8 @@ parameters = {
     'lr'         :[0.001],
 }
 
-def mnist_puzzle(width=3,height=3):
-    import puzzles.mnist_puzzle as p
+def puzzle_mnist(width=3,height=3):
+    import latplan.puzzles.puzzle_mnist as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -291,14 +291,14 @@ def mnist_puzzle(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mnist_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run(learn_flag,"samples/puzzle_mnist{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs[:13000],lambda configs: p.states(width,height,configs),"states.csv")
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
-def random_mnist_puzzle(width=3,height=3):
+def puzzle_random_mnist(width=3,height=3):
     global parameters
     parameters = {
         'layer'      :[4000],
@@ -307,7 +307,7 @@ def random_mnist_puzzle(width=3,height=3):
         'epoch'      :[1000],
         'batch_size' :[2000]
     }
-    import puzzles.random_mnist_puzzle as p
+    import latplan.puzzles.puzzle_random_mnist as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -316,13 +316,13 @@ def random_mnist_puzzle(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/random_mnist_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run(learn_flag,"samples/puzzle_random_mnist{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     
-def lenna_puzzle(width=3,height=3):
-    import puzzles.lenna_puzzle as p
+def puzzle_lenna(width=3,height=3):
+    import latplan.puzzles.puzzle_lenna as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -331,13 +331,13 @@ def lenna_puzzle(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/lenna_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run(learn_flag,"samples/puzzle_lenna{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
 
-def mandrill_puzzle(width=3,height=3):
-    import puzzles.mandrill_puzzle as p
+def puzzle_mandrill(width=3,height=3):
+    import latplan.puzzles.puzzle_mandrill as p
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -346,7 +346,7 @@ def mandrill_puzzle(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mandrill_puzzle{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run(learn_flag,"samples/puzzle_mandrill{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
@@ -365,7 +365,7 @@ def hanoi_hard(disks=5):
         'batch_size' :[2000],
         'lr'         :[0.001],
     }
-    import puzzles.hanoi as p
+    import latplan.puzzles.hanoi as p
     configs = p.generate_configs(disks)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -394,7 +394,7 @@ def hanoi(disks=4):
         # quick eval
         'epoch'      :[1000],
     }
-    import puzzles.hanoi as p
+    import latplan.puzzles.hanoi as p
     configs = p.generate_configs(disks)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -418,7 +418,7 @@ def xhanoi(disks=4):
         'epoch'      :[10000],
         'batch_size' :[3500]
     }
-    import puzzles.hanoi as p
+    import latplan.puzzles.hanoi as p
     configs = p.generate_configs(disks)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -447,7 +447,7 @@ def digital_lightsout(size=4):
         'batch_size' :[2000],
         'lr'         :[0.001],
     }
-    import puzzles.digital_lightsout as p
+    import latplan.puzzles.digital_lightsout as p
     print('generating configs...')
     configs = p.generate_configs(size)
     random.shuffle(configs)
@@ -472,7 +472,7 @@ def digital_lightsout_skewed(size=3):
         'epoch'      :[1000],
         'batch_size' :[2000]
     }
-    import puzzles.digital_lightsout_skewed as p
+    import latplan.puzzles.digital_lightsout_skewed as p
     print('generating configs...')
     configs = p.generate_configs(size)
     random.shuffle(configs)
@@ -487,7 +487,7 @@ def digital_lightsout_skewed(size=3):
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs))
 
-def mnist_counter():
+def counter_mnist():
     global parameters
     parameters = {
         'layer'      :[4000],
@@ -496,18 +496,18 @@ def mnist_counter():
         'epoch'      :[1000],
         'batch_size' :[3500]
     }
-    import puzzles.mnist_counter as p
+    import latplan.puzzles.counter_mnist as p
     configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/mnist_counter_{}/".format(encoder), train, test)
+    ae = run(learn_flag,"samples/counter_mnist_{}/".format(encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
 
-def random_mnist_counter():
+def counter_random_mnist():
     global parameters
     parameters = {
         'layer'      :[4000],
@@ -516,13 +516,13 @@ def random_mnist_counter():
         'epoch'      :[1000],
         'batch_size' :[3500]
     }
-    import puzzles.random_mnist_counter as p
+    import latplan.puzzles.counter_random_mnist as p
     configs = np.repeat(p.generate_configs(10),10000,axis=0)
     states = p.states(10,configs)
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/random_mnist_counter_{}/".format(encoder), train, test)
+    ae = run(learn_flag,"samples/counter_random_mnist_{}/".format(encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
