@@ -393,7 +393,7 @@ class GumbelAE(AE):
     def encode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
         assert M == 2, "M={}, not 2".format(M)
-        return self.encode(data,**kwargs)[:,:,0].reshape(-1, N)
+        return self.encode(data,**kwargs)[:,:,0].reshape(-1, N).astype(np.int8)
     
     def decode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
