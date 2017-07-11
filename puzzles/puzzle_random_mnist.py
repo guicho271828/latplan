@@ -2,20 +2,28 @@
 
 import numpy as np
 from .model.puzzle import generate_configs, successors
-
-from ..util.mnist import mnist
-x_train, y_train, _, _ = mnist()
-filters = [ np.equal(i,y_train) for i in range(10) ]
-imgs    = [ x_train[f] for f in filters ]
 from numpy.random import randint
+from ..util.mnist import mnist
+
+x_train, y_train, filters, imgs = None, None, None, None
+
+def load():
+    global x_train, y_train, filters, imgs
+    if x_train is None:
+        x_train, y_train, _, _ = mnist()
+        filters = [ np.equal(i,y_train) for i in range(10) ]
+        imgs    = [ x_train[f] for f in filters ]
 
 def random_panels():
+    load()
     return [ digits[randint(0,len(digits))].reshape((28,28)) for digits in imgs ]
+
 
 base_width = 28
 base_height = 28
 def generate(configs, width, height, panels):
     assert width*height <= 9
+    load()
     dim_x = base_width*width
     dim_y = base_height*height
     def generate(config):
