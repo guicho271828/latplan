@@ -8,6 +8,7 @@ assuming the input/output image is binarized
 import numpy as np
 from functools import reduce
 from keras.layers import Input, Dense, Dropout, Convolution2D, Deconvolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D, merge
+from keras.layers.merge import Concatenate
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 from keras.optimizers import Adam
@@ -42,6 +43,13 @@ def Sequential (array):
     def apply1(arg,f):
         # print("applying {}({})".format(f,arg))
         return f(arg)
+    return lambda x: reduce(apply1, array, x)
+
+def ConditionalSequential (array, condition, **kwargs):
+    def apply1(arg,f):
+        # print("applying {}({})".format(f,arg))
+        concat = Concatenate(**kwargs)([condition, arg])
+        return f(concat)
     return lambda x: reduce(apply1, array, x)
 
 def Residual (layer):
@@ -618,6 +626,172 @@ class Discriminator(Network):
         return self
 
 
+# action autoencoder ################################################################
+
+class ActionAE(AE):
+    """
+A network which autoencodes the difference information.
+
+State transitions are not a 1-to-1 mapping in a sense that
+there are multiple applicable actions. So you cannot train a newtork that directly learns
+a transition S -> T .
+
+We also do not have action labels, so we need to cluster the actions in an unsupervised manner.
+
+This network trains a bidirectional mapping of (S,T) -> (S,A) -> (S,T), given that 
+a state transition is a function conditioned by the before-state s.
+
+It is not useful to learn a normal autoencoder (S,T) -> Z -> (S,T) because we cannot separate the
+condition and the action label.
+
+We again use gumbel-softmax for representing A.
+(*undetermined*) To learn the lifted representation,
+A is a single variable with M categories. We do not specify N.
+
+"""
+    def build_encoder(self,input_shape):
+        return [
+            Sequential([
+                Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),]),
+            Sequential([
+                Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),]),
+            # Sequential([
+            #     Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
+            #     BN(),
+            #     Dropout(self.parameters['dropout']),]),
+            Dense(self.parameters['N']*self.parameters['M']),]
+    
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        return [
+            Sequential([
+                *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),]),
+            Sequential([
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),]),
+            # Sequential([
+            #     Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            #     BN(),
+            #     Dropout(self.parameters['dropout']),]),
+            Sequential([
+                Dense(data_dim, activation='sigmoid'),
+                Reshape(input_shape),]),]
+    def __init__(self,path,parameters={}):
+        if 'N' not in parameters:
+            parameters['N'] = 25
+        if 'M' not in parameters:
+            parameters['M'] = 2
+        super().__init__(path,parameters)
+        self.min_temperature = 0.1
+        self.max_temperature = 5.0
+        self.anneal_rate = 0.0003
+   
+    def _build(self,input_shape):
+
+        dim = np.prod(input_shape) // 2
+        print("{} latent bits".format(dim))
+        M, N = self.parameters['M'], self.parameters['N']
+        
+        x = Input(shape=input_shape)
+
+        _pre = tf.slice(x, [0,0],   [-1,dim])
+        _suc = tf.slice(x, [0,dim], [-1,dim])
+        
+        pre = wrap(x,_pre,name="pre")
+        suc = wrap(x,_suc,name="suc")
+
+        print("encoder")
+        _encoder = self.build_encoder([dim])
+        action_logit = ConditionalSequential(_encoder, pre, axis=1)(suc)
+        
+        gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
+        action = gs(action_logit)
+
+        print("decoder")
+        _decoder = self.build_decoder([dim])
+        suc_reconstruction = ConditionalSequential(_decoder, pre, axis=1)(flatten(action))
+        y = Concatenate(axis=1)([pre,suc_reconstruction])
+        
+        action2 = Input(shape=(N,M))
+        pre2    = Input(shape=(dim,))
+        suc_reconstruction2 = ConditionalSequential(_decoder, pre2, axis=1)(flatten(action2))
+        y2 = Concatenate(axis=1)([pre2,suc_reconstruction2])
+
+        def loss(x, y):
+            kl_loss = gs.loss()
+            reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],dim*2,)),
+                                      K.reshape(y,(K.shape(x)[0],dim*2,)))
+            return reconstruction_loss + kl_loss
+
+        self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
+        self.loss = loss
+        self.encoder     = Model(x, [pre,action])
+        self.decoder     = Model([pre2,action2], y2)
+
+        self.net = Model(x, y)
+        self.autoencoder = self.net
+        
+    def encode_action(self,data,**kwargs):
+        M, N = self.parameters['M'], self.parameters['N']
+        return self.encode(data,**kwargs)[1]
+
+    def report(self,train_data,
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               test_data=None,
+               train_data_to=None,
+               test_data_to=None,):
+        test_data     = train_data if test_data is None else test_data
+        train_data_to = train_data if train_data_to is None else train_data_to
+        test_data_to  = test_data  if test_data_to is None else test_data_to
+        opts = {'verbose':0,'batch_size':batch_size}
+        def test_both(msg, fn):
+            print(msg.format(fn(train_data)))
+            if test_data is not None:
+                print((msg+" (validation)").format(fn(test_data)))
+        self.autoencoder.compile(optimizer=optimizer, loss=bce)
+        test_both("Reconstruction BCE: {}",
+                  lambda data: self.autoencoder.evaluate(data,data,**opts))
+        return self
+    
+    def plot(self,data,path,verbose=False,ae=None):
+        self.load()
+        dim = data.shape[1] // 2
+        x = data
+        _, z = self.encode(x) # _ == x
+        y = self.decode([x[:,:dim],z])
+        b = np.round(z)
+        by = self.decode([x[:,:dim],b])
+
+        from .util.plot import plot_grid, squarify
+        x_pre, x_suc = squarify(x[:,:dim]), squarify(x[:,dim:])
+        y_pre, y_suc = squarify(y[:,:dim]), squarify(y[:,dim:])
+        by_pre, by_suc = squarify(by[:,:dim]), squarify(by[:,dim:])
+        y_suc_r, by_suc_r = y_suc.round(), by_suc.round()
+
+        if ae:
+            x_pre_im, x_suc_im = ae.decode_binary(x[:,:dim]), ae.decode_binary(x[:,dim:])
+            y_pre_im, y_suc_im = ae.decode_binary(y[:,:dim]), ae.decode_binary(y[:,dim:])
+            by_pre_im, by_suc_im = ae.decode_binary(by[:,:dim]), ae.decode_binary(by[:,dim:])
+            y_suc_r_im, by_suc_r_im = ae.decode_binary(y[:,dim:].round()), ae.decode_binary(by[:,dim:].round())
+            images = []
+            for seq in zip(x_pre_im, x_suc_im, z, y_pre_im, y_suc_im, y_suc_r_im, b, by_pre_im, by_suc_im, by_suc_r_im):
+                images.extend(seq)
+            plot_grid(images, w=10, path=self.local(path), verbose=verbose)
+        else:
+            images = []
+            for seq in zip(x_pre, x_suc, z, y_pre, y_suc, y_suc_r, b, by_pre, by_suc, by_suc_r):
+                images.extend(seq)
+            plot_grid(images, w=10, path=self.local(path), verbose=verbose)
+        return x,z,y,b,by
 
 def main ():
     import matplotlib.pyplot as plt

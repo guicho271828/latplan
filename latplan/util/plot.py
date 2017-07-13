@@ -67,3 +67,18 @@ def plot_grid2(images,w=10,path="plan.png",verbose=False):
 
 def plot_ae(ae,data,path):
     return ae.plot(data,path)
+
+def squarify(bitvectors):
+    batch, N = bitvectors.shape
+    import math
+    root = math.sqrt(N)
+    l1 = math.floor(root)
+
+    if l1*l1 == N:
+        return bitvectors.reshape((-1,l1,l1))
+    else:
+        l2 = math.ceil(root)
+        size = l2*l2
+        return np.concatenate((bitvectors,np.ones((bitvectors.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
+    
+    
