@@ -417,32 +417,26 @@ class GumbelAE(AE):
         assert M == 2, "M={}, not 2".format(M)
         return self.decode_downsample(np.stack((data,1-data),axis=-1),**kwargs)
 
+    
     def plot(self,data,path,verbose=False):
         self.load()
-        xs = data
-        zs = self.encode_binary(xs)
-        ys = self.decode_binary(zs)
-        bs = np.round(zs)
-        bys = self.decode_binary(bs)
+        x = data
+        z = self.encode_binary(x)
+        y = self.decode_binary(z)
+        b = np.round(z)
+        by = self.decode_binary(b)
         M, N = self.parameters['M'], self.parameters['N']
-        import math
-        root = math.sqrt(N)
-        l1 = math.floor(root)
-        if l1*l1 == N:
-            _zs = zs.reshape((-1,l1,l1))
-            _bs = bs.reshape((-1,l1,l1))
-        else:
-            l2 = math.ceil(root)
-            size = l2*l2
-            print(root,size,N) if verbose else None
-            _zs = np.concatenate((zs,np.ones((zs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
-            _bs = np.concatenate((bs,np.ones((bs.shape[0],size-N))),axis=1).reshape((-1,l2,l2))
+
+        from .util.plot import plot_grid, squarify
+        _z = squarify(z)
+        _b = squarify(b)
+        
         images = []
         from .util.plot import plot_grid
-        for seq in zip(xs, _zs, ys, _bs, bys):
+        for seq in zip(x, _z, y, _b, by):
             images.extend(seq)
         plot_grid(images, path=self.local(path), verbose=verbose)
-        return xs,zs,ys,bs,bys
+        return x,z,y,b,by
 
 class GumbelAE2(GumbelAE):
     def build_decoder(self,input_shape):
