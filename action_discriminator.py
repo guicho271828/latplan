@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import GumbelAE, ActionDiscriminator, default_networks
+from model import GumbelAE, Discriminator, default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -46,62 +46,86 @@ def prepare(data):
     return train_in, train_out, test_in, test_out
     
 
+def curry(fn,*args1,**kwargs1):
+    return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
+
 def anneal_rate(epoch,min=0.1,max=5.0):
     import math
-    return (2 / (epoch * (epoch+1))) * math.log(max/min)
+    return math.log(max/min) / epoch
 
-def grid_search(path, epoch, train_in, train_out, test_in, test_out):
-    names      = []
-    parameters = []
+# default values
+default_parameters = {
+    'lr'              : 0.0001,
+    'batch_size'      : 2000,
+    'full_epoch'      : 1000,
+    'epoch'           : 1000,
+    'max_temperature' : 2.0,
+    'min_temperature' : 0.1,
+}
+parameters = {}
+
+def learn_model(path,train_in,train_out,test_in,test_out,network,params_dict={}):
+    discriminator = network(path)
+    training_parameters = default_parameters.copy()
+    for key, _ in training_parameters.items():
+        if key in params_dict:
+            training_parameters[key] = params_dict[key]
+    discriminator.train(train_in,
+                        test_data=test_in,
+                        train_data_to=train_out,
+                        test_data_to=test_out,
+                        anneal_rate=anneal_rate(training_parameters['full_epoch'],
+                                                training_parameters['min_temperature'],
+                                                training_parameters['max_temperature']),
+                        report=False,
+                        **training_parameters,)
+    return discriminator
+
+def grid_search(path, train_in, train_out, test_in, test_out):
+    # perform random trials on possible combinations
+    network = Discriminator
     best_error = float('inf')
     best_params = None
     best_ae     = None
     results = []
-    rate = anneal_rate(epoch,0.5)
-    print("anneal reate is {}".format(rate))
+    print("Network: {}".format(network))
     try:
         import itertools
-        import tensorflow as tf
-        for params in itertools.product(*parameters):
+        names  = [ k for k, _ in parameters.items()]
+        values = [ v for _, v in parameters.items()]
+        all_params = list(itertools.product(*values))
+        random.shuffle(all_params)
+        [ print(r) for r in all_params]
+        for i,params in enumerate(all_params):
+            config.reload_session()
             params_dict = { k:v for k,v in zip(names,params) }
-            print("Testing model with parameters={}".format(params_dict))
-            discriminator = ActionDiscriminator(path,params_dict)
-            batch_size = 2100
-            finished = False
-            while not finished:
-                print("batch size {}".format(batch_size))
-                try:
-                    discriminator.train(train_in, batch_size=batch_size, 
-                                        test_data=test_in,
-                                        train_data_to=train_out,
-                                        test_data_to=test_out,
-                                        anneal_rate=rate,
-                                        lr=0.0001,
-                                        epoch=epoch,)
-                    finished = True
-                except tf.errors.ResourceExhaustedError as e:
-                    print(e)
-                    batch_size = batch_size // 2
-
-            if isinstance(discriminator.loss,list):
-                error = discriminator.net.evaluate(
-                    test_in,[test_out,test_out],batch_size=batch_size,)[0]
-            else:
-                error = discriminator.net.evaluate(
-                    test_in,test_out,batch_size=batch_size,)
-            results.append((error,)+params)
-            print("Evaluation result for {} : error = {}".format(params_dict,error))
-            print("Current results:\n{}".format(np.array(results)),flush=True)
+            print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), params_dict))
+            ae = learn_model(path, train_in,train_out,test_in,test_out,
+                             network=curry(network, parameters=params_dict),
+                             params_dict=params_dict)
+            error = ae.net.evaluate(test_in,test_out,batch_size=100,verbose=0)
+            results.append({'error':error, **params_dict})
+            print("Evaluation result for:\n{}\nerror = {}".format(params_dict,error))
+            print("Current results:")
+            results.sort(key=lambda result: result['error'])
+            [ print(r) for r in results]
             if error < best_error:
-                print("Found a better parameter {}: error:{} old-best:{}".format(
+                print("Found a better parameter:\n{}\nerror:{} old-best:{}".format(
                     params_dict,error,best_error))
+                del best_ae
                 best_params = params_dict
                 best_error = error
-                best_ae = discriminator
-        print("Best parameter {}: error:{}".format(best_params,best_error))
+                best_ae = ae
+            else:
+                del ae
+        print("Best parameter:\n{}\nerror: {}".format(best_params,best_error))
     finally:
         print(results)
     best_ae.save()
+    with open(best_ae.local("grid_search.log"), 'a') as f:
+        import json
+        f.write("\n")
+        json.dump(results, f)
     return best_ae,best_params,best_error
 
 
@@ -119,15 +143,24 @@ if __name__ == '__main__':
     data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
     train_in, train_out, test_in, test_out = prepare(data)
     
-    train = False
-    if train:
-        discriminator, _, _ = grid_search(directory_ad,
-                                          1000, train_in, train_out, test_in, test_out)
-    else:
-        discriminator = ActionDiscriminator(directory_ad).load()
-    print("index, discrimination, action")
-    show_n = 30
+    global parameters
+    parameters = {
+        'layer'      :[300],# [400,4000],
+        'dropout'    :[0.1], #[0.1,0.4],
+        'batch_size' :[1000],
+        'full_epoch' :[1000],
+        'activation' :['tanh'],
+        # quick eval
+        'epoch'      :[50],
+        'lr'         :[0.0001],
+    }
+    
+    try:
+        discriminator = Discriminator(directory_ad).load()
+    except FileNotFoundError:
+        discriminator,_,_ = grid_search(directory_ad, train_in, train_out, test_in, test_out)
 
+    show_n = 30
     
     for y,_y in zip(discriminator.discriminate(test_in)[:show_n],
                     test_out[:show_n]):
