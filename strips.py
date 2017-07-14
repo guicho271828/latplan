@@ -299,30 +299,6 @@ def puzzle_mnist(width=3,height=3):
     dump_all_states(ae,configs[:13000],lambda configs: p.states(width,height,configs),"states.csv")
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
-def puzzle_random_mnist(width=3,height=3):
-    global parameters
-    parameters = {
-        'layer'      :[4000],
-        'dropout'    :[0.4],
-        'N'          :[49],
-        'epoch'      :[1000],
-        'batch_size' :[2000]
-    }
-    import latplan.puzzles.puzzle_random_mnist as p
-    p.setup()
-    configs = p.generate_configs(width*height)
-    configs = np.array([ c for c in configs ])
-    random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    train       = p.states(width,height,train_c)
-    test        = p.states(width,height,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/puzzle_random_mnist{}{}_{}/".format(width,height,encoder), train, test)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
-    
 def puzzle_lenna(width=3,height=3):
     import latplan.puzzles.puzzle_lenna as p
     p.setup()
