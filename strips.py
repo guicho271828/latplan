@@ -48,7 +48,7 @@ def learn_model(path,train_data,test_data=None,network=None,params_dict={}):
                                      training_parameters['min_temperature'],
                                      training_parameters['max_temperature']),
              test_data=test_data,
-             report=False,
+             report=True,
              **training_parameters,)
     return ae
 
