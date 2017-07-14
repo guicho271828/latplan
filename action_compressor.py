@@ -8,7 +8,7 @@ I don't remember what it does
 import warnings
 import config
 import numpy as np
-from model import GumbelAE, GumbelAE2, ActionDiscriminator, default_networks
+from model import GumbelAE, GumbelAE2, Discriminator, default_networks
 from model import GumbelAETan
 
 import keras.backend as K

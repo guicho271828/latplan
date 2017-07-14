@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import GumbelAE, StateDiscriminator, default_networks
+from model import GumbelAE, Discriminator, default_networks
 
 import keras.backend as K
 import tensorflow as tf

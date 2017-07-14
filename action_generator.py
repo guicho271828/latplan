@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import GumbelAE, ActionDiscriminator, default_networks
+from model import GumbelAE, Discriminator, default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -25,7 +25,7 @@ def main():
 
     directory = sys.argv[1]
     directory_ad = "{}_ad/".format(directory)
-    discriminator = ActionDiscriminator(directory_ad).load()
+    discriminator = Discriminator(directory_ad).load()
     name = "generated_actions.csv"
     
     N = discriminator.net.input_shape[1]

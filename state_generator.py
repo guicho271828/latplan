@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import GumbelAE, StateDiscriminator, default_networks
+from model import GumbelAE, Discriminator, default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -25,7 +25,7 @@ def main():
 
     directory = sys.argv[1]
     directory_sd = "{}/_sd/".format(directory)
-    sd = StateDiscriminator(directory_sd).load()
+    sd = Discriminator(directory_sd).load()
     name = "generated_states.csv"
     
     N = sd.net.input_shape[1]

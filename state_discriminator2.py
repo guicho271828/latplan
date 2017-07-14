@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import GumbelAE, StateDiscriminator, default_networks
+from model import GumbelAE, Discriminator, default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -49,7 +49,7 @@ def learn_model(path,train_in,train_out,test_in,test_out,network,params_dict={})
 
 def grid_search(path, train_in, train_out, test_in, test_out):
     # perform random trials on possible combinations
-    network = StateDiscriminator
+    network = Discriminator
     best_error = float('inf')
     best_params = None
     best_ae     = None
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     if train:
         discriminator,_,_ = grid_search(directory_sd, train_in, train_out, test_in, test_out)
     else:
-        discriminator = StateDiscriminator(directory_sd).load()
+        discriminator = Discriminator(directory_sd).load()
     print("index, discrimination, action")
     show_n = 30
 

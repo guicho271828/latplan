@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import GumbelAE, StateDiscriminator, default_networks
+from model import GumbelAE, Discriminator, default_networks
 
 import keras.backend as K
 import tensorflow as tf
@@ -53,7 +53,7 @@ def learn_model(path,train_in,train_out,test_in,test_out,network,params_dict={})
 
 def grid_search(path, train_in, train_out, test_in, test_out):
     # perform random trials on possible combinations
-    network = StateDiscriminator
+    network = Discriminator
     best_error = float('inf')
     best_params = None
     best_ae     = None
@@ -141,12 +141,12 @@ if __name__ == '__main__':
         'epoch'      :[50],
         'lr'         :[0.0001],
     }
-    
-    train = True
-    if train:
+
+    try:
+        discriminator = Discriminator(directory_sd).load()
+    except:
         discriminator,_,_ = grid_search(directory_sd, train_in, train_out, test_in, test_out)
-    else:
-        discriminator = StateDiscriminator(directory_sd).load()
+        
     print("index, discrimination, action")
     show_n = 30
 
@@ -168,8 +168,12 @@ if __name__ == '__main__':
     states_invalid = np.setdiff1d(ai, av).view(states_invalid.dtype).reshape((-1, N))
     print("invalid",states_invalid.shape)
 
-    discriminator.report(states_valid,  train_data_to=np.ones((len(states_valid),)))
-    discriminator.report(states_invalid,train_data_to=np.zeros((len(states_invalid),)))
+    type1_error = np.sum(1- discriminator.discriminate(states_valid,batch_size=1000).round())
+    print("type1 error:",type1_error,"/",len(states_valid),
+          "Error ratio:", type1_error/len(states_valid) * 100, "%")
+    type2_error = np.sum(discriminator.discriminate(states_invalid,batch_size=1000).round())
+    print("type2 error:",type2_error,"/",len(states_invalid),
+          "Error ratio:", type2_error/len(states_invalid) * 100, "%")
     
 """
 
