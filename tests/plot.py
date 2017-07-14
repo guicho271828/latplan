@@ -69,12 +69,15 @@ def puzzle_plot(p):
     def name(template):
         return template.format(p.__name__)
     from itertools import islice
-    configs = list(islice(p.generate_configs(9), 36)) # be careful, islice is not immutable!!!
+    configs = list(islice(p.generate_configs(9), 1000)) # be careful, islice is not immutable!!!
+    import numpy.random as random
+    random.shuffle(configs)
+    configs = configs[:10]
     puzzles = p.generate(configs, 3, 3)
     print(puzzles.shape)
     plot_image(puzzles[10], name("{}.png"))
-    plot_grid(puzzles[:36], name("{}s.png"))
-    _transitions = p.transitions(3,3,configs=configs)[:36]
+    plot_grid(puzzles, name("{}s.png"))
+    _transitions = p.transitions(3,3,configs=configs)
     print(_transitions.shape)
     transitions_for_show = \
         np.einsum('ba...->ab...',_transitions) \
