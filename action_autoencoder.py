@@ -26,7 +26,7 @@ default_parameters = {
     'full_epoch'      : 1000,
     'epoch'           : 1000,
     'max_temperature' : 5.0,
-    'min_temperature' : 0.7,
+    'min_temperature' : 0.1,
 }
 parameters = {}
 
