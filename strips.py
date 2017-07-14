@@ -283,6 +283,7 @@ parameters = {
 
 def puzzle_mnist(width=3,height=3):
     import latplan.puzzles.puzzle_mnist as p
+    p.setup()
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -308,6 +309,7 @@ def puzzle_random_mnist(width=3,height=3):
         'batch_size' :[2000]
     }
     import latplan.puzzles.puzzle_random_mnist as p
+    p.setup()
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -323,6 +325,7 @@ def puzzle_random_mnist(width=3,height=3):
     
 def puzzle_lenna(width=3,height=3):
     import latplan.puzzles.puzzle_lenna as p
+    p.setup()
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
@@ -338,6 +341,7 @@ def puzzle_lenna(width=3,height=3):
 
 def puzzle_mandrill(width=3,height=3):
     import latplan.puzzles.puzzle_mandrill as p
+    p.setup()
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
