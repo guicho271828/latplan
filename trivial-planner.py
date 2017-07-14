@@ -29,6 +29,11 @@ CLOSED = 1
 #     def __repr__(self):
 #         return "State({})".format(self.raw_state)
 
+def bce(x,y,axis):
+    return - (x * np.log(y+1e-5) + \
+              (1-x) * np.log(1-y+1e-5)).mean(axis=axis)
+    
+
 def state_hash(state):
     return np.sum(state << np.arange(len(state)))
 
@@ -63,22 +68,36 @@ def astar(init,goal,heuristic):
     close_list[state_hash(init)] = State(init, 0)
     
     def successors(state):
+        reductions = []
         s = state.state
         y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
                .round().astype(int)
-        valid_y = y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
-        t = valid_y[:,N:]
+        reductions.append(len(y))
+        
+        # filtering based on OAE action reconstruction
+        action_reconstruction = oae.encode_action(y)
+        loss = bce(available_actions, action_reconstruction, (1,2))
+        # print(loss)
+        y = y[np.where(loss < 0.01)]
+        reductions.append(len(y))
+        
+        # AD-based filtering
+        y = y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
+        reductions.append(len(y))
 
-        # filtering based on reconstruction
+        t = y[:,N:]
+
+        # filtering based on SAE reconstruction
         images  = sae.decode_binary(t)
         images2 = sae.autoencode(images)
-        binary_crossentropy = - (images     * np.log(images2+1e-5) + \
-                                 (1-images) * np.log(1-images2+1e-5)).mean(axis=(1,2))
-        valid_t = t[np.where(binary_crossentropy < 0.01)]
+        loss = bce(images,images2,(1,2))
+        # print(loss)
+        t = t[np.where(loss < 0.01)]
+        reductions.append(len(t))
         
-        print(len(y),"->",len(valid_y),"->",len(valid_t))
+        print("->".join(map(str,reductions)))
         # for now, assume they are all valid
-        for i,succ in enumerate(valid_t):
+        for i,succ in enumerate(t):
             # print(succ)
             hash_value = state_hash(succ)
             if hash_value in close_list:
