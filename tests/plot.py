@@ -68,16 +68,13 @@ def plot_grid(images,path="plan.png",w=6,verbose=False):
 def puzzle_plot(p):
     def name(template):
         return template.format(p.__name__)
-    
-    configs = p.generate_configs(6)
-    puzzles = p.generate(configs, 2, 3)
-    print(puzzles[10])
+    from itertools import islice
+    configs = list(islice(p.generate_configs(9), 36)) # be careful, islice is not immutable!!!
+    puzzles = p.generate(configs, 3, 3)
+    print(puzzles.shape)
     plot_image(puzzles[10], name("{}.png"))
     plot_grid(puzzles[:36], name("{}s.png"))
-    _transitions = p.transitions(2,3)
-    import numpy.random as random
-    indices = random.randint(0,_transitions[0].shape[0],18)
-    _transitions = _transitions[:,indices]
+    _transitions = p.transitions(3,3,configs=configs)[:36]
     print(_transitions.shape)
     transitions_for_show = \
         np.einsum('ba...->ab...',_transitions) \
