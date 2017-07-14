@@ -120,7 +120,7 @@ if __name__ == '__main__':
         'full_epoch' :[500],
         'activation' :['tanh'],
         # quick eval
-        'epoch'      :[200],
+        'epoch'      :[500],
         'lr'         :[0.001],
     }
     print(data.shape)
