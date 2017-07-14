@@ -46,38 +46,42 @@ class State(object):
 
     def path(self):
         if self.parent:
-            return [self.state, *self.parent.path()]
+            return [*self.parent.path(),self.state]
         else:
             return [self.state]
     
-def astar(init,goal,h):
+def astar(init,goal,heuristic):
+    
+    N = len(init)
     
     import queue
     open_list = queue.PriorityQueue()
-
-    open_list.put((0, h(init,goal), State(init, 0)))
+    open_list.put((0, heuristic(init,goal), state_hash(init)))
 
     close_list = {}
-
-    N = len(init)
+    close_list[state_hash(init)] = State(init, 0)
     
     def successors(state):
         s = state.state
-        y = oae.decode([np.repeat(s, len(available_actions)), available_actions])
+        y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
+               .round().astype(int)
         t = y[:,N:]
         # for now, assume they are all valid
-        for succ in t:
+        for i,succ in enumerate(t):
+            # print(succ)
             hash_value = state_hash(succ)
             if hash_value in close_list:
                 yield close_list[hash_value]
             else:
-                yield State(succ)
+                _succ = State(succ)
+                close_list[hash_value] = _succ
+                yield _succ
 
     best_f = -1
     best_h = math.inf
     while True:
-        f, h, state = open_list.get()
-
+        f, h, shash = open_list.get()
+        state = close_list[shash]
         if state.status == CLOSED:
             continue
         
@@ -99,7 +103,7 @@ def astar(init,goal,h):
                 c.g      = new_g
                 c.parent = state
                 c.status = OPEN
-                open_list.put((0, h(c,goal), c))
+                open_list.put((0, heuristic(c.state,goal), state_hash(c.state)))
             
         
 def goalcount(state,goal):
@@ -113,16 +117,19 @@ def main(directory, init_path, goal_path):
     oae = ActionAE(sae.local("_aae/")).load()
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
-    print(known_transisitons,known_transisitons.shape)
-    actions = oae.encode_action(known_transisitons, batch_size=1000)
-    print(actions) 
-    print(actions[0], actions[0].sum(axis=1))
-    histogram = actions.sum(axis=0,dtype=int)
+    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
     print(histogram)
-    print(np.count_nonzero(histogram))
-    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1]))
-    available_actions[np.where(histogram > 0)] = 1
-    print(available_actions)
+    print(np.count_nonzero(histogram),"actions valid")
+    print("valid actions:")
+    print(np.where(histogram > 0)[0])
+    identified, total = np.squeeze(histogram.sum()), len(actions)
+    if total != identified:
+        print("network does not explain all actions: only {} out of {} ({}%)".format(
+            identified, total, identified * 100 // total ))
+    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+    for i, pos in enumerate(np.where(histogram > 0)[0]):
+        available_actions[i][0][pos] = 1
     
     from scipy import misc
     init_image = misc.imread(init_path)
@@ -130,8 +137,12 @@ def main(directory, init_path, goal_path):
     
     init = sae.encode_binary(np.expand_dims(init_image,0))[0]
     goal = sae.encode_binary(np.expand_dims(goal_image,0))[0]
-    
-    print(astar(init,goal,goalcount).path())
+
+    path = np.array(astar(init,goal,goalcount).path())
+    print(path)
+    from latplan.util.plot import plot_grid
+    plot_grid(sae.decode_binary(path),path="path.png",verbose=True)
+
 
 if __name__ == '__main__':
     import sys
@@ -140,3 +151,8 @@ if __name__ == '__main__':
     main(*sys.argv[1:])
 
 
+def test():
+    main("samples/puzzle_mnist33_fc/",
+         "trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/init.png",
+         "trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/goal.png")
+    
