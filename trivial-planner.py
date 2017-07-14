@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import default_networks, ActionAE
+from latplan.model import default_networks, ActionAE, Discriminator
 
 import keras.backend as K
 import tensorflow as tf
@@ -13,6 +13,7 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 
 sae = None
 oae = None
+ad  = None
 available_actions = None
 
 OPEN   = 0
@@ -65,9 +66,19 @@ def astar(init,goal,heuristic):
         s = state.state
         y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
                .round().astype(int)
-        t = y[:,N:]
+        valid_y = y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
+        t = valid_y[:,N:]
+
+        # filtering based on reconstruction
+        images  = sae.decode_binary(t)
+        images2 = sae.autoencode(images)
+        binary_crossentropy = - (images     * np.log(images2+1e-5) + \
+                                 (1-images) * np.log(1-images2+1e-5)).mean(axis=(1,2))
+        valid_t = t[np.where(binary_crossentropy < 0.01)]
+        
+        print(len(y),"->",len(valid_y),"->",len(valid_t))
         # for now, assume they are all valid
-        for i,succ in enumerate(t):
+        for i,succ in enumerate(valid_t):
             # print(succ)
             hash_value = state_hash(succ)
             if hash_value in close_list:
@@ -110,11 +121,12 @@ def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
 def main(directory, init_path, goal_path):
-    global sae, oae, available_actions
+    global sae, oae, ad, available_actions
     
     from latplan.util import get_ae_type
     sae = default_networks[get_ae_type(directory)](directory).load()
     oae = ActionAE(sae.local("_aae/")).load()
+    ad  = Discriminator(sae.local("_ad/")).load()
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
