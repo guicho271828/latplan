@@ -10,6 +10,5 @@ from . import puzzle_digital
 from . import puzzle_lenna
 from . import puzzle_mandrill
 from . import puzzle_mnist
-from . import puzzle_random_mnist
 from . import puzzle_spider
 from . import split_image

@@ -66,6 +66,7 @@ def plot_grid(images,path="plan.png",w=6,verbose=False):
 #     plt.savefig(name)
 
 def puzzle_plot(p):
+    p.setup()
     def name(template):
         return template.format(p.__name__)
     from itertools import islice
@@ -75,7 +76,7 @@ def puzzle_plot(p):
     configs = configs[:10]
     puzzles = p.generate(configs, 3, 3)
     print(puzzles.shape)
-    plot_image(puzzles[10], name("{}.png"))
+    plot_image(puzzles[-1], name("{}.png"))
     plot_grid(puzzles, name("{}s.png"))
     _transitions = p.transitions(3,3,configs=configs)
     print(_transitions.shape)
