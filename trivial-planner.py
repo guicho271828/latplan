@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from model import Discriminator, default_networks
+from latplan.model import default_networks, ActionAE
 
 import keras.backend as K
 import tensorflow as tf
@@ -11,10 +11,9 @@ import math
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
-sd = None
-ad = None
-ae = None
-max_diff = None
+sae = None
+oae = None
+available_actions = None
 
 OPEN   = 0
 CLOSED = 1
@@ -60,27 +59,14 @@ def astar(init,goal,h):
 
     close_list = {}
 
-    import itertools
     N = len(init)
-    print("building a flipper")
-    flip_indices = np.array(list(itertools.combinations(list(range(N)), max_diff)))
-    print("building a flipper")
-    flipper = np.zeros((len(flip_indices),N),dtype=np.uint8)
-    print("building a flipper")
-    for i in range(len(flip_indices)):
-        flipper[i,flip_indices[i]] = 1
-    print("flipper building finished; elements:", len(flipper))
     
     def successors(state):
         s = state.state
-        all_possible_succ = s ^ flipper
-        valid_possible_succ = all_possible_succ[np.where(0.8 < sd.discriminate(all_possible_succ,batch_size=4000))]
-        print("valid_possible_succ",len(valid_possible_succ))
-        actions = np.concatenate((s,valid_possible_succ),axis=1)
-        valid_actions = actions[np.where(0.8 < ad.discriminate(actions,batch_size=4000))]
-        print("valid_actions",len(valid_actions))
-        valid_succ = valid_actions[:,N:]
-        for succ in valid_succ:
+        y = oae.decode([np.repeat(s, len(available_actions)), available_actions])
+        t = y[:,N:]
+        # for now, assume they are all valid
+        for succ in t:
             hash_value = state_hash(succ)
             if hash_value in close_list:
                 yield close_list[hash_value]
@@ -120,28 +106,31 @@ def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
 def main(directory, init_path, goal_path):
-    global sd, ad, ae, max_diff
+    global sae, oae, available_actions
     
-    sd = Discriminator("{}/_sd/".format(directory)).load()
-    ad = Discriminator("{}/_ad/".format(directory)).load()
-
     from latplan.util import get_ae_type
-    ae = default_networks[get_ae_type(directory)](directory).load()
-
-    known_actions = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
-    N = known_actions.shape[1]//2
-    pre, suc = known_actions[:,:N], known_actions[:,N:]
-    abs_diff = np.sum(np.abs(pre-suc),axis=1)
-    print(np.histogram(abs_diff,N,(0,N))[0])
-    max_diff = np.max(abs_diff)
+    sae = default_networks[get_ae_type(directory)](directory).load()
+    oae = ActionAE(sae.local("_aae/")).load()
+    
+    known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
+    print(known_transisitons,known_transisitons.shape)
+    actions = oae.encode_action(known_transisitons, batch_size=1000)
+    print(actions) 
+    print(actions[0], actions[0].sum(axis=1))
+    histogram = actions.sum(axis=0,dtype=int)
+    print(histogram)
+    print(np.count_nonzero(histogram))
+    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1]))
+    available_actions[np.where(histogram > 0)] = 1
+    print(available_actions)
     
     from scipy import misc
     init_image = misc.imread(init_path)
     goal_image = misc.imread(goal_path)
     
-    init = ae.encode_binary(np.expand_dims(init_image,0))[0]
-    goal = ae.encode_binary(np.expand_dims(goal_image,0))[0]
-
+    init = sae.encode_binary(np.expand_dims(init_image,0))[0]
+    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0]
+    
     print(astar(init,goal,goalcount).path())
 
 if __name__ == '__main__':
