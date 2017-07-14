@@ -165,7 +165,9 @@ if __name__ == '__main__':
     # test if the learned action is correct
 
     actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=int)
-    ae = default_networks['fc'](directory).load()
+    
+    from latplan.util import get_ae_type
+    ae = default_networks[get_ae_type(directory)](directory).load()
     N = ae.parameters["N"]
     print("valid",actions_valid.shape)
     discriminator.report(actions_valid,  train_data_to=np.ones((len(actions_valid),)))

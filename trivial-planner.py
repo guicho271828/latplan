@@ -125,14 +125,8 @@ def main(directory, init_path, goal_path):
     sd = Discriminator("{}/_sd/".format(directory)).load()
     ad = Discriminator("{}/_ad/".format(directory)).load()
 
-    import os.path
-    d, n = os.path.split(directory)
-    if n == '':
-        ae_type = d.split("/")[-1].split("_")[-1]
-    else:
-        ae_type = n.split("_")[-1]
-    print(ae_type)
-    ae = default_networks[ae_type](directory).load()
+    from latplan.util import get_ae_type
+    ae = default_networks[get_ae_type(directory)](directory).load()
 
     known_actions = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
     N = known_actions.shape[1]//2
