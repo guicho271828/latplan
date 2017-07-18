@@ -401,7 +401,7 @@ class GumbelAE(AE):
     def encode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
         assert M == 2, "M={}, not 2".format(M)
-        return self.encode(data,**kwargs)[:,:,0].reshape(-1, N).astype(np.int8)
+        return self.encode(data,**kwargs)[:,:,0].reshape(-1, N)
     
     def decode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
@@ -438,6 +438,29 @@ class GumbelAE(AE):
         plot_grid(images, path=self.local(path), verbose=verbose)
         return x,z,y,b,by
 
+    def plot_autodecode(self,data,path,verbose=False):
+        self.load()
+        z = data
+        x = self.decode_binary(z)
+        z2 = self.encode_binary(x)
+        z2r = z2.round()
+        x2 = self.decode_binary(z2)
+        x2r = self.decode_binary(z2r)
+        M, N = self.parameters['M'], self.parameters['N']
+
+        from .util.plot import plot_grid, squarify
+        _z = squarify(z)
+        _z2 = squarify(z2)
+        _z2r = _z2.round()
+        
+        images = []
+        from .util.plot import plot_grid
+        for seq in zip(_z, x, _z2, _z2r, x2, x2r):
+            images.extend(seq)
+        plot_grid(images, w=6, path=self.local(path), verbose=verbose)
+        return _z, x, _z2, _z2r
+
+    
 class GumbelAE2(GumbelAE):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)

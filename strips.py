@@ -204,6 +204,8 @@ def dump_actions(ae,transitions,threshold=0.,name="actions.csv"):
 
 # This is used
 def dump_autoencoding_image(ae,test,train):
+    rz = np.random.randint(0,2,(6,ae.parameters['N']))
+    ae.plot_autodecode(rz,"autodecoding_random.png",verbose=True)
     ae.plot(select(test,12),"autoencoding_test.png",verbose=True)
     ae.plot(select(train,12),"autoencoding_train.png",verbose=True)
     
