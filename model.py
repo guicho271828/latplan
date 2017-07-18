@@ -596,15 +596,10 @@ class Discriminator(Network):
         N = input_shape[0] // 2
 
         actions_any = Sequential([
-            Dense(self.parameters['layer'],activation=self.parameters['activation']),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'],activation=self.parameters['activation']),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'],activation=self.parameters['activation']),
-            BN(),
-            Dropout(self.parameters['dropout']),
+            *[Sequential([Dense(self.parameters['layer'],activation=self.parameters['activation']),
+                          BN(),
+                          Dropout(self.parameters['dropout']),])
+              for i in range(self.parameters['num_layers']) ],
             Dense(1,activation="sigmoid")
         ])(x)
         self._actions_any = Model(x, actions_any)
