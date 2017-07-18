@@ -151,14 +151,15 @@ if __name__ == '__main__':
     
     global parameters
     parameters = {
+        'num_layers' :[1,2,3],
         'layer'      :[300,1000],# [400,4000],
-        'dropout'    :[0.1,0.4], #[0.1,0.4],
+        'dropout'    :[0.4], #[0.1,0.4],
         'batch_size' :[1000],
         'full_epoch' :[1000],
-        'activation' :['tanh'],
+        'activation' :['tanh','relu'],
         # quick eval
-        'epoch'      :[300],
-        'lr'         :[0.001,0.0001],
+        'epoch'      :[500],
+        'lr'         :[0.0001],
     }
     
     try:
