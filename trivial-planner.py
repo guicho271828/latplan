@@ -38,13 +38,14 @@ def state_hash(state):
     return np.sum(state << np.arange(len(state)))
 
 class State(object):
-    def __init__(self, state, g=math.inf, parent=None, status=OPEN):
+    def __init__(self, state, g=math.inf, h=0, parent=None, status=OPEN):
         self.state  = state
         self.g      = g
+        self.h      = h
         self.parent = parent
         self.status = status
 
-    def __hash__(self):
+    def hash(self):
         return state_hash(self.state)
 
     def __repr__(self):
@@ -56,16 +57,19 @@ class State(object):
         else:
             return [self.state]
     
-def astar(init,goal,heuristic):
+def astar(init,goal,distance):
     
     N = len(init)
+    heuristic = lambda x: distance(x, goal)
+    
+    _init = State(init, g=0, h=heuristic(init))
     
     import queue
     open_list = queue.PriorityQueue()
-    open_list.put((0, heuristic(init,goal), state_hash(init)))
+    open_list.put((_init.g + _init.h, _init.h, _init.hash()))
 
     close_list = {}
-    close_list[state_hash(init)] = State(init, 0)
+    close_list[_init.hash()] = _init
     
     def successors(state):
         reductions = []
@@ -133,7 +137,8 @@ def astar(init,goal,heuristic):
                 c.g      = new_g
                 c.parent = state
                 c.status = OPEN
-                open_list.put((0, heuristic(c.state,goal), state_hash(c.state)))
+                c.h      = heuristic(c.state)
+                open_list.put((c.g+c.h, c.h, c.hash()))
             
         
 def goalcount(state,goal):
