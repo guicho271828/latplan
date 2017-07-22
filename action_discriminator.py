@@ -141,6 +141,7 @@ if __name__ == '__main__':
     
     global parameters
     parameters = {
+        'num_layers' :[2],
         'layer'      :[300],# [400,4000],
         'dropout'    :[0.1], #[0.1,0.4],
         'batch_size' :[1000],
