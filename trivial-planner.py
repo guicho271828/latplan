@@ -92,10 +92,10 @@ def astar(init,goal,heuristic):
         images2 = sae.autoencode(images)
         loss = bce(images,images2,(1,2))
         # print(loss)
-        t = t[np.where(loss < 0.01)]
+        t = t[np.where(loss < 0.01)].astype(int)
         reductions.append(len(t))
         
-        print("->".join(map(str,reductions)))
+        # print("->".join(map(str,reductions)))
         # for now, assume they are all valid
         for i,succ in enumerate(t):
             # print(succ)
@@ -166,13 +166,13 @@ def main(directory, init_path, goal_path):
     init_image = misc.imread(init_path)
     goal_image = misc.imread(goal_path)
     
-    init = sae.encode_binary(np.expand_dims(init_image,0))[0]
-    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0]
+    init = sae.encode_binary(np.expand_dims(init_image,0))[0].astype(int)
+    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].astype(int)
 
     path = np.array(astar(init,goal,goalcount).path())
     print(path)
     from latplan.util.plot import plot_grid
-    plot_grid(sae.decode_binary(path),path="path.png",verbose=True)
+    plot_grid(sae.decode_binary(path),path=sae.local("path.png"),verbose=True)
 
 
 if __name__ == '__main__':
@@ -183,6 +183,7 @@ if __name__ == '__main__':
 
 
 def test():
+    # ./trivial-planner.py samples/puzzle_mnist33_fc/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/init.png trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/goal.png
     main("samples/puzzle_mnist33_fc/",
          "trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/init.png",
          "trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/goal.png")
