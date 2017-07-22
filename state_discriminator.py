@@ -133,11 +133,12 @@ if __name__ == '__main__':
     parameters = {
         'layer'      :[300],# [400,4000],
         'dropout'    :[0.1], #[0.1,0.4],
+        'num_layers' :[2],
         'batch_size' :[1000],
         'full_epoch' :[1000],
         'activation' :['tanh'],
         # quick eval
-        'epoch'      :[50],
+        'epoch'      :[200],
         'lr'         :[0.0001],
     }
 
