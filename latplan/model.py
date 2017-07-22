@@ -32,6 +32,13 @@ def flatten(x):
         return Flatten()(x)
     else:
         return x
+
+def set_trainable (model, flag):
+    if hasattr(model, "layers"):
+        for l in model.layers:
+            set_trainable(l, flag)
+    else:
+        model.trainable = flag
     
 def Print():
     def printer(x):
