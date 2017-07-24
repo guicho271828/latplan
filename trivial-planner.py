@@ -33,7 +33,10 @@ CLOSED = 1
 def bce(x,y,axis):
     return - (x * np.log(y+1e-5) + \
               (1-x) * np.log(1-y+1e-5)).mean(axis=axis)
-    
+
+def absolute_error(x,y,axis):
+    return np.sum(np.absolute(x - y),axis=axis)
+
 
 def state_hash(state):
     return np.sum(state << np.arange(len(state)))
@@ -80,8 +83,9 @@ def astar(init,goal,distance):
         reductions.append(len(y))
         
         # filtering based on OAE action reconstruction
-        action_reconstruction = oae.encode_action(y)
-        loss = bce(available_actions, action_reconstruction, (1,2))
+        action_reconstruction = oae.encode_action(y).round()
+        # loss = bce(available_actions, action_reconstruction, (1,2))
+        loss = absolute_error(available_actions, action_reconstruction, (1,2))
         # print(loss)
         y = y[np.where(loss < 0.01)]
         reductions.append(len(y))
@@ -95,9 +99,9 @@ def astar(init,goal,distance):
         if len(y) == 0:
             return
         # filtering based on SAE reconstruction
-        images  = sae.decode_binary(t)
-        images2 = sae.autoencode(images)
-        loss = bce(images,images2,(1,2))
+        images  = sae.decode_binary(t).round()
+        images2 = sae.autoencode(images).round()
+        loss = absolute_error(images,images2,(1,2))
         # print(loss)
         t = t[np.where(loss < 0.01)].astype(int)
         reductions.append(len(t))
