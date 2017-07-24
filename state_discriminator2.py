@@ -131,11 +131,15 @@ if __name__ == '__main__':
     # loss_images = bce(images,images2,(1,2))
     # print(loss)
     data_invalid = data_invalid[np.where(loss < 0.01)].astype(np.int8)
+    print(len(data_valid),len(data_invalid),"problem: the number of generated invalid examples are too small!")
 
     # remove valid states
     ai = data_invalid.view([('', data_invalid.dtype)] * N)
     av = data_valid.view  ([('', data_valid.dtype)]   * N)
     data_invalid = np.setdiff1d(ai, av).view(data_valid.dtype).reshape((-1, N))
+    print(len(data_valid),len(data_invalid))
+
+    data_invalid = data_invalid[:len(data_valid)]
 
     out_valid   = np.ones ((len(data_valid),1))
     out_invalid = np.zeros((len(data_invalid),1))
@@ -146,6 +150,7 @@ if __name__ == '__main__':
     train_out = data_out[:int(0.9*len(data_out))]
     test_in   = data_in [int(0.9*len(data_out)):]
     test_out  = data_out[int(0.9*len(data_out)):]
+    print(len(train_in), len(train_out), len(test_in), len(test_out),)
 
     global parameters
     parameters = {
