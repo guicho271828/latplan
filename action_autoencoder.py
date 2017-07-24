@@ -82,8 +82,8 @@ def grid_search(path, train_in, train_out, test_in, test_out):
                 best_params = params_dict
                 best_error = error
                 best_ae = ae
-                ae.plot(train_in[:20],"aae_train.png")
-                ae.plot(test_in[:20],"aae_test.png")
+                ae.plot(train_in[:8],"aae_train.png")
+                ae.plot(test_in[:8],"aae_test.png")
                 ae.save()
             else:
                 del ae
@@ -129,14 +129,14 @@ if __name__ == '__main__':
     except FileNotFoundError:
         aae,_,_ = grid_search(directory_aae, data[:12000], data[:12000], data[12000:], data[12000:],)
 
-    aae.plot(data[:20], "aae_train.png")
-    aae.plot(data[12000:12020], "aae_test.png")
+    aae.plot(data[:8], "aae_train.png")
+    aae.plot(data[12000:12008], "aae_test.png")
 
     from latplan.util import get_ae_type
     ae = default_networks[get_ae_type(directory)](directory).load()
 
-    aae.plot(data[:20], "aae_train_decoded.png", ae=ae)
-    aae.plot(data[12000:12020], "aae_test_decoded.png", ae=ae)
+    aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
+    aae.plot(data[12000:12008], "aae_test_decoded.png", ae=ae)
     
     
     actions = aae.encode_action(data, batch_size=1000)
