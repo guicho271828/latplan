@@ -91,6 +91,8 @@ def astar(init,goal,distance):
 
         t = y[:,N:]
 
+        if len(y) == 0:
+            return
         # filtering based on SAE reconstruction
         images  = sae.decode_binary(t)
         images2 = sae.autoencode(images)
