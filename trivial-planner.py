@@ -144,11 +144,11 @@ def astar(init,goal,distance):
 def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
-def main(directory, init_path, goal_path):
+def main(network_dir, problem_dir):
     global sae, oae, ad, available_actions
     
     from latplan.util import get_ae_type
-    sae = default_networks[get_ae_type(directory)](directory).load()
+    sae = default_networks[get_ae_type(network_dir)](network_dir).load()
     oae = ActionAE(sae.local("_aae/")).load()
     ad  = Discriminator(sae.local("_ad/")).load()
     
@@ -168,28 +168,34 @@ def main(directory, init_path, goal_path):
         available_actions[i][0][pos] = 1
     
     from scipy import misc
-    init_image = misc.imread(init_path)
-    goal_image = misc.imread(goal_path)
+    import os.path
+    # d, n = os.path.split(problem_dir)
+    # if n == '':
+    #     problem_dir = d
+    # else:
+    #     problem_dir = 
+    
+    init_image = misc.imread(os.path.join(problem_dir,"init.png"))
+    goal_image = misc.imread(os.path.join(problem_dir,"goal.png"))
     
     init = sae.encode_binary(np.expand_dims(init_image,0))[0].astype(int)
     goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].astype(int)
 
-    path = np.array(astar(init,goal,goalcount).path())
-    print(path)
+    plan = np.array(astar(init,goal,goalcount).path())
+    print(plan)
     from latplan.util.plot import plot_grid
-    plot_grid(sae.decode_binary(path),path=sae.local("path.png"),verbose=True)
+    plot_grid(sae.decode_binary(plan),path=os.path.join(problem_dir,"path.png"),verbose=True)
 
 
 if __name__ == '__main__':
     import sys
-    if len(sys.argv) < 4:
-        sys.exit("{} [networkdir] [init.png] [goal.png]".format(sys.argv[0]))
+    if len(sys.argv) < 3:
+        sys.exit("{} [networkdir] [problemdir]".format(sys.argv[0]))
     main(*sys.argv[1:])
 
 
 def test():
-    # ./trivial-planner.py samples/puzzle_mnist33_fc/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/init.png trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/goal.png
+    # ./trivial-planner.py samples/puzzle_mnist33_fc/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
     main("samples/puzzle_mnist33_fc/",
-         "trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/init.png",
-         "trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/goal.png")
+         "trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/")
     
