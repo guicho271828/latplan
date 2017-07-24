@@ -14,6 +14,7 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 sae = None
 oae = None
 ad  = None
+sd  = None
 available_actions = None
 
 OPEN   = 0
@@ -85,7 +86,7 @@ def astar(init,goal,distance):
         y = y[np.where(loss < 0.01)]
         reductions.append(len(y))
         
-        # AD-based filtering
+        # filtering based on Action Discriminator
         y = y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
         reductions.append(len(y))
 
@@ -99,6 +100,10 @@ def astar(init,goal,distance):
         loss = bce(images,images2,(1,2))
         # print(loss)
         t = t[np.where(loss < 0.01)].astype(int)
+        reductions.append(len(t))
+
+        # filtering based on State Discriminator
+        t = t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
         reductions.append(len(t))
         
         # print("->".join(map(str,reductions)))
@@ -147,12 +152,13 @@ def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
 def main(network_dir, problem_dir):
-    global sae, oae, ad, available_actions
+    global sae, oae, ad, sd, available_actions
     
     from latplan.util import get_ae_type
     sae = default_networks[get_ae_type(network_dir)](network_dir).load()
     oae = ActionAE(sae.local("_aae/")).load()
     ad  = Discriminator(sae.local("_ad/")).load()
+    sd  = Discriminator(sae.local("_sd/")).load()
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
