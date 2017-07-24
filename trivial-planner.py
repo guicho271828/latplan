@@ -110,7 +110,7 @@ def astar(init,goal,distance):
         t = t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
         reductions.append(len(t))
         
-        # print("->".join(map(str,reductions)))
+        print("->".join(map(str,reductions)))
         # for now, assume they are all valid
         for i,succ in enumerate(t):
             # print(succ)
@@ -162,7 +162,7 @@ def main(network_dir, problem_dir):
     sae = default_networks[get_ae_type(network_dir)](network_dir).load()
     oae = ActionAE(sae.local("_aae/")).load()
     ad  = Discriminator(sae.local("_ad/")).load()
-    sd  = Discriminator(sae.local("_sd/")).load()
+    sd  = Discriminator(sae.local("_sd2/")).load()
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
