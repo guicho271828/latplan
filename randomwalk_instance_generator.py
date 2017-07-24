@@ -20,7 +20,7 @@ def random_walk(init_c,length,successor_fn):
     return current
 
 def puzzle_mnist(steps, N):
-    import puzzles.puzzle_mnist as p
+    import latplan.puzzles.puzzle_mnist as p
     for i in range(N):
         print(random_walk([0,1,2,3,4,5,6,7,8], steps, lambda config: p.successors(config,3,3)))
 
