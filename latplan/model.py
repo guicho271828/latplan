@@ -176,7 +176,7 @@ class Network:
         for k,v in kwargs.items():
             setattr(self, k, v)
         self.build(train_data.shape[1:])
-        self.summary()
+        # self.summary()
         print({"parameters":self.parameters,
                "train_shape":train_data.shape,
                "test_shape":test_data.shape})
@@ -670,36 +670,25 @@ A is a single variable with M categories. We do not specify N.
 """
     def build_encoder(self,input_shape):
         return [
-            Sequential([
-                Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),]),
-            Sequential([
-                Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),]),
-            # Sequential([
-            #     Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
-            #     BN(),
-            #     Dropout(self.parameters['dropout']),]),
+            *[
+                Sequential([
+                    Dense(self.parameters['layer'], activation=self.parameters['encoder_activation'], use_bias=False),
+                    BN(),
+                    Dropout(self.parameters['dropout']),])
+                for i in range(self.parameters['encoder_layers'])
+            ],
             Dense(self.parameters['N']*self.parameters['M']),]
     
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
-            Sequential([
-                *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),]),
-            Sequential([
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),]),
-            # Sequential([
-            #     Dense(self.parameters['layer'], activation='relu', use_bias=False),
-            #     BN(),
-            #     Dropout(self.parameters['dropout']),]),
+            *[
+                Sequential([
+                    Dense(self.parameters['layer'], activation=self.parameters['decoder_activation'], use_bias=False),
+                    BN(),
+                    Dropout(self.parameters['dropout']),])
+                for i in range(self.parameters['decoder_layers'])
+            ],
             Sequential([
                 Dense(data_dim, activation='sigmoid'),
                 Reshape(input_shape),]),]

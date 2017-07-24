@@ -113,20 +113,25 @@ if __name__ == '__main__':
     parameters = {
         'N'          :[1],
         'M'          :[128],
-        'layer'      :[1000],# [400,4000],
+        'layer'      :[400],# 200,300,400,700,1000
+        'encoder_layers' : [2], # 0,2,3
+        'decoder_layers' : [2], # 0,1,3
         'dropout'    :[0.4], #[0.1,0.4],
-        'dropout_z'  :[False],
+        # 'dropout_z'  :[False],
         'batch_size' :[2000],
-        'full_epoch' :[500],
-        'activation' :['tanh'],
+        'full_epoch' :[1000],
+        'epoch'      :[1000],
+        'encoder_activation' :['relu'], # 'tanh'
+        'decoder_activation' :['relu'], # 'tanh',
         # quick eval
-        'epoch'      :[500],
         'lr'         :[0.001],
     }
     print(data.shape)
     try:
         aae = ActionAE(directory_aae).load()
     except FileNotFoundError:
+        aae,_,_ = grid_search(directory_aae, data[:12000], data[:12000], data[12000:], data[12000:],)
+    except ValueError:
         aae,_,_ = grid_search(directory_aae, data[:12000], data[:12000], data[12000:], data[12000:],)
 
     aae.plot(data[:8], "aae_train.png")
