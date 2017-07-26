@@ -16,13 +16,6 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 # I made this discriminator for pruning some state transitions while checking
 # the entire (2^98) transitions and make them compact.
 
-def curry(fn,*args1,**kwargs1):
-    return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
-
-def anneal_rate(epoch,min=0.1,max=5.0):
-    import math
-    return math.log(max/min) / epoch
-
 # default values
 default_parameters = {
     'lr'              : 0.0001,
@@ -31,6 +24,7 @@ default_parameters = {
     'epoch'           : 1000,
     'max_temperature' : 2.0,
     'min_temperature' : 0.1,
+    'M'               : 2,
 }
 parameters = {}
 
@@ -44,9 +38,6 @@ def learn_model(path,train_in,train_out,test_in,test_out,network,params_dict={})
                         test_data=test_in,
                         train_data_to=train_out,
                         test_data_to=test_out,
-                        anneal_rate=anneal_rate(training_parameters['full_epoch'],
-                                                training_parameters['min_temperature'],
-                                                training_parameters['max_temperature']),
                         report=False,
                         **training_parameters,)
     return discriminator
@@ -71,7 +62,7 @@ def grid_search(path, train_in, train_out, test_in, test_out):
             params_dict = { k:v for k,v in zip(names,params) }
             print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), params_dict))
             ae = learn_model(path, train_in,train_out,test_in,test_out,
-                             network=curry(network, parameters=params_dict),
+                             network=network,
                              params_dict=params_dict)
             error = ae.net.evaluate(test_in,test_out,batch_size=100,verbose=0)
             results.append({'error':error, **params_dict})
