@@ -4,6 +4,7 @@ import config
 import numpy as np
 import numpy.random as random
 from latplan.model import default_networks
+from latplan.util.tuning import grid_search
 
 import keras.backend as K
 import tensorflow as tf
@@ -31,64 +32,6 @@ default_parameters = {
     'min_temperature' : 0.7,
     'M'               : 2,
 }
-parameters = {}
-
-def learn_model(network,path,local_parameters,train_data,test_data):
-    full_parameters = default_parameters.copy()
-    for key, value in local_parameters.items():
-        full_parameters[key] = value
-    ae = network(path,parameters=full_parameters)
-    ae.train(train_data,
-             test_data=test_data,
-             report=True,
-             **full_parameters,)
-    return ae
-
-def grid_search(path, train=None, test=None):
-    # perform random trials on possible combinations
-    network = default_networks[encoder]
-    best_error = float('inf')
-    best_params = None
-    best_ae     = None
-    results = []
-    print("Network: {}".format(network))
-    try:
-        import itertools
-        names  = [ k for k, _ in parameters.items()]
-        values = [ v for _, v in parameters.items()]
-        all_params = list(itertools.product(*values))
-        random.shuffle(all_params)
-        [ print(r) for r in all_params]
-        for i,params in enumerate(all_params):
-            config.reload_session()
-            local_parameters = { k:v for k,v in zip(names,params) }
-            print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), local_parameters))
-            ae = learn_model(network, path, local_parameters, train, test)
-            error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
-            results.append({'error':error, **local_parameters})
-            print("Evaluation result for:\n{}\nerror = {}".format(local_parameters,error))
-            print("Current results:")
-            results.sort(key=lambda result: result['error'])
-            [ print(r) for r in results]
-            if error < best_error:
-                print("Found a better parameter:\n{}\nerror:{} old-best:{}".format(
-                    local_parameters,error,best_error))
-                dump_autoencoding_image(ae,test,train)
-                del best_ae
-                best_params = local_parameters
-                best_error = error
-                best_ae = ae
-            else:
-                del ae
-        print("Best parameter:\n{}\nerror: {}".format(best_params,best_error))
-    finally:
-        print(results)
-    best_ae.save()
-    with open(best_ae.local("grid_search.log"), 'a') as f:
-        import json
-        f.write("\n")
-        json.dump(results, f)
-    return best_ae,best_params,best_error
 
 def dump_autoencoding_image(ae,test,train):
     rz = np.random.randint(0,2,(6,ae.parameters['N']))
@@ -148,14 +91,33 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
-def run(learn,*args, **kwargs):
+def task(path, train, test, parameters):
+    ae = default_networks[encoder](path,parameters=parameters)
+    ae.train(train,
+             test_data=test,
+             report=True,
+             **parameters,)
+    error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
+    try:
+        with open(ae.local("grid_search.log"), 'a') as f:
+            import json
+            json.dump((error, parameters), f)
+            f.write("\n")
+    except TypeError:
+        pass
+    return ae, error
+
+def run(learn,path,train,test):
     if learn:
-        ae, _, _ = grid_search(*args, **kwargs)
+        from latplan.util import curry
+        ae, _, _ = grid_search(curry(task, path, train, test),
+                               default_parameters,
+                               parameters,
+                               report = lambda ae: dump_autoencoding_image(ae,test,train))
     else:
-        ae = default_networks[encoder](args[0]).load()
+        ae = default_networks[encoder](path).load()
         ae.summary()
     return ae
-
 
 parameters = {
     'layer'      :[2000],# [400,4000],
@@ -433,13 +395,15 @@ def counter_random_mnist():
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
 
-if __name__ == '__main__':
+
+def main():
+    global encoder, mode, learn_flag
     import sys
     if len(sys.argv) == 1:
         print({ k for k in default_networks})
         gs = globals()
         print({ k for k in gs if hasattr(gs[k], '__call__')})
-        print({k for k in modes})
+        print({ k for k in modes})
     else:
         print('args:',sys.argv)
         sys.argv.pop(0)
@@ -452,3 +416,6 @@ if __name__ == '__main__':
             raise ValueError("invalid mode!: {}".format(mode))
         learn_flag = modes[mode]
         globals()[task](*map(eval,sys.argv))
+    
+if __name__ == '__main__':
+    main()

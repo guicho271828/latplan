@@ -11,6 +11,7 @@ from keras.layers import Input, Dense, Dropout, Convolution2D, Deconvolution2D, 
 from keras.layers.merge import Concatenate
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
+import keras.optimizers
 from keras.optimizers import Adam
 from keras import backend as K
 from keras import objectives
@@ -172,11 +173,11 @@ class Network:
         self.bar.update(epoch+1, **ologs)
         
     def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer=Adam,lr=0.0001,test_data=None,save=True,report=True,
+              epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,test_data=None,save=True,report=True,
               train_data_to=None,
               test_data_to=None,
               **kwargs):
-        o = optimizer(lr)
+        o = getattr(keras.optimizers,optimizer)(lr)
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
