@@ -15,9 +15,6 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 def curry(fn,*args1,**kwargs1):
     return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
 
-def anneal_rate(epoch,min=0.1,max=5.0):
-    import math
-    return math.log(max/min) / epoch
 
 encoder = 'fc'
 mode = 'learn_dump'
@@ -32,6 +29,7 @@ default_parameters = {
     'epoch'           : 1000,
     'max_temperature' : 5.0,
     'min_temperature' : 0.7,
+    'M'               : 2,
 }
 parameters = {}
 
@@ -44,9 +42,6 @@ def learn_model(path,train_data,test_data=None,network=None,params_dict={}):
         if key in params_dict:
             training_parameters[key] = params_dict[key]
     ae.train(train_data,
-             anneal_rate=anneal_rate(training_parameters['full_epoch'],
-                                     training_parameters['min_temperature'],
-                                     training_parameters['max_temperature']),
              test_data=test_data,
              report=True,
              **training_parameters,)
@@ -72,7 +67,7 @@ def grid_search(path, train=None, test=None):
             params_dict = { k:v for k,v in zip(names,params) }
             print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), params_dict))
             ae = learn_model(path, train, test,
-                             network=curry(network, parameters=params_dict),
+                             network=network,
                              params_dict=params_dict)
             error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
             results.append({'error':error, **params_dict})

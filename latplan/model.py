@@ -181,8 +181,6 @@ class Network:
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
 
-        for k,v in kwargs.items():
-            setattr(self, k, v)
         self.build(train_data.shape[1:])
         # self.summary()
         print({"parameters":self.parameters,
@@ -380,16 +378,7 @@ class GumbelAE(AE):
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
 
-    def __init__(self,path,parameters={}):
-        if 'N' not in parameters:
-            parameters['N'] = 25
-        if 'M' not in parameters:
-            parameters['M'] = 2
-        super().__init__(path,parameters)
-        self.min_temperature = 0.1
-        self.max_temperature = 5.0
-        self.anneal_rate = 0.0003
-   
+    
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
@@ -618,9 +607,6 @@ class ConvolutionalGumbelAE2(ConvolutionalGumbelAE,GumbelAE2):
 
 # state/action discriminator ####################################################
 class Discriminator(Network):
-    def __init__(self,path,parameters={}):
-        super().__init__(path,parameters)
-
     def _build(self,input_shape):
         x = Input(shape=input_shape)
         N = input_shape[0] // 2
@@ -715,15 +701,6 @@ A is a single variable with M categories. We do not specify N.
             Sequential([
                 Dense(data_dim, activation='sigmoid'),
                 Reshape(input_shape),]),]
-    def __init__(self,path,parameters={}):
-        if 'N' not in parameters:
-            parameters['N'] = 25
-        if 'M' not in parameters:
-            parameters['M'] = 2
-        super().__init__(path,parameters)
-        self.min_temperature = 0.1
-        self.max_temperature = 5.0
-        self.anneal_rate = 0.0003
    
     def _build(self,input_shape):
 
