@@ -1,6 +1,7 @@
 from . import trace
 from . import plot
 from . import mnist
+from . import tuning
 
 def get_ae_type(directory):
     import os.path
