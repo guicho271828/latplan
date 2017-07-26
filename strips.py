@@ -33,18 +33,15 @@ default_parameters = {
 }
 parameters = {}
 
-def learn_model(path,train_data,test_data=None,network=None,params_dict={}):
-    if network is None:
-        network = default_networks[encoder]
-    ae = network(path)
-    training_parameters = default_parameters.copy()
-    for key, _ in training_parameters.items():
-        if key in params_dict:
-            training_parameters[key] = params_dict[key]
+def learn_model(network,path,local_parameters,train_data,test_data):
+    full_parameters = default_parameters.copy()
+    for key, value in local_parameters.items():
+        full_parameters[key] = value
+    ae = network(path,parameters=full_parameters)
     ae.train(train_data,
              test_data=test_data,
              report=True,
-             **training_parameters,)
+             **full_parameters,)
     return ae
 
 def grid_search(path, train=None, test=None):
@@ -64,23 +61,21 @@ def grid_search(path, train=None, test=None):
         [ print(r) for r in all_params]
         for i,params in enumerate(all_params):
             config.reload_session()
-            params_dict = { k:v for k,v in zip(names,params) }
-            print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), params_dict))
-            ae = learn_model(path, train, test,
-                             network=network,
-                             params_dict=params_dict)
+            local_parameters = { k:v for k,v in zip(names,params) }
+            print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), local_parameters))
+            ae = learn_model(network, path, local_parameters, train, test)
             error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
-            results.append({'error':error, **params_dict})
-            print("Evaluation result for:\n{}\nerror = {}".format(params_dict,error))
+            results.append({'error':error, **local_parameters})
+            print("Evaluation result for:\n{}\nerror = {}".format(local_parameters,error))
             print("Current results:")
             results.sort(key=lambda result: result['error'])
             [ print(r) for r in results]
             if error < best_error:
                 print("Found a better parameter:\n{}\nerror:{} old-best:{}".format(
-                    params_dict,error,best_error))
+                    local_parameters,error,best_error))
                 dump_autoencoding_image(ae,test,train)
                 del best_ae
-                best_params = params_dict
+                best_params = local_parameters
                 best_error = error
                 best_ae = ae
             else:
