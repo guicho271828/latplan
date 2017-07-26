@@ -338,6 +338,21 @@ class AE(Network):
         self.autoencoder.summary()
         return self
 
+    def build_gs(self,
+                 **kwargs):
+        # hack, but is useful overall
+
+        def fn(N=self.parameters['N'],
+               M=self.parameters['M'],
+               max_temperature=self.parameters['max_temperature'],
+               min_temperature=self.parameters['min_temperature'],
+               full_epoch=self.parameters['full_epoch'],):
+            return GumbelSoftmax(
+                N,M,min_temperature,max_temperature,
+                anneal_rate(full_epoch, min_temperature, max_temperature))
+        return fn(**kwargs)
+
+
 class GumbelAE(AE):
     def build_encoder(self,input_shape):
         return [GaussianNoise(0.1),
@@ -383,7 +398,7 @@ class GumbelAE(AE):
         x_flat = flatten(x)
         pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
         print(Model(x,pre_encoded))
-        gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
+        gs = self.build_gs()
         z = gs(pre_encoded)
         z_flat = flatten(z)
         _decoder = self.build_decoder(input_shape)
@@ -499,12 +514,12 @@ class GumbelAE2(GumbelAE):
         x = Input(shape=input_shape)
         x_flat = flatten(x)
         pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
-        gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
+        gs = self.build_gs()
         z = gs(pre_encoded)
         z_flat = flatten(z)
         _decoder = self.build_decoder(input_shape)
         y_logit  = Sequential(_decoder)(z_flat)
-        gs2 = GumbelSoftmax(data_dim,2,self.min_temperature,self.max_temperature,self.anneal_rate)
+        gs2 = self.build_gs(N=data_dim)
         y_cat = gs2(y_logit)
         
         y = Reshape(input_shape)(Lambda(take_true)(y_cat))
@@ -512,7 +527,7 @@ class GumbelAE2(GumbelAE):
         z2 = Input(shape=(N,M))
         z2_flat = flatten(z2)
         y2_logit = Sequential(_decoder)(z2_flat)
-        gs3 = GumbelSoftmax(data_dim,2,self.min_temperature,self.max_temperature,self.anneal_rate)
+        gs3 = self.build_gs(N=data_dim)
         y2_cat = gs3(y2_logit)
         y2 = Reshape(input_shape)(Lambda(take_true)(y2_cat))
         
@@ -728,7 +743,7 @@ A is a single variable with M categories. We do not specify N.
         _encoder = self.build_encoder([dim])
         action_logit = ConditionalSequential(_encoder, pre, axis=1)(suc)
         
-        gs = GumbelSoftmax(N,M,self.min_temperature,self.max_temperature,self.anneal_rate)
+        gs = self.build_gs()
         action = gs(action_logit)
 
         print("decoder")
