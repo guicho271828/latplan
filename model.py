@@ -454,9 +454,9 @@ class GumbelAE(AE):
         
         images = []
         from .util.plot import plot_grid
-        for seq in zip(x, _z, y, _b, by):
+        for seq in zip(x, _z, y, y.round(), _b, by, by.round()):
             images.extend(seq)
-        plot_grid(images, path=self.local(path), verbose=verbose)
+        plot_grid(images, w=14, path=self.local(path), verbose=verbose)
         return x,z,y,b,by
 
     def plot_autodecode(self,data,path,verbose=False):

@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 
 def plot_image(a,name):
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(20,20))
     plt.imshow(a,interpolation='nearest',cmap='gray',)
     plt.savefig(name)
 
