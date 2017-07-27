@@ -31,7 +31,7 @@ def plot_grid(images,w=10,path="plan.png",verbose=False):
     images = fix_images(images)
     l = len(images)
     h = int(math.ceil(l/w))
-    plt.figure(figsize=(w*2, h*2))
+    plt.figure(figsize=(w*3, h*3))
     for i,image in enumerate(images):
         ax = plt.subplot(h,w,i+1)
         try:
@@ -43,6 +43,7 @@ def plot_grid(images,w=10,path="plan.png",verbose=False):
     print(path) if verbose else None
     plt.savefig(path)
 
+# contiguous image
 def plot_grid2(images,w=10,path="plan.png",verbose=False):
     import matplotlib.pyplot as plt
     images = fix_images(images)
