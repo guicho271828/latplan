@@ -9,7 +9,7 @@ from latplan.puzzles.hanoi import generate_configs, successors, generate, states
 from plot import plot_image, plot_grid
 
 disks = 8
-towers = 4
+towers = 3
 
 configs = generate_configs(disks,towers)
 puzzles = generate(configs,disks,towers)

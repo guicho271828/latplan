@@ -202,87 +202,54 @@ def puzzle_mandrill(width=3,height=3):
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
 
-def hanoi_hard(disks=5):
+def hanoi(disks=5,towers=3):
     global parameters
-    parameters = {
-        'layer'      :[2000],# [400,4000],
-        'clayer'     :[16],# [400,4000],
-        'dropout'    :[0.4], #[0.1,0.4],
-        'N'          :[25],  #[25,49],
-        'dropout_z'  :[False],
-        'activation' : ['tanh'],
-        'full_epoch' :[1000],
-        'epoch'      :[500],
-        'batch_size' :[2000],
-        'lr'         :[0.001],
-    }
+    if 'fc' in encoder:
+        parameters = {
+            'layer'      :[2000],# [400,4000],
+            'clayer'     :[9],# [400,4000],
+            'dropout'    :[0.4], #[0.1,0.4],
+            'N'          :[49],  #[25,49],
+            'dropout_z'  :[False],
+            'activation' : ['relu'],
+            'full_epoch' :[1000],
+            'epoch'      :[1000],
+            'batch_size' :[500],
+            'optimizer'  :['adam'],
+            'lr'         :[0.001],
+        }
+    else:
+        parameters = {
+            'layer'      :[1000],# [400,4000],
+            'clayer'     :[12],# [400,4000],
+            'dropout'    :[0.4], #[0.1,0.4],
+            'N'          :[49],  #[25,49],
+            'dropout_z'  :[False],
+            'activation' : ['relu'],
+            'full_epoch' :[1000],
+            'epoch'      :[1000],
+            'batch_size' :[500],
+            'optimizer'  :['adam'],
+            'lr'         :[0.001],
+        }
     import latplan.puzzles.hanoi as p
-    configs = p.generate_configs(disks)
+    configs = p.generate_configs(disks,towers)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
+    print(len(configs))
+    configs = configs[:min(8000,len(configs))]
     print(len(configs))
     train_c = configs[:int(0.9*len(configs))]
     test_c  = configs[int(0.9*len(configs)):]
-    train       = p.states(disks,train_c)
-    test        = p.states(disks,test_c)
+    train       = p.states(disks,towers,train_c)
+    test        = p.states(disks,towers,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/hanoi{}_{}/".format(disks,encoder), train, test)
+    ae = run(learn_flag,"samples/hanoi{}{}_{}/".format(disks,towers,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs,lambda configs: p.transitions(disks,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),)
-    dump_all_states(ae,configs,lambda configs: p.states(disks,configs),"states.csv")
-    dump_all_states(ae,configs,        lambda configs: p.states(disks,configs),)
-
-def hanoi(disks=4):
-    global parameters
-    parameters = {
-        'layer'      :[1000,2000,4000],# [400,4000],
-        'dropout'    :[0.1,0.2,0.4], #[0.1,0.4],
-        'N'          :[16,25,30,36],  #[25,49],
-        'batch_size' :[500,2000],
-        'dropout_z'  :[True,False],
-        'full_epoch' :[1000],
-        # quick eval
-        'epoch'      :[1000],
-    }
-    import latplan.puzzles.hanoi as p
-    configs = p.generate_configs(disks)
-    configs = np.array([ c for c in configs ])
-    random.shuffle(configs)
-    print(len(configs))
-    train_c = configs
-    test_c  = configs
-    train       = p.states(disks,train_c)
-    test        = p.states(disks,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/hanoi{}_{}/".format(disks,encoder), train, test)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),)
-
-def xhanoi(disks=4):
-    global parameters
-    parameters = {
-        'layer'      :[6000],
-        'dropout'    :[0.4],
-        'N'          :[29],
-        'epoch'      :[10000],
-        'batch_size' :[3500]
-    }
-    import latplan.puzzles.hanoi as p
-    configs = p.generate_configs(disks)
-    configs = np.array([ c for c in configs ])
-    random.shuffle(configs)
-    print(len(configs))
-    train_c = configs
-    test_c  = configs
-    train       = p.states(disks,train_c)
-    test        = p.states(disks,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/xhanoi{}_{}/".format(disks,encoder), train, test)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,configs),)
+    dump_all_actions(ae,configs,lambda configs: p.transitions(disks,towers,configs),"actions.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),)
+    dump_all_states(ae,configs,lambda configs: p.states(disks,towers,configs),"states.csv")
+    dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),)
 
 def digital_lightsout(size=4):
     global parameters
