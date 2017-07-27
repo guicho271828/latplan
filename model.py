@@ -355,6 +355,7 @@ class AE(Network):
 class GumbelAE(AE):
     def build_encoder(self,input_shape):
         return [GaussianNoise(0.1),
+                BN(),
                 Dense(self.parameters['layer'], activation='relu', use_bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),
@@ -547,6 +548,7 @@ class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
+                BN(),
                 Convolution2D(self.parameters['clayer'],3,3,
                               activation=self.parameters['activation'],border_mode='same', use_bias=False),
                 Dropout(self.parameters['dropout']),
