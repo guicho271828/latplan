@@ -15,6 +15,8 @@ sae = None
 oae = None
 ad  = None
 sd  = None
+ad2  = None
+sd2  = None
 available_actions = None
 
 OPEN   = 0
@@ -156,13 +158,15 @@ def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
 def main(network_dir, problem_dir):
-    global sae, oae, ad, sd, available_actions
+    global sae, oae, ad, ad2, sd, sd2, available_actions
     
     from latplan.util import get_ae_type
     sae = default_networks[get_ae_type(network_dir)](network_dir).load()
     oae = ActionAE(sae.local("_aae/")).load()
     ad  = Discriminator(sae.local("_ad/")).load()
-    sd  = Discriminator(sae.local("_sd2/")).load()
+    sd  = Discriminator(sae.local("_sd/")).load()
+    ad2  = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
+    sd2  = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
