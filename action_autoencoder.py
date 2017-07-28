@@ -3,6 +3,8 @@ import warnings
 import config
 import numpy as np
 from latplan.model import ActionAE, default_networks
+from latplan.util        import curry
+from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
 import tensorflow as tf
@@ -22,71 +24,6 @@ default_parameters = {
     'min_temperature' : 0.1,
     'M'               : 2,
 }
-parameters = {}
-
-def learn_model(path,train_in,train_out,test_in,test_out,network,params_dict={}):
-    discriminator = network(path)
-    training_parameters = default_parameters.copy()
-    for key, _ in training_parameters.items():
-        if key in params_dict:
-            training_parameters[key] = params_dict[key]
-    discriminator.train(train_in,
-                        test_data=test_in,
-                        train_data_to=train_out,
-                        test_data_to=test_out,
-                        report=True,
-                        **training_parameters,)
-    return discriminator
-
-def grid_search(path, train_in, train_out, test_in, test_out):
-    # perform random trials on possible combinations
-    network = ActionAE
-    best_error = float('inf')
-    best_params = None
-    best_ae     = None
-    results = []
-    print("Network: {}".format(network))
-    try:
-        import itertools
-        names  = [ k for k, _ in parameters.items()]
-        values = [ v for _, v in parameters.items()]
-        all_params = list(itertools.product(*values))
-        random.shuffle(all_params)
-        [ print(r) for r in all_params]
-        for i,params in enumerate(all_params):
-            config.reload_session()
-            params_dict = { k:v for k,v in zip(names,params) }
-            print("{}/{} Testing model with parameters=\n{}".format(i, len(all_params), params_dict))
-            ae = learn_model(path, train_in,train_out,test_in,test_out,
-                             network=network,
-                             params_dict=params_dict)
-            error = ae.net.evaluate(test_in,test_out,batch_size=100,verbose=0)
-            results.append({'error':error, **params_dict})
-            print("Evaluation result for:\n{}\nerror = {}".format(params_dict,error))
-            print("Current results:")
-            results.sort(key=lambda result: result['error'])
-            [ print(r) for r in results]
-            if error < best_error:
-                print("Found a better parameter:\n{}\nerror:{} old-best:{}".format(
-                    params_dict,error,best_error))
-                del best_ae
-                best_params = params_dict
-                best_error = error
-                best_ae = ae
-                ae.plot(train_in[:8],"aae_train.png")
-                ae.plot(test_in[:8],"aae_test.png")
-                ae.save()
-            else:
-                del ae
-        print("Best parameter:\n{}\nerror: {}".format(best_params,best_error))
-    finally:
-        print(results)
-    with open(best_ae.local("grid_search.log"), 'a') as f:
-        import json
-        f.write("\n")
-        json.dump(results, f)
-    return best_ae,best_params,best_error
-
 
 if __name__ == '__main__':
     import numpy.random as random
@@ -100,7 +37,6 @@ if __name__ == '__main__':
     
     data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
     
-    global parameters
     parameters = {
         'N'          :[1],
         'M'          :[128],
@@ -120,10 +56,12 @@ if __name__ == '__main__':
     print(data.shape)
     try:
         aae = ActionAE(directory_aae).load()
-    except FileNotFoundError:
-        aae,_,_ = grid_search(directory_aae, data[:12000], data[:12000], data[12000:], data[12000:],)
-    except ValueError:
-        aae,_,_ = grid_search(directory_aae, data[:12000], data[:12000], data[12000:], data[12000:],)
+    except (FileNotFoundError, ValueError):
+        aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae,
+                                    data[:12000], data[:12000],
+                                    data[12000:], data[12000:],),
+                              default_parameters,
+                              parameters)
 
     aae.plot(data[:8], "aae_train.png")
     aae.plot(data[12000:12008], "aae_test.png")
