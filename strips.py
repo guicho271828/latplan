@@ -4,7 +4,8 @@ import config
 import numpy as np
 import numpy.random as random
 from latplan.model import default_networks
-from latplan.util.tuning import grid_search
+from latplan.util        import curry
+from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
 import tensorflow as tf
@@ -12,10 +13,6 @@ import tensorflow as tf
 
 float_formatter = lambda x: "%.5f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
-
-def curry(fn,*args1,**kwargs1):
-    return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
-
 
 encoder = 'fc'
 mode = 'learn_dump'
@@ -91,26 +88,12 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
 def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
-def task(path, train, test, parameters):
-    ae = default_networks[encoder](path,parameters=parameters)
-    ae.train(train,
-             test_data=test,
-             report=True,
-             **parameters,)
-    error = ae.autoencoder.evaluate(test,test,batch_size=100,verbose=0)
-    try:
-        with open(ae.local("grid_search.log"), 'a') as f:
-            import json
-            json.dump((error, parameters), f)
-            f.write("\n")
-    except TypeError:
-        pass
-    return ae, error
 
 def run(learn,path,train,test):
     if learn:
         from latplan.util import curry
-        ae, _, _ = grid_search(curry(task, path, train, test),
+        ae, _, _ = grid_search(curry(nn_task, default_networks[encoder], path,
+                                     train, train, test, test),
                                default_parameters,
                                parameters,
                                report = lambda ae: dump_autoencoding_image(ae,test,train))
