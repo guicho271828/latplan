@@ -108,9 +108,9 @@ parameters = {
     'dropout'    :[0.4], #[0.1,0.4],
     'N'          :[36],  #[25,49],
     'dropout_z'  :[False],
-    'activation' : ['tanh'],
-    'full_epoch' :[300],
-    'epoch'      :[300],
+    'activation' :['tanh'],
+    'full_epoch' :[1000],
+    'epoch'      :[1000],
     'batch_size' :[2000],
     'lr'         :[0.001],
 }
