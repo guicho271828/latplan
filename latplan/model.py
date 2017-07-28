@@ -121,10 +121,18 @@ class Network:
             json.dump({"parameters":self.parameters,
                        "input_shape":self.net.input_shape[1:]}, f)
             
-    def load(self):
-        if not self.loaded:
-            self._load()
-            self.loaded = True
+    def load(self,allow_failure=False):
+        if allow_failure:
+            try:
+                if not self.loaded:
+                    self._load()
+                    self.loaded = True
+            except Exception as e:
+                print("Exception {} during load(), ignored.".format(e))
+        else:
+            if not self.loaded:
+                self._load()
+                self.loaded = True
         return self
     
     def _load(self):
