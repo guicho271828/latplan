@@ -660,26 +660,23 @@ class Discriminator(Network):
 # action autoencoder ################################################################
 
 class ActionAE(AE):
-    """
-A network which autoencodes the difference information.
-
-State transitions are not a 1-to-1 mapping in a sense that
-there are multiple applicable actions. So you cannot train a newtork that directly learns
-a transition S -> T .
-
-We also do not have action labels, so we need to cluster the actions in an unsupervised manner.
-
-This network trains a bidirectional mapping of (S,T) -> (S,A) -> (S,T), given that 
-a state transition is a function conditioned by the before-state s.
-
-It is not useful to learn a normal autoencoder (S,T) -> Z -> (S,T) because we cannot separate the
-condition and the action label.
-
-We again use gumbel-softmax for representing A.
-(*undetermined*) To learn the lifted representation,
-A is a single variable with M categories. We do not specify N.
-
-"""
+    # A network which autoencodes the difference information.
+    # 
+    # State transitions are not a 1-to-1 mapping in a sense that
+    # there are multiple applicable actions. So you cannot train a newtork that directly learns
+    # a transition S -> T .
+    # 
+    # We also do not have action labels, so we need to cluster the actions in an unsupervised manner.
+    # 
+    # This network trains a bidirectional mapping of (S,T) -> (S,A) -> (S,T), given that 
+    # a state transition is a function conditioned by the before-state s.
+    # 
+    # It is not useful to learn a normal autoencoder (S,T) -> Z -> (S,T) because we cannot separate the
+    # condition and the action label.
+    # 
+    # We again use gumbel-softmax for representing A.
+    # (*undetermined*) To learn the lifted representation,
+    # A is a single variable with M categories. We do not specify N.
     def build_encoder(self,input_shape):
         return [
             *[

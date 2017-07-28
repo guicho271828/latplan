@@ -18,6 +18,8 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 # I made this discriminator for pruning some state transitions while checking
 # the entire (2^98) transitions and make them compact.
 
+# negative examples (random bitstrings) are pre-filtered using SAE reconstruction
+
 # default values
 default_parameters = {
     'lr'              : 0.0001,
