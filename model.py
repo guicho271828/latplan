@@ -832,5 +832,15 @@ def main ():
 if __name__ == '__main__':
     main()
 
-default_networks = {'fc':GumbelAE,'conv':ConvolutionalGumbelAE,
-                    'fc2':GumbelAE2,'conv2':ConvolutionalGumbelAE2,}
+default_networks = {
+    'fc':GumbelAE,
+    'fc2':GumbelAE2,
+    'conv':ConvolutionalGumbelAE,
+    'conv2':ConvolutionalGumbelAE2,
+    'cc' : Convolutional2GumbelAE,
+    **{
+        name: classobj \
+        for name, classobj in globals().items() \
+        if isinstance(classobj, type)
+    }
+}
