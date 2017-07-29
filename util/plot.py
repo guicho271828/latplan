@@ -42,6 +42,7 @@ def plot_grid(images,w=10,path="plan.png",verbose=False):
         ax.get_yaxis().set_visible(False)
     print(path) if verbose else None
     plt.savefig(path)
+    plt.close()
 
 # contiguous image
 def plot_grid2(images,w=10,path="plan.png",verbose=False):
