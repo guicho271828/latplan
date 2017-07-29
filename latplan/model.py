@@ -23,6 +23,7 @@ from keras.callbacks import LambdaCallback, LearningRateScheduler
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 
+debug = False
 # utilities ###############################################################
 def wrap(x,y,**kwargs):
     "wrap arbitrary operation"
@@ -49,8 +50,12 @@ def Print():
 
 def Sequential (array):
     def apply1(arg,f):
-        # print("applying {}({})".format(f,arg))
-        return f(arg)
+        if debug:
+            print("applying {}({})".format(f,arg))
+        result = f(arg)
+        if debug:
+            print(K.int_shape(result))
+        return result
     return lambda x: reduce(apply1, array, x)
 
 def ConditionalSequential (array, condition, **kwargs):
@@ -183,7 +188,8 @@ class Network:
         test_data_to  = test_data  if test_data_to is None else test_data_to
 
         self.build(train_data.shape[1:])
-        # self.summary()
+        if debug:
+            self.summary()
         print({"parameters":self.parameters,
                "train_shape":train_data.shape,
                "test_shape":test_data.shape})
