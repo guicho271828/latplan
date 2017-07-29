@@ -30,6 +30,9 @@ default_parameters = {
     'M'               : 2,
 }
 
+def select(data,num):
+    return data[random.randint(0,data.shape[0],num)]
+
 def dump_autoencoding_image(ae,test,train):
     rz = np.random.randint(0,2,(6,ae.parameters['N']))
     ae.plot_autodecode(rz,"autodecoding_random.png",verbose=True)
@@ -84,10 +87,6 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
 ################################################################
 
 # note: lightsout has epoch 200
-
-def select(data,num):
-    return data[random.randint(0,data.shape[0],num)]
-
 
 def run(learn,path,train,test):
     if learn:
