@@ -357,7 +357,6 @@ class AE(Network):
                 anneal_rate(full_epoch, min_temperature, max_temperature))
         return fn(**kwargs)
 
-
 class GumbelAE(AE):
     def build_encoder(self,input_shape):
         return [GaussianNoise(0.1),
@@ -386,7 +385,6 @@ class GumbelAE(AE):
             Dense(data_dim, activation='sigmoid'),
             Reshape(input_shape),]
 
-    
     def _build(self,input_shape):
         data_dim = np.prod(input_shape)
         print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
@@ -444,7 +442,6 @@ class GumbelAE(AE):
         assert M == 2, "M={}, not 2".format(M)
         return self.decode_downsample(np.stack((data,1-data),axis=-1),**kwargs)
 
-    
     def plot(self,data,path,verbose=False):
         self.load()
         x = data
@@ -487,7 +484,6 @@ class GumbelAE(AE):
         plot_grid(images, w=6, path=self.local(path), verbose=verbose)
         return _z, x, _z2, _z2r
 
-    
 class GumbelAE2(GumbelAE):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
