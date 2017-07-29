@@ -28,6 +28,7 @@ default_parameters = {
     'max_temperature' : 5.0,
     'min_temperature' : 0.7,
     'M'               : 2,
+    'optimizer'       : 'adam',
 }
 
 def select(data,num):
