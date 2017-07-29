@@ -497,50 +497,44 @@ class GumbelAE2(GumbelAE):
             Dense(data_dim*2),]
     
     def _build(self,input_shape):
-        data_dim = np.prod(input_shape)
-        print("input_shape:{}, flattened into {}".format(input_shape,data_dim))
-        M, N = self.parameters['M'], self.parameters['N']
-        x = Input(shape=input_shape)
-        x_flat = flatten(x)
-        pre_encoded = Sequential(self.build_encoder(input_shape))(x_flat)
-        gs = self.build_gs()
-        z = gs(pre_encoded)
-        z_flat = flatten(z)
+        data_dim = np.prod(input_shape) 
+        self.gs = self.build_gs()
+        self.gs2 = self.build_gs(N=data_dim)
+        self.gs3 = self.build_gs(N=data_dim)
+
+        _encoder = self.build_encoder(input_shape)
         _decoder = self.build_decoder(input_shape)
-        y_logit  = Sequential(_decoder)(z_flat)
-        gs2 = self.build_gs(N=data_dim)
-        y_cat = gs2(y_logit)
         
-        y = Reshape(input_shape)(Lambda(take_true)(y_cat))
-            
-        z2 = Input(shape=(N,M))
-        z2_flat = flatten(z2)
-        y2_logit = Sequential(_decoder)(z2_flat)
-        gs3 = self.build_gs(N=data_dim)
-        y2_cat = gs3(y2_logit)
-        y2 = Reshape(input_shape)(Lambda(take_true)(y2_cat))
-        
+        x = Input(shape=input_shape)
+        z = Sequential([flatten, *_encoder, self.gs])(x)
+        y = Sequential([flatten,
+                        *_decoder,
+                        self.gs2,
+                        Lambda(take_true),
+                        Reshape(input_shape)])(z)
+         
+        z2 = Input(shape=(self.parameters['N'], self.parameters['M']))
+        y2 = Sequential([flatten,
+                        *_decoder,
+                        self.gs3,
+                        Lambda(take_true),
+                        Reshape(input_shape)])(z2)
+
         def loss(x, y):
-            kl_loss = gs.loss() + gs2.loss()
+            kl_loss = self.gs.loss() + self.gs2.loss()
             reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
                                       K.reshape(y,(K.shape(x)[0],data_dim,)))
             return reconstruction_loss + kl_loss
 
-        self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
-        self.callbacks.append(LambdaCallback(on_epoch_end=gs2.cool))
-        self.callbacks.append(LambdaCallback(on_epoch_end=gs3.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.cool))
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.cool))
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs3.cool))
+        self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
         self.loss = loss
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.net = Model(x, y)
         self.autoencoder = self.net
-        y2_downsample = Sequential([
-            Reshape((*input_shape,1)),
-            MaxPooling2D((2,2))
-            ])(y2)
-        shape = K.int_shape(y2_downsample)[1:3]
-        self.decoder_downsample = Model(z2, Reshape(shape)(y2_downsample))
 
 class ConvolutionalGumbelAE(GumbelAE):
     def build_encoder(self,input_shape):
