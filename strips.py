@@ -127,10 +127,10 @@ def puzzle_mnist(width=3,height=3):
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
     ae = run(learn_flag,"samples/puzzle_mnist{}{}_{}/".format(width,height,encoder), train, test)
-    dump_autoencoding_image(ae,test,train)
+    dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs[:13000],lambda configs: p.states(width,height,configs),"states.csv")
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
 def puzzle_mnist_zdropout(width=3,height=3):
