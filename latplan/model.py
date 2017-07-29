@@ -607,6 +607,7 @@ class Discriminator(Network):
         N = input_shape[0] // 2
 
         actions_any = Sequential([
+            flatten,
             *[Sequential([Dense(self.parameters['layer'],activation=self.parameters['activation']),
                           BN(),
                           Dropout(self.parameters['dropout']),])
@@ -648,6 +649,94 @@ class Discriminator(Network):
         self.net.summary()
         return self
 
+class ConvolutionalDiscriminator(Discriminator):
+    def _build(self,input_shape):
+        x = Input(shape=input_shape)
+
+        actions_any = Sequential([
+            Convolution2D(self.parameters['clayer'], (3,3), padding='same', activation=self.parameters['activation']),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            MaxPooling2D((2,2)),
+            Convolution2D(self.parameters['clayer'], (3,3), padding='same', activation=self.parameters['activation']),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            MaxPooling2D((2,2)),
+            Convolution2D(self.parameters['clayer'], (3,3), padding='same', activation=self.parameters['activation']),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            MaxPooling2D((2,2)),
+            flatten,
+            Dense(self.parameters['layer'], activation=self.parameters['activation']),
+            # BN(),
+            # Dropout(self.parameters['dropout'])
+            # *[Sequential([,])
+            #   for i in range(self.parameters['num_layers']) ],
+            Dense(1,activation="sigmoid")
+        ])(x)
+        self._actions_any = Model(x, actions_any)
+
+        def loss(x,y):
+            return bce(x,y)
+        self.loss = loss
+        self.net = Model(x, actions_any)
+
+class SimpleCAE(AE):
+    def build_encoder(self,input_shape):
+        return [Reshape((*input_shape,1)),
+                GaussianNoise(0.1),
+                BN(),
+                Convolution2D(self.parameters['clayer'],(3,3),
+                              activation=self.parameters['activation'],border_mode='same', use_bias=False),
+                Dropout(self.parameters['dropout']),
+                BN(),
+                MaxPooling2D((2,2)),
+                Convolution2D(self.parameters['clayer'],(3,3),
+                              activation=self.parameters['activation'],border_mode='same', use_bias=False),
+                Dropout(self.parameters['dropout']),
+                BN(),
+                MaxPooling2D((2,2)),
+                Convolution2D(self.parameters['clayer'],(3,3),
+                              activation=self.parameters['activation'],border_mode='same', use_bias=False),
+                Dropout(self.parameters['dropout']),
+                BN(),
+                MaxPooling2D((2,2)),
+                flatten,]
+    
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        return [
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(data_dim, activation='sigmoid'),
+            Reshape(input_shape),]
+
+    def _build(self,input_shape):
+        _encoder = self.build_encoder(input_shape)
+        _decoder = self.build_decoder(input_shape)
+        
+        x = Input(shape=input_shape)
+        z = Sequential([flatten, *_encoder])(x)
+        y = Sequential(_decoder)(flatten(z))
+
+        z2 = Input(shape=K.int_shape(z)[1:])
+        y2 = Sequential(_decoder)(flatten(z2))
+        
+        self.loss = bce
+        self.encoder     = Model(x, z)
+        self.decoder     = Model(z2, y2)
+        self.net = Model(x, y)
+        self.autoencoder = self.net
+    def report(self,train_data,
+               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               test_data=None,
+               train_data_to=None,
+               test_data_to=None,):
+        pass
 
 # action autoencoder ################################################################
 
