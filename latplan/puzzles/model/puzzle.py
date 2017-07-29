@@ -8,8 +8,8 @@ setting = {
     'loader' : None,
 }
 
-def load(width,height):
-    if setting['panels'] is None:
+def load(width,height,force=False):
+    if setting['panels'] is None or force is True:
         setting['panels'] = setting['loader'](width,height)
 
 def generate(configs, width, height):
