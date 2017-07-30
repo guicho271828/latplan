@@ -134,6 +134,8 @@ def astar(init,goal,distance):
     best_f = -1
     best_h = math.inf
     while True:
+        if open_list.empty():
+            raise Exception("Open list is empty!")
         f, h, shash = open_list.get()
         state = close_list[shash]
         if state.status == CLOSED:
