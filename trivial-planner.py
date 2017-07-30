@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import default_networks, ActionAE, Discriminator
+from latplan.model import default_networks, ActionAE, Discriminator, combined_discriminate
 
 import keras.backend as K
 import tensorflow as tf
@@ -17,6 +17,9 @@ ad  = None
 sd  = None
 ad2  = None
 sd2  = None
+sd3 = None
+cae = None
+
 available_actions = None
 
 OPEN   = 0
@@ -109,7 +112,11 @@ def astar(init,goal,distance):
         reductions.append(len(t))
 
         # filtering based on State Discriminator
-        t = t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
+        # t = t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
+        # reductions.append(len(t))
+        
+        # filtering based on State Discriminator 3
+        t = t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.8)[0]]
         reductions.append(len(t))
         
         print("->".join(map(str,reductions)))
@@ -158,15 +165,17 @@ def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
 def main(network_dir, problem_dir):
-    global sae, oae, ad, ad2, sd, sd2, available_actions
+    global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
     
     from latplan.util import get_ae_type
     sae = default_networks[get_ae_type(network_dir)](network_dir).load()
     oae = ActionAE(sae.local("_aae/")).load()
     ad  = Discriminator(sae.local("_ad/")).load()
-    sd  = Discriminator(sae.local("_sd/")).load()
+    sd  = Discriminator(sae.local("_sd/")).load(allow_failure=True)
     ad2  = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
     sd2  = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
+    cae = default_networks['SimpleCAE'](sae.local("_cae/")).load()
+    sd3  = Discriminator(sae.local("_sd3/")).load()
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
