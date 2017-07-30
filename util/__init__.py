@@ -35,3 +35,14 @@ def prepare_binary_classification_data(real, fake):
 
     return train_in, train_out, test_in, test_out
 
+def set_difference(a, b):
+    import numpy as np
+    assert a.shape[1:] == b.shape[1:]
+    print((a.shape,a.dtype),(b.shape,b.dtype))
+    a = a.copy()
+    b = b.copy()
+    a_v = a.view([('', a.dtype)] * a.shape[1])
+    b_v = b.view([('', b.dtype)] * b.shape[1])
+    return np.setdiff1d(a_v, b_v).view(a.dtype).reshape((-1, a.shape[1]))
+
+    
