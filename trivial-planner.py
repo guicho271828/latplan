@@ -203,9 +203,8 @@ def main(network_dir, problem_dir):
     init_image = misc.imread(os.path.join(problem_dir,"init.png"))
     goal_image = misc.imread(os.path.join(problem_dir,"goal.png"))
     
-    init = sae.encode_binary(np.expand_dims(init_image,0))[0].astype(int)
-    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].astype(int)
-
+    init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
+    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
     plan = np.array(astar(init,goal,goalcount).path())
     print(plan)
     from latplan.util.plot import plot_grid
