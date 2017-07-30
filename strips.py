@@ -16,8 +16,6 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 
 encoder = 'fc'
 mode = 'learn_dump'
-modes = {'learn':True,'learn_dump':True,'dump':False}
-learn_flag = True
 
 # default values
 default_parameters = {
@@ -35,6 +33,8 @@ def select(data,num):
     return data[random.randint(0,data.shape[0],num)]
 
 def dump_autoencoding_image(ae,test,train):
+    if 'plot' not in mode:
+        return
     rz = np.random.randint(0,2,(6,ae.parameters['N']))
     ae.plot_autodecode(rz,"autodecoding_random.png",verbose=True)
     ae.plot(select(test,12),"autoencoding_test.png",verbose=True)
@@ -89,8 +89,8 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
 
 # note: lightsout has epoch 200
 
-def run(learn,path,train,test):
-    if learn:
+def run(path,train,test):
+    if 'learn' in mode:
         from latplan.util import curry
         ae, _, _ = grid_search(curry(nn_task, default_networks[encoder], path,
                                      train, train, test, test),
@@ -126,7 +126,7 @@ def puzzle_mnist(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/puzzle_mnist{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run("samples/puzzle_mnist{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_states(ae,configs[:13000],lambda configs: p.states(width,height,configs),"states.csv")
@@ -163,7 +163,7 @@ def puzzle_mnist_zdropout(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/puzzle_mnist_zdropout{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run("samples/puzzle_mnist_zdropout{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
@@ -181,7 +181,7 @@ def puzzle_lenna(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/puzzle_lenna{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run("samples/puzzle_lenna{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
@@ -197,7 +197,7 @@ def puzzle_mandrill(width=3,height=3):
     train       = p.states(width,height,train_c)
     test        = p.states(width,height,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/puzzle_mandrill{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run("samples/puzzle_mandrill{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
@@ -244,7 +244,7 @@ def hanoi(disks=5,towers=3):
     train       = p.states(disks,towers,train_c)
     test        = p.states(disks,towers,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/hanoi{}{}_{}/".format(disks,towers,encoder), train, test)
+    ae = run("samples/hanoi{}{}_{}/".format(disks,towers,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,lambda configs: p.transitions(disks,towers,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),)
@@ -276,7 +276,7 @@ def digital_lightsout(size=4):
     test        = p.states(size,test_c)
 
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/digital_lightsout_{}_{}/".format(size,encoder), train, test)
+    ae = run("samples/digital_lightsout_{}_{}/".format(size,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
@@ -300,7 +300,7 @@ def digital_lightsout_skewed(size=3):
     train       = p.states(size,train_c)
     test        = p.states(size,test_c)
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/digital_lightsout_skewed_{}_{}/".format(size,encoder), train, test)
+    ae = run("samples/digital_lightsout_skewed_{}_{}/".format(size,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs))
@@ -320,7 +320,7 @@ def counter_mnist():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/counter_mnist_{}/".format(encoder), train, test)
+    ae = run("samples/counter_mnist_{}/".format(encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
@@ -340,20 +340,19 @@ def counter_random_mnist():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run(learn_flag,"samples/counter_random_mnist_{}/".format(encoder), train, test)
+    ae = run("samples/counter_random_mnist_{}/".format(encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
 
 
 def main():
-    global encoder, mode, learn_flag
+    global encoder, mode
     import sys
     if len(sys.argv) == 1:
         print({ k for k in default_networks})
         gs = globals()
         print({ k for k in gs if hasattr(gs[k], '__call__')})
-        print({ k for k in modes})
     else:
         print('args:',sys.argv)
         sys.argv.pop(0)
@@ -362,9 +361,7 @@ def main():
             raise ValueError("invalid encoder!: {}".format(encoder))
         task = sys.argv.pop(0)
         mode = sys.argv.pop(0)
-        if mode not in modes:
-            raise ValueError("invalid mode!: {}".format(mode))
-        learn_flag = modes[mode]
+        
         globals()[task](*map(eval,sys.argv))
     
 if __name__ == '__main__':
