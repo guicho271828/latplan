@@ -9,20 +9,12 @@ trap exit SIGINT
 wait
 ./trivial-planner.py samples/puzzle_mnist33_fc/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
 
-./strips.py fc2 puzzle_mnist learn_dump 3 3
-./state_discriminator.py samples/puzzle_mnist33_fc2/ &
-./action_discriminator.py samples/puzzle_mnist33_fc2/ &
-./action_autoencoder.py samples/puzzle_mnist33_fc2/ &
+./strips.py conv puzzle_mnist learn_dump 3 3
+./state_discriminator3.py samples/puzzle_mnist33_conv/ learn &
+./action_discriminator.py samples/puzzle_mnist33_conv/ &
+./action_autoencoder.py samples/puzzle_mnist33_conv/ &
 wait
-./trivial-planner.py samples/puzzle_mnist33_fc2/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
-
-
-./strips.py infofc puzzle_mnist learn_dump 3 3
-./state_discriminator.py samples/puzzle_mnist33_infofc/ &
-./action_discriminator.py samples/puzzle_mnist33_infofc/ &
-./action_autoencoder.py samples/puzzle_mnist33_infofc/ &
-wait
-./trivial-planner.py samples/puzzle_mnist33_infofc/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
+./trivial-planner.py samples/puzzle_mnist33_conv/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
 
 ./strips.py fc puzzle_mandrill learn_dump 3 3
 ./strips.py fc puzzle_lenna learn_dump 3 3
