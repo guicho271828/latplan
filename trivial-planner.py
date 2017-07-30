@@ -101,22 +101,22 @@ def astar(init,goal,distance):
 
         t = y[:,N:]
 
-        if len(y) == 0:
-            return
-        # filtering based on SAE reconstruction
-        images  = sae.decode_binary(t).round()
-        images2 = sae.autoencode(images).round()
-        loss = absolute_error(images,images2,(1,2))
-        # print(loss)
-        t = t[np.where(loss < 0.01)].astype(int)
-        reductions.append(len(t))
+        # if len(y) == 0:
+        #     return
+        # # filtering based on SAE reconstruction
+        # images  = sae.decode_binary(t).round()
+        # images2 = sae.autoencode(images).round()
+        # loss = absolute_error(images,images2,(1,2))
+        # # print(loss)
+        # t = t[np.where(loss < 0.01)].astype(int)
+        # reductions.append(len(t))
 
         # filtering based on State Discriminator
         # t = t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
         # reductions.append(len(t))
         
         # filtering based on State Discriminator 3
-        t = t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.8)[0]]
+        t = t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.9)[0]]
         reductions.append(len(t))
         
         print("->".join(map(str,reductions)))
