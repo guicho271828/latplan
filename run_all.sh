@@ -3,7 +3,7 @@
 trap exit SIGINT
 
 ./strips.py fc puzzle_mnist learn_dump 3 3
-./state_discriminator.py samples/puzzle_mnist33_fc/ &
+./state_discriminator3.py samples/puzzle_mnist33_fc/ learn &
 ./action_discriminator.py samples/puzzle_mnist33_fc/ &
 ./action_autoencoder.py samples/puzzle_mnist33_fc/ &
 wait
