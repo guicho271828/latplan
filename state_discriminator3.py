@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import Discriminator, default_networks
+from latplan.model import Discriminator, default_networks, combined_discriminate
 from latplan.util        import curry, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
 
@@ -130,11 +130,6 @@ if __name__ == '__main__':
         cae           = default_networks['SimpleCAE'    ](sae.local("_cae")).load()
         discriminator = default_networks['Discriminator'](directory_sd).load()
 
-    def combined_discriminate(data,**kwargs):
-        images = sae.decode_binary(data,**kwargs)
-        data2  = cae.encode(images,**kwargs)
-        return discriminator.discriminate(data2,**kwargs)
-
     # test if the learned action is correct
 
     states_valid = np.loadtxt("{}/all_states.csv".format(directory),dtype=np.int8)
@@ -142,7 +137,7 @@ if __name__ == '__main__':
 
     from latplan.util.plot import plot_grid
 
-    type1_d = combined_discriminate(states_valid,batch_size=1000).round()
+    type1_d = combined_discriminate(states_valid,sae,cae,discriminator,batch_size=1000).round()
     type1_error = np.sum(1- type1_d)
     print("type1 error:",type1_error,"/",len(states_valid),
           "Error ratio:", type1_error/len(states_valid) * 100, "%")
@@ -152,7 +147,7 @@ if __name__ == '__main__':
 
     _,_,_,_, states_invalid = prepare(states_valid,sae)
     
-    type2_d = combined_discriminate(states_invalid,batch_size=1000).round()
+    type2_d = combined_discriminate(states_invalid,sae,cae,discriminator,batch_size=1000).round()
     type2_error = np.sum(type2_d)
     print("type2 error:",type2_error,"/",len(states_invalid),
           "Error ratio:", type2_error/len(states_invalid) * 100, "%")

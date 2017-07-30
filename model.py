@@ -747,6 +747,11 @@ class SimpleCAE(AE):
                test_data_to=None,):
         pass
 
+def combined_discriminate(data,sae,cae,discriminator,**kwargs):
+    images = sae.decode_binary(data,**kwargs)
+    data2  = cae.encode(images,**kwargs)
+    return discriminator.discriminate(data2,**kwargs)
+
 # action autoencoder ################################################################
 
 class ActionAE(AE):
