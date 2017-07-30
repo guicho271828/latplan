@@ -3,7 +3,7 @@ import warnings
 import config
 import numpy as np
 from latplan.model import Discriminator, default_networks
-from latplan.util        import curry
+from latplan.util        import curry, set_difference, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
@@ -14,33 +14,27 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 
 ################################################################
 
+inflation = 10
+
 def prepare(data):
     num = len(data)
     dim = data.shape[1]//2
     print(data.shape,num,dim)
     pre, suc = data[:,:dim], data[:,dim:]
-    
-    suc_invalid = np.copy(suc)
-    random.shuffle(suc_invalid)
-    data_invalid = np.concatenate((pre,suc_invalid),axis=1)
 
-    ai = data_invalid.view([('', data_invalid.dtype)] * 2*dim)
-    av = data.view        ([('', data.dtype)]         * 2*dim)
-    data_invalid = np.setdiff1d(ai, av).view(data_invalid.dtype).reshape((-1, 2*dim))
-    
-    inputs = np.concatenate((data,data_invalid),axis=0)
-    outputs = np.concatenate((np.ones((num,1)),np.zeros((len(data_invalid),1))),axis=0)
-    print(inputs.shape,outputs.shape)
-    io = np.concatenate((inputs,outputs),axis=1)
-    random.shuffle(io)
+    def generate():
+        suc_invalid = np.copy(suc)
+        random.shuffle(suc_invalid)
+        data_invalid = np.concatenate((pre,suc_invalid),axis=1)
+        data_invalid = set_difference(data_invalid, data)
+        return data_invalid
 
-    train_n = int(2*num*0.9)
-    train, test = io[:train_n], io[train_n:]
-    train_in, train_out = train[:,:dim*2], train[:,dim*2:]
-    test_in, test_out = test[:,:dim*2], test[:,dim*2:]
-    
-    return train_in, train_out, test_in, test_out
-    
+    data_valid   = np.repeat(data, inflation, axis=0)
+
+    data_invalid = np.cocnatenate(
+        tuple([ generate() for i in range(inflation) ]), axis=0)
+
+    train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
 
 # default values
 default_parameters = {
