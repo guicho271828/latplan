@@ -462,22 +462,31 @@ class GumbelAE(AE):
         self.load()
         z = data
         x = self.decode_binary(z)
+        
         z2 = self.encode_binary(x)
         z2r = z2.round()
         x2 = self.decode_binary(z2)
         x2r = self.decode_binary(z2r)
+
+        z3 = self.encode_binary(x2)
+        z3r = z3.round()
+        x3 = self.decode_binary(z3)
+        x3r = self.decode_binary(z3r)
+        
         M, N = self.parameters['M'], self.parameters['N']
 
         from .util.plot import plot_grid, squarify
-        _z = squarify(z)
-        _z2 = squarify(z2)
-        _z2r = _z2.round()
+        _z   = squarify(z)
+        _z2  = squarify(z2)
+        _z2r = squarify(z2r)
+        _z3  = squarify(z3)
+        _z3r = squarify(z3r)
         
         images = []
         from .util.plot import plot_grid
-        for seq in zip(_z, x, _z2, _z2r, x2, x2r):
+        for seq in zip(_z, x, _z2, _z2r, x2, x2r, _z3, _z3r, x3, x3r):
             images.extend(seq)
-        plot_grid(images, w=6, path=self.local(path), verbose=verbose)
+        plot_grid(images, w=10, path=self.local(path), verbose=verbose)
         return _z, x, _z2, _z2r
 
 class GumbelAE2(GumbelAE):
