@@ -210,7 +210,7 @@ def main(network_dir, problem_dir):
     plan = np.array(astar(init,goal,goalcount).path())
     print(plan)
     from latplan.util.plot import plot_grid
-    plot_grid(sae.decode_binary(plan),path=os.path.join(problem_dir,"path.png"),verbose=True)
+    plot_grid(sae.decode_binary(plan),path=os.path.join(problem_dir,"path_{}.png".format(get_ae_type(network_dir))),verbose=True)
 
 
 if __name__ == '__main__':
