@@ -3,7 +3,7 @@ import warnings
 import config
 import numpy as np
 from latplan.model import Discriminator, default_networks
-from latplan.util        import curry
+from latplan.util        import curry, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
@@ -22,24 +22,13 @@ def prepare(data_valid):
     print(data_valid.shape)
     batch = data_valid.shape[0]
     N = data_valid.shape[1]
-    data_invalid = np.random.randint(0,2,(batch*10,N),dtype=np.int8)
+    data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
     print(data_valid.shape,data_invalid.shape)
     ai = data_invalid.view([('', data_invalid.dtype)] * N)
     av = data_valid.view  ([('', data_valid.dtype)]   * N)
     data_invalid = np.setdiff1d(ai, av).view(data_valid.dtype).reshape((-1, N))
 
-    out_valid   = np.ones ((len(data_valid),1))
-    out_invalid = np.zeros((len(data_invalid),1))
-    data_out = np.concatenate((out_valid, out_invalid),axis=0)
-    data_in  = np.concatenate((data_valid, data_invalid),axis=0)
-
-    train_in  = data_in [:int(0.9*len(data_out))]
-    train_out = data_out[:int(0.9*len(data_out))]
-    test_in   = data_in [int(0.9*len(data_out)):]
-    test_out  = data_out[int(0.9*len(data_out)):]
-    
-    return train_in, train_out, test_in, test_out
-
+    return prepare_binary_classification_data(data_valid, data_invalid)
 
 # default values
 default_parameters = {
@@ -106,12 +95,23 @@ if __name__ == '__main__':
     states_invalid = np.setdiff1d(ai, av).view(states_invalid.dtype).reshape((-1, N))
     print("invalid",states_invalid.shape)
 
-    type1_error = np.sum(1- discriminator.discriminate(states_valid,batch_size=1000).round())
+    from latplan.util.plot import plot_grid
+
+    type1_d = discriminator.discriminate(states_valid,batch_size=1000).round()
+    type1_error = np.sum(1- type1_d)
     print("type1 error:",type1_error,"/",len(states_valid),
           "Error ratio:", type1_error/len(states_valid) * 100, "%")
-    type2_error = np.sum(discriminator.discriminate(states_invalid,batch_size=1000).round())
+    plot_grid(ae.decode_binary(states_valid[np.where(type1_d < 0.1)[0]])[:20],
+              path=discriminator.local("type1_error.png"))
+
+    type2_d = discriminator.discriminate(states_invalid,batch_size=1000).round()
+    type2_error = np.sum(type2_d)
     print("type2 error:",type2_error,"/",len(states_invalid),
           "Error ratio:", type2_error/len(states_invalid) * 100, "%")
+    plot_grid(ae.decode_binary(states_invalid[np.where(type2_d > 0.9)[0]])[:20],
+              path=discriminator.local("type2_error.png"))
+
+    
     
 """
 
