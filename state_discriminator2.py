@@ -20,6 +20,37 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 
 # negative examples (random bitstrings) are pre-filtered using SAE reconstruction
 
+def prepare(data_valid):
+    print(data_valid.shape)
+    batch = data_valid.shape[0]
+    N = data_valid.shape[1]
+
+    all_data_invalid = np.zeros((batch,N))
+    index = 0
+
+    while index < batch:
+        data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
+        print(data_valid.shape,data_invalid.shape)
+        ai = data_invalid.view([('', data_invalid.dtype)] * N)
+        av = data_valid.view  ([('', data_valid.dtype)]   * N)
+        data_invalid = np.setdiff1d(ai, av).view(data_valid.dtype).reshape((-1, N))
+
+        # filtering based on SAE reconstruction
+        images  = sae.decode_binary(data_invalid)
+        data2   = sae.encode_binary(images)
+        loss    = bce(data_invalid,data2,(1,))
+        # images2 = sae.decode_binary(data2)
+        # loss_images = bce(images,images2,(1,2))
+        # print(loss)
+        data_invalid = data_invalid[np.where(loss < 0.01)].astype(np.int8)
+
+    
+    print(len(data_valid),len(data_invalid),"problem: the number of generated invalid examples are too small!")
+
+    
+    return prepare_binary_classification_data(data_valid, data_invalid)
+
+
 # default values
 default_parameters = {
     'lr'              : 0.0001,
@@ -57,44 +88,8 @@ if __name__ == '__main__':
     directory = sys.argv[1]
     directory_sd = "{}/_sd2/".format(directory)
  
-    from latplan.util import get_ae_type
-    sae = default_networks[get_ae_type(directory)](directory).load()
-   
     data_valid = np.loadtxt("{}/states.csv".format(directory),dtype=np.int8)
-    print(data_valid.shape)
-    batch = data_valid.shape[0]
-    N = data_valid.shape[1]
-    
-    data_invalid = np.random.randint(0,2,(batch*2,N),dtype=np.int8)
-
-    # filtering based on SAE reconstruction
-    images  = sae.decode_binary(data_invalid)
-    data2   = sae.encode_binary(images)
-    loss    = bce(data_invalid,data2,(1,))
-    # images2 = sae.decode_binary(data2)
-    # loss_images = bce(images,images2,(1,2))
-    # print(loss)
-    data_invalid = data_invalid[np.where(loss < 0.01)].astype(np.int8)
-    print(len(data_valid),len(data_invalid),"problem: the number of generated invalid examples are too small!")
-
-    # remove valid states
-    ai = data_invalid.view([('', data_invalid.dtype)] * N)
-    av = data_valid.view  ([('', data_valid.dtype)]   * N)
-    data_invalid = np.setdiff1d(ai, av).view(data_valid.dtype).reshape((-1, N))
-    print(len(data_valid),len(data_invalid))
-
-    data_invalid = data_invalid[:len(data_valid)]
-
-    out_valid   = np.ones ((len(data_valid),1))
-    out_invalid = np.zeros((len(data_invalid),1))
-    data_out = np.concatenate((out_valid, out_invalid),axis=0)
-    data_in  = np.concatenate((data_valid, data_invalid),axis=0)
-
-    train_in  = data_in [:int(0.9*len(data_out))]
-    train_out = data_out[:int(0.9*len(data_out))]
-    test_in   = data_in [int(0.9*len(data_out)):]
-    test_out  = data_out[int(0.9*len(data_out)):]
-    print(len(train_in), len(train_out), len(test_in), len(test_out),)
+    train_in, train_out, test_in, test_out = prepare(data_valid)
 
     try:
         discriminator = Discriminator(directory_sd).load()
@@ -114,14 +109,34 @@ if __name__ == '__main__':
     # test if the learned action is correct
 
     states_valid = np.loadtxt("{}/all_states.csv".format(directory),dtype=int)
+    from latplan.util import get_ae_type
+    ae = default_networks[get_ae_type(directory)](directory).load()
+    N = ae.parameters["N"]
     print("valid",states_valid.shape)
 
-    type1_error = np.sum(1- discriminator.discriminate(states_valid,batch_size=1000).round())
+    from latplan.util.plot import plot_grid
+
+    type1_d = discriminator.discriminate(states_valid,batch_size=1000).round()
+    type1_error = np.sum(1- type1_d)
     print("type1 error:",type1_error,"/",len(states_valid),
           "Error ratio:", type1_error/len(states_valid) * 100, "%")
-    type2_error = np.sum(discriminator.discriminate(data_invalid,batch_size=1000).round())
-    print("type2 error:",type2_error,"/",len(data_invalid),
-          "Error ratio:", type2_error/len(data_invalid) * 100, "%")
+    plot_grid(ae.decode_binary(states_valid[np.where(type1_d < 0.1)[0]])[:20],
+              path=discriminator.local("type1_error.png"))
+
+
+    # # invalid states generated from random bits
+    # states_invalid = np.random.randint(0,2,(len(states_valid),N))
+    # ai = states_invalid.view([('', states_invalid.dtype)] * N)
+    # av = states_valid.view  ([('', states_valid.dtype)]   * N)
+    # states_invalid = np.setdiff1d(ai, av).view(states_invalid.dtype).reshape((-1, N))
+    # print("invalid",states_invalid.shape)
+    # 
+    # type2_d = discriminator.discriminate(states_invalid,batch_size=1000).round()
+    # type2_error = np.sum(type2_d)
+    # print("type2 error:",type2_error,"/",len(states_invalid),
+    #       "Error ratio:", type2_error/len(states_invalid) * 100, "%")
+    # plot_grid(ae.decode_binary(states_invalid[np.where(type2_d > 0.9)[0]])[:20],
+    #           path=discriminator.local("type2_error.png"))
     
 """
 
