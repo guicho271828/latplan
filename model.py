@@ -24,6 +24,7 @@ from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 
 debug = False
+# debug = True
 # utilities ###############################################################
 def wrap(x,y,**kwargs):
     "wrap arbitrary operation"
