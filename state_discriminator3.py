@@ -57,8 +57,14 @@ def prepare(data_valid, sae):
     data_invalid = regenerate_many(sae, data_invalid)
     
     from latplan.util import set_difference
-    data_invalid = set_difference(data_invalid, data_valid)
+    data_invalid = set_difference(data_invalid.round(), data_valid.round())
     print(batch, " -> ", len(data_invalid), "invalid examples")
+
+    # image_valid = sae.decode_binary(data_valid).reshape((batch, -1))
+    # image_invalid = sae.decode_binary(data_invalid).reshape((len(data_invalid), -1))
+    # image_invalid = set_difference(image_invalid.round(), image_valid.round())
+    # print(batch, " -> ", len(image_invalid), "invalid examples (rounded image)")
+    
     train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
     return train_in, train_out, test_in, test_out, data_invalid
 
