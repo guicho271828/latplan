@@ -65,7 +65,39 @@ class State(object):
             return [*self.parent.path(),self.state]
         else:
             return [self.state]
+
+def action_reconstruction_filtering(y):
+    # filtering based on OAE action reconstruction
+    action_reconstruction = oae.encode_action(y).round()
+    # loss = bce(available_actions, action_reconstruction, (1,2))
+    loss = absolute_error(available_actions, action_reconstruction, (1,2))
+    # print(loss)
+    return y[np.where(loss < 0.01)]
+
+def action_discriminator_filtering(y):
+    return y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
+
+action_pruning_methods = [action_reconstruction_filtering,
+                          action_discriminator_filtering]
+
+def state_reconstruction_filtering(t):
+    # filtering based on SAE reconstruction
+    images  = sae.decode_binary(t).round()
+    images2 = sae.autoencode(images).round()
+    loss = absolute_error(images,images2,(1,2))
+    # print(loss)
+    return t[np.where(loss < 0.01)].astype(int)
     
+def state_discriminator_filtering(t):
+    # filtering based on State Discriminator
+    return t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
+
+def state_discriminator3_filtering(t):
+    return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.9)[0]]
+
+state_pruning_methods = [state_reconstruction_filtering,
+                         state_discriminator3_filtering]
+
 def astar(init,goal,distance):
     
     N = len(init)
@@ -86,39 +118,20 @@ def astar(init,goal,distance):
         y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
                .round().astype(int)
         reductions.append(len(y))
+        for m in action_pruning_methods:
+            y = m(y)
+            reductions.append(len(y))
+            if len(y) == 0:
+                return
         
-        # filtering based on OAE action reconstruction
-        action_reconstruction = oae.encode_action(y).round()
-        # loss = bce(available_actions, action_reconstruction, (1,2))
-        loss = absolute_error(available_actions, action_reconstruction, (1,2))
-        # print(loss)
-        y = y[np.where(loss < 0.01)]
-        reductions.append(len(y))
-        
-        # filtering based on Action Discriminator
-        y = y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
-        reductions.append(len(y))
-
         t = y[:,N:]
 
-        # if len(y) == 0:
-        #     return
-        # # filtering based on SAE reconstruction
-        # images  = sae.decode_binary(t).round()
-        # images2 = sae.autoencode(images).round()
-        # loss = absolute_error(images,images2,(1,2))
-        # # print(loss)
-        # t = t[np.where(loss < 0.01)].astype(int)
-        # reductions.append(len(t))
-
-        # filtering based on State Discriminator
-        # t = t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
-        # reductions.append(len(t))
-        
-        # filtering based on State Discriminator 3
-        t = t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.9)[0]]
-        reductions.append(len(t))
-        
+        for m in state_pruning_methods:
+            t = m(t)
+            reductions.append(len(t)) 
+            if len(t) == 0:
+                return
+       
         print("->".join(map(str,reductions)))
         # for now, assume they are all valid
         for i,succ in enumerate(t):
