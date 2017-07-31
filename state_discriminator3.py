@@ -3,7 +3,7 @@ import warnings
 import config
 import numpy as np
 from latplan.model import Discriminator, default_networks, combined_discriminate, combined_discriminate2
-from latplan.util        import curry, prepare_binary_classification_data
+from latplan.util        import curry, prepare_binary_classification_data, set_difference
 from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
@@ -23,6 +23,7 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 threshold = 0.01
 rate_threshold = 0.99
 max_repeat = 50
+inflation = 10
 
 def bce(x,y,axis):
     return - (x * np.log(y+1e-5) + \
@@ -56,14 +57,26 @@ def prepare(data_valid, sae):
     print(data_valid.shape)
     batch = data_valid.shape[0]
     N = data_valid.shape[1]
-   
-    data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
-    data_invalid = regenerate_many(sae, data_invalid)
-    data_invalid = prune_unreconstructable(sae, data_invalid)
-    
-    from latplan.util import set_difference
-    data_invalid = set_difference(data_invalid.round(), data_valid.round())
-    print(batch, " -> ", len(data_invalid), "invalid examples")
+
+    def generate():
+        data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
+        data_invalid = regenerate_many(sae, data_invalid)
+        data_invalid = prune_unreconstructable(sae, data_invalid)
+        from latplan.util import set_difference
+        data_invalid = set_difference(data_invalid.round(), data_valid.round())
+        return data_invalid
+
+    data_invalid = generate()
+    for i in range(inflation-1):
+        data_invalid = np.concatenate((data_invalid,
+                                       set_difference(generate(),data_invalid))
+                                      , axis=0)
+        print(batch, "->", len(data_invalid), "invalid examples")
+
+    if inflation != 1:
+        real_inflation = len(data_invalid)//batch
+        data_invalid = data_invalid[:batch*real_inflation]
+        data_valid   = np.repeat(data_valid, real_inflation, axis=0)
 
     # image_valid = sae.decode_binary(data_valid).reshape((batch, -1))
     # image_invalid = sae.decode_binary(data_invalid).reshape((len(data_invalid), -1))
@@ -71,7 +84,7 @@ def prepare(data_valid, sae):
     # print(batch, " -> ", len(image_invalid), "invalid examples (rounded image)")
     
     train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
-    return train_in, train_out, test_in, test_out, data_invalid
+    return train_in, train_out, test_in, test_out, data_valid, data_invalid
 
 
 # default values
@@ -106,7 +119,7 @@ if __name__ == '__main__':
     if 'learn' in mode:
         data_valid = np.loadtxt(sae.local("states.csv"),dtype=np.int8)
 
-        train_in, train_out, test_in, test_out, data_invalid = prepare(data_valid,sae)
+        train_in, train_out, test_in, test_out, data_valid, data_invalid = prepare(data_valid,sae)
 
         sae.plot_autodecode(data_invalid[:8], "_sd3/fake_samples.png")
 
@@ -127,7 +140,7 @@ if __name__ == '__main__':
                                       'batch_size' :[4000],
                                       'full_epoch' :[1000],
                                       'activation' :['relu'],
-                                      'epoch'      :[300],
+                                      'epoch'      :[30],
                                       'lr'         :[0.001],
                                   })
 
@@ -171,7 +184,20 @@ if __name__ == '__main__':
               w=20,
               path=discriminator.local("type1_error.png"))
 
-    _,_,_,_, states_invalid = prepare(states_valid,sae)
+    inflation = 1
+    _,_,_,_, _, states_invalid = prepare(states_valid,sae)
+
+    if 'check' in mode:
+        import latplan.puzzles.puzzle_mnist as p
+        p.setup()
+        import latplan.puzzles.model.puzzle as m
+        # m.validate_states(sae.decode_binary(states_valid),3,3)
+        is_invalid = m.validate_states(sae.decode_binary(states_invalid),3,3)
+        states_invalid = states_invalid[np.logical_not(is_invalid)]
+
+        plot_grid(sae.decode_binary(states_invalid)[:120],
+                  w=20,
+                  path=discriminator.local("surely_invalid_states.png"))
     
     if 'conv' in aetype:
         type2_d = combined_discriminate2(states_invalid,sae,discriminator,batch_size=1000).round()
