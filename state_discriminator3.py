@@ -46,7 +46,11 @@ def regenerate_many(sae, data):
         if loss < threshold:
             break
     return data.round().astype(np.int8)
-    
+
+def prune_unreconstructable(sae,data):
+    rec = regenerate(sae,data)
+    loss = bce(data,rec,(1,))
+    return data[np.where(loss < 0.01)[0]]
 
 def prepare(data_valid, sae):
     print(data_valid.shape)
@@ -55,6 +59,7 @@ def prepare(data_valid, sae):
    
     data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
     data_invalid = regenerate_many(sae, data_invalid)
+    data_invalid = prune_unreconstructable(sae, data_invalid)
     
     from latplan.util import set_difference
     data_invalid = set_difference(data_invalid.round(), data_valid.round())
