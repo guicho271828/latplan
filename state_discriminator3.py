@@ -100,7 +100,8 @@ if __name__ == '__main__':
     subprocess.call(["mkdir","-p",directory_sd])
     
     from latplan.util import get_ae_type
-    sae = default_networks[get_ae_type(directory)](directory).load()
+    aetype = get_ae_type(directory)
+    sae = default_networks[aetype](directory).load()
  
     if 'learn' in mode:
         data_valid = np.loadtxt(sae.local("states.csv"),dtype=np.int8)
@@ -110,23 +111,27 @@ if __name__ == '__main__':
         sae.plot_autodecode(data_invalid[:8], "_sd3/fake_samples.png")
 
         train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
-        cae,_,_ = grid_search(curry(nn_task, default_networks['SimpleCAE'],
-                                    sae.local("_cae"),
-                                    train_image, train_image, test_image, test_image),
-                              default_parameters,
-                              {
-                                  'num_layers' :[2],
-                                  'layer'      :[500],
-                                  'clayer'     :[16],
-                                  'dropout'    :[0.4],
-                                  'batch_size' :[4000],
-                                  'full_epoch' :[1000],
-                                  'activation' :['relu'],
-                                  'epoch'      :[300],
-                                  'lr'         :[0.001],
-                              })
+        
+        if 'conv' in aetype:
+            train_in2, test_in2 = sae.get_features(train_image), sae.get_features(test_image)
+        else:
+            cae,_,_ = grid_search(curry(nn_task, default_networks['SimpleCAE'],
+                                        sae.local("_cae"),
+                                        train_image, train_image, test_image, test_image),
+                                  default_parameters,
+                                  {
+                                      'num_layers' :[2],
+                                      'layer'      :[500],
+                                      'clayer'     :[16],
+                                      'dropout'    :[0.4],
+                                      'batch_size' :[4000],
+                                      'full_epoch' :[1000],
+                                      'activation' :['relu'],
+                                      'epoch'      :[300],
+                                      'lr'         :[0.001],
+                                  })
 
-        train_in2, test_in2 = cae.encode(train_image), cae.encode(test_image)
+            train_in2, test_in2 = cae.encode(train_image), cae.encode(test_image)
         
         discriminator,_,_ = grid_search(curry(nn_task, Discriminator, directory_sd,
                                               train_in2, train_out, test_in2, test_out,),
@@ -144,7 +149,8 @@ if __name__ == '__main__':
                                         })
         
     else:
-        cae           = default_networks['SimpleCAE'    ](sae.local("_cae")).load()
+        if 'conv' not in aetype:
+            cae           = default_networks['SimpleCAE'    ](sae.local("_cae")).load()
         discriminator = default_networks['Discriminator'](directory_sd).load()
 
     # test if the learned action is correct
@@ -154,7 +160,10 @@ if __name__ == '__main__':
 
     from latplan.util.plot import plot_grid
 
-    type1_d = combined_discriminate(states_valid,sae,cae,discriminator,batch_size=1000).round()
+    if 'conv' in aetype:
+        type1_d = combined_discriminate2(states_valid,sae,discriminator,batch_size=1000).round()
+    else:
+        type1_d = combined_discriminate(states_valid,sae,cae,discriminator,batch_size=1000).round()
     type1_error = np.sum(1- type1_d)
     print("type1 error:",type1_error,"/",len(states_valid),
           "Error ratio:", type1_error/len(states_valid) * 100, "%")
@@ -164,7 +173,10 @@ if __name__ == '__main__':
 
     _,_,_,_, states_invalid = prepare(states_valid,sae)
     
-    type2_d = combined_discriminate(states_invalid,sae,cae,discriminator,batch_size=1000).round()
+    if 'conv' in aetype:
+        type2_d = combined_discriminate2(states_invalid,sae,discriminator,batch_size=1000).round()
+    else:
+        type2_d = combined_discriminate(states_invalid,sae,cae,discriminator,batch_size=1000).round()
     type2_error = np.sum(type2_d)
     print("type2 error:",type2_error,"/",len(states_invalid),
           "Error ratio:", type2_error/len(states_invalid) * 100, "%")
