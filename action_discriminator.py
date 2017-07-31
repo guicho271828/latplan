@@ -31,10 +31,10 @@ def prepare(data):
 
     data_valid   = np.repeat(data, inflation, axis=0)
 
-    data_invalid = np.cocnatenate(
+    data_invalid = np.concatenate(
         tuple([ generate() for i in range(inflation) ]), axis=0)
 
-    train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
+    return prepare_binary_classification_data(data_valid, data_invalid)
 
 # default values
 default_parameters = {
@@ -99,9 +99,7 @@ if __name__ == '__main__':
 
     # invalid actions generated from random bits
     actions_invalid = np.random.randint(0,2,(len(actions_valid),2*N))
-    ai = actions_invalid.view([('', actions_invalid.dtype)] * 2*N)
-    av = actions_valid.view  ([('', actions_valid.dtype)]   * 2*N)
-    actions_invalid = np.setdiff1d(ai, av).view(actions_invalid.dtype).reshape((-1, 2*N))
+    actions_invalid = set_difference(actions_invalid, actions_valid)
     print("invalid",actions_invalid.shape)
     discriminator.report(actions_invalid,train_data_to=np.zeros((len(actions_invalid),)))
 
@@ -110,9 +108,7 @@ if __name__ == '__main__':
     suc_invalid = np.copy(suc)
     random.shuffle(suc_invalid)
     actions_invalid2 = np.concatenate((pre,suc_invalid),axis=1)
-    ai = actions_invalid2.view([('', actions_invalid2.dtype)] * 2*N)
-    av = actions_valid.view  ([('', actions_valid.dtype)]   * 2*N)
-    actions_invalid2 = np.setdiff1d(ai, av).view(actions_invalid2.dtype).reshape((-1, 2*N))
+    actions_invalid2 = set_difference(actions_invalid2, actions_valid)
     print("invalid2",actions_invalid2.shape)
     discriminator.report(actions_invalid2,train_data_to=np.zeros((len(actions_invalid2),)))
 
