@@ -418,6 +418,7 @@ class GumbelAE(AE):
             ])(y2)
         shape = K.int_shape(y2_downsample)[1:3]
         self.decoder_downsample = Model(z2, Reshape(shape)(y2_downsample))
+        self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
         
     def encode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
@@ -437,6 +438,9 @@ class GumbelAE(AE):
         M, N = self.parameters['M'], self.parameters['N']
         assert M == 2, "M={}, not 2".format(M)
         return self.decode_downsample(np.stack((data,1-data),axis=-1),**kwargs)
+
+    def get_features(self, data, **kwargs):
+        return self.features.predict(data, **kwargs)
 
     def plot(self,data,path,verbose=False):
         self.load()
@@ -561,10 +565,12 @@ class ConvolutionalGumbelAE(GumbelAE):
                 BN(),
                 MaxPooling2D((2,2)),
                 flatten,
-                Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['N']*self.parameters['M']),]
+                Sequential([
+                    Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
+                    BN(),
+                    Dropout(self.parameters['dropout']),
+                    Dense(self.parameters['N']*self.parameters['M']),
+                ])]
     
 class Convolutional2GumbelAE(ConvolutionalGumbelAE):
     def build_decoder(self,input_shape):
@@ -750,6 +756,11 @@ class SimpleCAE(AE):
 def combined_discriminate(data,sae,cae,discriminator,**kwargs):
     images = sae.decode_binary(data,**kwargs)
     data2  = cae.encode(images,**kwargs)
+    return discriminator.discriminate(data2,**kwargs)
+
+def combined_discriminate2(data,sae,discriminator,**kwargs):
+    images = sae.decode_binary(data,**kwargs)
+    data2  = sae.get_features(images,**kwargs)
     return discriminator.discriminate(data2,**kwargs)
 
 # action autoencoder ################################################################

@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import Discriminator, default_networks, combined_discriminate
+from latplan.model import Discriminator, default_networks, combined_discriminate, combined_discriminate2
 from latplan.util        import curry, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
 
