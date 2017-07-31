@@ -28,28 +28,34 @@ def bce(x,y,axis):
     return - (x * np.log(y+1e-5) + \
               (1-x) * np.log(1-y+1e-5)).mean(axis=axis)
 
-def prepare(data_valid, ae):
-    print(data_valid.shape)
-    batch = data_valid.shape[0]
-    N = data_valid.shape[1]
+def regenerate(sae, data):
+    images           = sae.decode_binary(data,batch_size=2000)
+    data_invalid_rec = sae.encode_binary(images,batch_size=2000)
+    return data_invalid_rec
 
-    data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
-
+def regenerate_many(sae, data):
     loss = 1000000000
     for i in range(max_repeat):
-        images           = ae.decode_binary(data_invalid,batch_size=2000)
-        data_invalid_rec = ae.encode_binary(images,batch_size=2000)
-
+        data_rec = regenerate(sae, data)
         prev_loss = loss
-        loss    = bce(data_invalid,data_invalid_rec,(0,1,))
+        loss    = bce(data,data_rec,(0,1,))
         print(loss, loss / prev_loss)
-        data_invalid = data_invalid_rec
+        data = data_rec
         if loss / prev_loss > rate_threshold:
             break
         if loss < threshold:
             break
+    return data.round().astype(np.int8)
+    
 
-    data_invalid = data_invalid.round().astype(np.int8)
+def prepare(data_valid, sae):
+    print(data_valid.shape)
+    batch = data_valid.shape[0]
+    N = data_valid.shape[1]
+   
+    data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
+    data_invalid = regenerate_many(sae, data_invalid)
+    
     from latplan.util import set_difference
     data_invalid = set_difference(data_invalid, data_valid)
     print(batch, " -> ", len(data_invalid), "invalid examples")
