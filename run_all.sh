@@ -8,6 +8,7 @@ trap exit SIGINT
 ./action_autoencoder.py samples/puzzle_mnist33_fc/ &
 wait
 ./trivial-planner.py samples/puzzle_mnist33_fc/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
+parallel --timeout 45 --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist33_fc/ {1} > {1}/fc.log" ::: trivial-planner-instances/latplan.puzzles.puzzle_mnist/*
 
 ./strips.py conv puzzle_mnist learn_plot_dump 3 3
 ./state_discriminator3.py samples/puzzle_mnist33_conv/ learn &
@@ -16,7 +17,7 @@ wait
 wait
 ./trivial-planner.py samples/puzzle_mnist33_conv/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
 
-parallel --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist33_conv/ {1} > {1}/conv.log" ::: trivial-planner-instances/latplan.puzzles.puzzle_mnist/*
+parallel --timeout 45 --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist33_conv/ {1} > {1}/conv.log" ::: trivial-planner-instances/latplan.puzzles.puzzle_mnist/*
 
 ./strips.py fc puzzle_mandrill learn_plot_dump 3 3
 ./strips.py fc puzzle_lenna learn_plot_dump 3 3
