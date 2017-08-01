@@ -2,7 +2,8 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import default_networks, ActionAE, Discriminator, combined_discriminate
+from latplan.model import default_networks, ActionAE, Discriminator, combined_discriminate, combined_discriminate2
+from latplan.util import get_ae_type
 
 import keras.backend as K
 import tensorflow as tf
@@ -93,7 +94,10 @@ def state_discriminator_filtering(t):
     return t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
 
 def state_discriminator3_filtering(t):
-    return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.9)[0]]
+    if "conv" in get_ae_type(sae.path):
+        return t[np.where(np.squeeze(combined_discriminate2(t,sae,sd3)) > 0.9)[0]]
+    else:
+        return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.9)[0]]
 
 state_pruning_methods = [state_reconstruction_filtering,
                          state_discriminator3_filtering]
@@ -182,14 +186,13 @@ def goalcount(state,goal):
 def main(network_dir, problem_dir):
     global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
     
-    from latplan.util import get_ae_type
     sae = default_networks[get_ae_type(network_dir)](network_dir).load()
     oae = ActionAE(sae.local("_aae/")).load()
     ad  = Discriminator(sae.local("_ad/")).load()
     sd  = Discriminator(sae.local("_sd/")).load(allow_failure=True)
     ad2  = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
     sd2  = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
-    cae = default_networks['SimpleCAE'](sae.local("_cae/")).load()
+    cae = default_networks['SimpleCAE'](sae.local("_cae/")).load(allow_failure=True)
     sd3  = Discriminator(sae.local("_sd3/")).load()
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
