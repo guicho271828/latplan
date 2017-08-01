@@ -64,43 +64,39 @@ if __name__ == '__main__':
     import numpy.random as random
 
     import sys
-    if len(sys.argv) == 1:
-        sys.exit("{} [directory]".format(sys.argv[0]))
+    if len(sys.argv) != 3:
+        sys.exit("{} [directory] [mode]".format(sys.argv[0]))
 
     directory = sys.argv[1]
     directory_ad = "{}/_ad/".format(directory)
-    
-    data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
-    train_in, train_out, test_in, test_out = prepare(data)
-    
+    mode = sys.argv[2]
+
     try:
-        discriminator = Discriminator(directory_ad).load()
-    except (FileNotFoundError, ValueError):
+        if 'learn' in mode:
+            raise Exception('learn')
+        discriminator = PUDiscriminator(directory_ad).load()
+    except:
+        data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
+        train_in, train_out, test_in, test_out = prepare(data)
+
         discriminator,_,_ = grid_search(curry(nn_task, Discriminator, directory_ad,
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         parameters)
-
-    show_n = 30
     
-    for y,_y in zip(discriminator.discriminate(test_in)[:show_n],
-                    test_out[:show_n]):
-        print(y,_y)
-
     # test if the learned action is correct
 
-    actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=int)
+    actions_valid = np.loadtxt("{}/actions.csv".format(directory),dtype=int)
+    # actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=int)
     
-    from latplan.util import get_ae_type
-    ae = default_networks[get_ae_type(directory)](directory).load()
-    N = ae.parameters["N"]
+    N = actions_valid.shape[1] // 2
     print("valid",actions_valid.shape)
-    discriminator.report(actions_valid,  train_data_to=np.ones((len(actions_valid),)))
+    # discriminator.report(actions_valid,  train_data_to=np.ones((len(actions_valid),)))
 
     # invalid actions generated from random bits
     actions_invalid = np.random.randint(0,2,(len(actions_valid),2*N))
     actions_invalid = set_difference(actions_invalid, actions_valid)
-    print("invalid",actions_invalid.shape)
+    print("invalid",actions_invalid.shape, "--- invalid actions generated from random bits")
     discriminator.report(actions_invalid,train_data_to=np.zeros((len(actions_invalid),)))
 
     # invalid actions generated from swapping successors; predecessors/successors are both correct states
@@ -109,8 +105,19 @@ if __name__ == '__main__':
     random.shuffle(suc_invalid)
     actions_invalid2 = np.concatenate((pre,suc_invalid),axis=1)
     actions_invalid2 = set_difference(actions_invalid2, actions_valid)
-    print("invalid2",actions_invalid2.shape)
+    print("invalid2",actions_invalid2.shape, "--- invalid actions generated from swapping successors; predecessors/successors are both correct states")
     discriminator.report(actions_invalid2,train_data_to=np.zeros((len(actions_invalid2),)))
+
+    if 'check' in mode:
+        from latplan.util import get_ae_type
+        ae = default_networks[get_ae_type(directory)](directory).load()
+        pre_images = ae.decode_binary(pre,batch_size=1000)
+        suc_images = ae.decode_binary(suc_invalid,batch_size=1000)
+        import latplan.puzzles.puzzle_mnist as p
+        p.setup()
+        import latplan.puzzles.model.puzzle as m
+        validation = m.validate_transitions([pre_images, suc_images], 3,3)
+        print(np.count_nonzero(validation),"valid actions in invalid2")
 
     actions_invalid3 = actions_invalid.copy()
     actions_invalid3[:,:N] = actions_valid[:len(actions_invalid),:N]
