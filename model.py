@@ -719,14 +719,18 @@ class PUDiscriminator(Discriminator):
               batch_size=1000,
               save=True,
               train_data_to=None,
+              test_data=None,
+              test_data_to=None,
               **kwargs):
         super().train(train_data,
                       batch_size=batch_size,
                       train_data_to=train_data_to,
+                      test_data=test_data,
+                      test_data_to=test_data_to,
                       save=False,
                       **kwargs)
         
-        s = self.net.predict(train_data[train_data_to == 1],batch_size=batch_size)
+        s = self.net.predict(test_data[test_data_to == 1],batch_size=batch_size)
         c = s.mean()
         print("PU constant c =", c)
         K.set_value(self.c, c)
