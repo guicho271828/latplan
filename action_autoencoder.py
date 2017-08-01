@@ -34,6 +34,7 @@ if __name__ == '__main__':
 
     directory = sys.argv[1]
     directory_aae = "{}/_aae/".format(directory)
+    mode = sys.argv[2]
     
     data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
     
@@ -55,8 +56,10 @@ if __name__ == '__main__':
     }
     print(data.shape)
     try:
+        if 'learn' in mode:
+            raise Exception('learn')
         aae = ActionAE(directory_aae).load()
-    except (FileNotFoundError, ValueError):
+    except:
         aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae,
                                     data[:12000], data[:12000],
                                     data[12000:], data[12000:],),
