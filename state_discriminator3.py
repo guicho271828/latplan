@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import Discriminator, default_networks, combined_discriminate, combined_discriminate2
+from latplan.model import PUDiscriminator, default_networks, combined_discriminate, combined_discriminate2
 from latplan.util        import curry, prepare_binary_classification_data, set_difference
 from latplan.util.tuning import grid_search, nn_task
 
@@ -23,7 +23,7 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 threshold = 0.01
 rate_threshold = 0.99
 max_repeat = 50
-inflation = 10
+inflation = 1
 
 def bce(x,y,axis):
     return - (x * np.log(y+1e-5) + \
@@ -146,7 +146,7 @@ if __name__ == '__main__':
 
             train_in2, test_in2 = cae.encode(train_image), cae.encode(test_image)
         
-        discriminator,_,_ = grid_search(curry(nn_task, Discriminator, directory_sd,
+        discriminator,_,_ = grid_search(curry(nn_task, PUDiscriminator, directory_sd,
                                               train_in2, train_out, test_in2, test_out,),
                                         default_parameters,
                                         {
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     else:
         if 'conv' not in aetype:
             cae           = default_networks['SimpleCAE'    ](sae.local("_cae")).load()
-        discriminator = default_networks['Discriminator'](directory_sd).load()
+        discriminator = default_networks['PUDiscriminator'](directory_sd).load()
 
     # test if the learned action is correct
 
