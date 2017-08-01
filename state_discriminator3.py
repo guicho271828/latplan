@@ -150,15 +150,15 @@ if __name__ == '__main__':
                                               train_in2, train_out, test_in2, test_out,),
                                         default_parameters,
                                         {
-                                            'num_layers' :[2],
-                                            'layer'      :[500],
+                                            'num_layers' :[1],
+                                            'layer'      :[50],
                                             'clayer'     :[16],
-                                            'dropout'    :[0.4],
-                                            'batch_size' :[4000],
+                                            'dropout'    :[0.8],
+                                            'batch_size' :[1000],
                                             'full_epoch' :[1000],
                                             'activation' :['relu'],
-                                            'epoch'      :[300],
-                                            'lr'         :[0.001],
+                                            'epoch'      :[1000],
+                                            'lr'         :[0.00005],
                                         })
         
     else:
