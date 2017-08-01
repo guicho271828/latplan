@@ -627,8 +627,8 @@ class Discriminator(Network):
 
         y = Sequential([
             flatten,
-            *[Sequential([Dense(self.parameters['layer'],activation=self.parameters['activation']),
-                          BN(),
+            *[Sequential([BN(),
+                          Dense(self.parameters['layer'],activation=self.parameters['activation']),
                           Dropout(self.parameters['dropout']),])
               for i in range(self.parameters['num_layers']) ],
             Dense(1,activation="sigmoid")
