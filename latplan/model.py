@@ -625,7 +625,7 @@ class Discriminator(Network):
         x = Input(shape=input_shape)
         N = input_shape[0] // 2
 
-        actions_any = Sequential([
+        y = Sequential([
             flatten,
             *[Sequential([Dense(self.parameters['layer'],activation=self.parameters['activation']),
                           BN(),
@@ -633,12 +633,9 @@ class Discriminator(Network):
               for i in range(self.parameters['num_layers']) ],
             Dense(1,activation="sigmoid")
         ])(x)
-        self._actions_any = Model(x, actions_any)
 
-        def loss(x,y):
-            return bce(x,y)
-        self.loss = loss
-        self.net = Model(x, actions_any)
+        self.loss = bce
+        self.net = Model(x, y)
         
     def _save(self):
         super()._save()
@@ -657,13 +654,13 @@ class Discriminator(Network):
             print(msg.format(fn(train_data,train_data_to)))
             if test_data is not None:
                 print((msg+" (validation)").format(fn(test_data,test_data_to)))
-        self.net.compile(optimizer=optimizer, loss=mae)
-        test_both("MAE: {}",
+        self.net.compile(optimizer=optimizer, loss=bce)
+        test_both("BCE: {}",
                   lambda data, data_to: self.net.evaluate(data,data_to,**opts))
         return self
     def discriminate(self,data,**kwargs):
         self.load()
-        return self._actions_any.predict(data,**kwargs)
+        return self.net.predict(data,**kwargs)
     def summary(self,verbose=False):
         self.net.summary()
         return self
@@ -672,7 +669,7 @@ class ConvolutionalDiscriminator(Discriminator):
     def _build(self,input_shape):
         x = Input(shape=input_shape)
 
-        actions_any = Sequential([
+        y = Sequential([
             Convolution2D(self.parameters['clayer'], (3,3), padding='same', activation=self.parameters['activation']),
             BN(),
             Dropout(self.parameters['dropout']),
@@ -693,12 +690,11 @@ class ConvolutionalDiscriminator(Discriminator):
             #   for i in range(self.parameters['num_layers']) ],
             Dense(1,activation="sigmoid")
         ])(x)
-        self._actions_any = Model(x, actions_any)
 
         def loss(x,y):
             return bce(x,y)
         self.loss = loss
-        self.net = Model(x, actions_any)
+        self.net = Model(x, y)
 
 class SimpleCAE(AE):
     def build_encoder(self,input_shape):
