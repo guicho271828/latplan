@@ -696,6 +696,45 @@ class ConvolutionalDiscriminator(Discriminator):
         self.loss = loss
         self.net = Model(x, y)
 
+class PUDiscriminator(Discriminator):
+    def _load(self):
+        super()._load()
+        K.set_value(self.c, self.parameters['c'])
+
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        c = K.variable(0, name="c")
+        self.c = c
+        
+        x = Input(shape=input_shape)
+        s = self.net(x)
+        y2 = wrap(s, s / c)
+        self.pu = Model(x,y2)
+    
+    def discriminate(self,data,**kwargs):
+        self.load()
+        return self.pu.predict(data,**kwargs)
+    
+    def train(self,train_data,
+              batch_size=1000,
+              save=True,
+              train_data_to=None,
+              **kwargs):
+        super().train(train_data,
+                      batch_size=batch_size,
+                      train_data_to=train_data_to,
+                      save=False,
+                      **kwargs)
+        
+        s = self.net.predict(train_data[train_data_to == 1],batch_size=batch_size)
+        c = s.mean()
+        print("PU constant c =", c)
+        K.set_value(self.c, c)
+        self.parameters['c'] = float(c)
+        # prevent saving before setting c
+        if save:
+            self.save()
+    
 class SimpleCAE(AE):
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
