@@ -21,14 +21,16 @@ def random_walk(init_c,length,successor_fn):
 
 def puzzle_mnist(steps, N):
     import latplan.puzzles.puzzle_mnist as p
-    for i in range(N):
-        print(random_walk([0,1,2,3,4,5,6,7,8], steps, lambda config: p.successors(config,3,3)))
+    return [
+        random_walk([0,1,2,3,4,5,6,7,8], steps, lambda config: p.successors(config,3,3))
+        for i in range(N)
+    ]
 
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 4:
-        print("Usage : ", sys.argv[0], puzzle_["mnist"], "steps", "N")
+        print("Usage : ", sys.argv[0], "puzzle_mnist", "steps", "N")
     else:
         print('args:',sys.argv)
         task = sys.argv[1]
-        globals()[task](*(map(eval,sys.argv[2:])))
+        [ print(c) for c in eval(task)(*(map(eval,sys.argv[2:]))) ]

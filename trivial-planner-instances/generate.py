@@ -39,6 +39,10 @@ def run_puzzle():
         convert([3, 0, 2, 6, 1, 5, 7, 4, 8]),
         convert([5, 1, 2, 0, 7, 4, 3, 6, 8]),
     ]
+
+    from latplan.randomwalk_instance_generator import puzzle_mnist
+    ics = [ convert(c) for c in puzzle_mnist(4, 100) ]
+    
     gcs = [convert([0,1,2,3,4,5,6,7,8])]
 
     for i,init in enumerate(p.generate(ics,size,size)):
