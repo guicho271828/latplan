@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import Discriminator, default_networks
+from latplan.model import PUDiscriminator, default_networks
 from latplan.util        import curry, set_difference, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
 
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
         train_in, train_out, test_in, test_out = prepare(data)
 
-        discriminator,_,_ = grid_search(curry(nn_task, Discriminator, directory_ad,
+        discriminator,_,_ = grid_search(curry(nn_task, PUDiscriminator, directory_ad,
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         parameters)
