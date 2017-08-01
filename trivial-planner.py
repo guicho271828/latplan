@@ -178,7 +178,79 @@ def astar(init,goal,distance):
                 c.status = OPEN
                 c.h      = heuristic(c.state)
                 open_list.put((c.g+c.h, c.h, c.hash()))
-            
+
+def gbfs(init,goal,distance):
+    
+    N = len(init)
+    heuristic = lambda x: distance(x, goal)
+    
+    _init = State(init, g=0, h=heuristic(init))
+    
+    import queue
+    open_list = queue.PriorityQueue()
+    open_list.put((_init.h, _init.hash()))
+
+    close_list = {}
+    close_list[_init.hash()] = _init
+    
+    def successors(state):
+        reductions = []
+        s = state.state
+        y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
+               .round().astype(int)
+        reductions.append(len(y))
+        for m in action_pruning_methods:
+            y = m(y)
+            reductions.append(len(y))
+            if len(y) == 0:
+                return
+        
+        t = y[:,N:]
+
+        for m in state_pruning_methods:
+            t = m(t)
+            reductions.append(len(t)) 
+            if len(t) == 0:
+                return
+       
+        print("->".join(map(str,reductions)))
+        # for now, assume they are all valid
+        for i,succ in enumerate(t):
+            # print(succ)
+            hash_value = state_hash(succ)
+            if hash_value in close_list:
+                yield close_list[hash_value]
+            else:
+                _succ = State(succ)
+                close_list[hash_value] = _succ
+                yield _succ
+
+    best_h = math.inf
+    while True:
+        if open_list.empty():
+            raise Exception("Open list is empty!")
+        h, shash = open_list.get()
+        state = close_list[shash]
+        if state.status == CLOSED:
+            continue
+        
+        state.status = CLOSED
+
+        if best_h > h:
+            best_h = h
+            print("new h = {}".format(h))
+
+        if (state.state == goal).all():
+            return state
+
+        for c in successors(state):
+            new_g = state.g + 1
+            if c.g > new_g:
+                c.g      = new_g
+                c.parent = state
+                c.status = OPEN
+                c.h      = heuristic(c.state)
+                open_list.put((c.h, c.hash()))
         
 def goalcount(state,goal):
     return np.abs(state-goal).sum()
@@ -217,7 +289,8 @@ def main(network_dir, problem_dir):
     
     init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
     goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
-    plan = np.array(astar(init,goal,goalcount).path())
+    # plan = np.array(astar(init,goal,goalcount).path())
+    plan = np.array(gbfs(init,goal,goalcount).path())
     print(plan)
     from latplan.util.plot import plot_grid
     plot_grid(sae.decode_binary(plan),path=os.path.join(problem_dir,"path_{}.png".format(get_ae_type(network_dir))),verbose=True)
