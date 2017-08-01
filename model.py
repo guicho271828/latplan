@@ -420,6 +420,9 @@ class GumbelAE(AE):
         shape = K.int_shape(y2_downsample)[1:3]
         self.decoder_downsample = Model(z2, Reshape(shape)(y2_downsample))
         self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
+        self.callbacks.append(
+            LearningRateScheduler(lambda epoch: self.parameters['lr'] if epoch < self.parameters['full_epoch'] * 0.5 else self.parameters['lr']*0.1))
+        self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
     def encode_binary(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
