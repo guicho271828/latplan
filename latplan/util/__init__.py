@@ -10,6 +10,12 @@ def get_ae_type(directory):
         return d.split("/")[-1].split("_")[-1]
     else:
         return n.split("_")[-1]
+
+def ensure_directory(directory):
+    if directory[-1] is "/":
+        return directory
+    else:
+        return directory+"/"
     
 
 def curry(fn,*args1,**kwargs1):

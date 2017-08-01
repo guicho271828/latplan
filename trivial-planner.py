@@ -209,12 +209,6 @@ def main(network_dir, problem_dir):
     
     from scipy import misc
     import os.path
-    # d, n = os.path.split(problem_dir)
-    # if n == '':
-    #     problem_dir = d
-    # else:
-    #     problem_dir = 
-    
     init_image = misc.imread(os.path.join(problem_dir,"init.png"))
     goal_image = misc.imread(os.path.join(problem_dir,"goal.png"))
     
@@ -225,6 +219,20 @@ def main(network_dir, problem_dir):
     from latplan.util.plot import plot_grid
     plot_grid(sae.decode_binary(plan),path=os.path.join(problem_dir,"path_{}.png".format(get_ae_type(network_dir))),verbose=True)
 
+    from latplan.util import ensure_directory
+    module_name = ensure_directory(problem_dir).split("/")[-3]
+    from importlib import import_module
+    m = import_module(module_name)
+    m.setup()
+
+    validation = m.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
+    print(validation)
+    print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
+    
+    import subprocess
+    subprocess.call(["rm", "-f", os.path.join(problem_dir,"path_{}.valid".format(get_ae_type(network_dir)))])
+    if np.all(validation):
+        subprocess.call(["touch", os.path.join(problem_dir,"path_{}.valid".format(get_ae_type(network_dir)))])
 
 if __name__ == '__main__':
     import sys
