@@ -16,6 +16,8 @@ wait
 wait
 ./trivial-planner.py samples/puzzle_mnist33_conv/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
 
+parallel --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist33_conv/ {1} > {1}/conv.log" ::: trivial-planner-instances/latplan.puzzles.puzzle_mnist/*
+
 ./strips.py fc puzzle_mandrill learn_plot_dump 3 3
 ./strips.py fc puzzle_lenna learn_plot_dump 3 3
 ./strips.py fc puzzle_spider learn_plot_dump 3 3
