@@ -146,8 +146,9 @@ parameters = {
     'lr'         :[0.001],
 }
 
-def puzzle_mnist(width=3,height=3):
-    import latplan.puzzles.puzzle_mnist as p
+def puzzle(type='mnist',width=3,height=3):
+    import importlib
+    p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
@@ -157,81 +158,12 @@ def puzzle_mnist(width=3,height=3):
     print(states.shape)
     train = states[:12000]
     test  = states[12000:]
-    ae = run("samples/puzzle_mnist{}{}_{}/".format(width,height,encoder), train, test)
+    ae = run("samples/puzzle_{}{}{}_{}/".format(type,width,height,encoder), train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
-
-def puzzle_mnist_zdropout(width=3,height=3):
-    # Made to see if increasing the z_dim and enabling the dropout
-    # would solve the "invalid states problem". 
-    # The purpose is to see if the randomly generated bitvector
-    # decodes into a valid state and it encodes into itself.
-    # Did not achieve the expected outcome. Perhaps reulating the
-    # latent layer with infoGAN-like training is necessary.
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
-    global parameters
-    parameters = {
-        'layer'      :[2000],# [400,4000],
-        'clayer'     :[16],# [400,4000],
-        'dropout'    :[0.4], #[0.1,0.4],
-        'N'          :[100],  #[25,49],
-        'dropout_z'  :[True],
-        'activation' : ['tanh'],
-        'full_epoch' :[500],
-        'epoch'      :[200],
-        'batch_size' :[2000],
-        'lr'         :[0.001],
-    }
-    configs = p.generate_configs(width*height)
-    configs = np.array([ c for c in configs ])
-    random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    train       = p.states(width,height,train_c)
-    test        = p.states(width,height,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run("samples/puzzle_mnist_zdropout{}{}_{}/".format(width,height,encoder), train, test)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
-    dump_all_states(ae,configs[:13000],lambda configs: p.states(width,height,configs),"states.csv")
-    dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
-
-def puzzle_lenna(width=3,height=3):
-    import latplan.puzzles.puzzle_lenna as p
-    p.setup()
-    configs = p.generate_configs(width*height)
-    configs = np.array([ c for c in configs ])
-    random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    train       = p.states(width,height,train_c)
-    test        = p.states(width,height,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run("samples/puzzle_lenna{}{}_{}/".format(width,height,encoder), train, test)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
-
-def puzzle_mandrill(width=3,height=3):
-    import latplan.puzzles.puzzle_mandrill as p
-    p.setup()
-    configs = p.generate_configs(width*height)
-    configs = np.array([ c for c in configs ])
-    random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    train       = p.states(width,height,train_c)
-    test        = p.states(width,height,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run("samples/puzzle_mandrill{}{}_{}/".format(width,height,encoder), train, test)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
 
 def hanoi(disks=5,towers=3):
     global parameters
@@ -392,8 +324,14 @@ def main():
             raise ValueError("invalid encoder!: {}".format(encoder))
         task = sys.argv.pop(0)
         mode = sys.argv.pop(0)
+
+        def myeval(str):
+            try:
+                return eval(str)
+            except:
+                return str
         
-        globals()[task](*map(eval,sys.argv))
+        globals()[task](*map(myeval,sys.argv))
     
 if __name__ == '__main__':
     main()
