@@ -115,36 +115,39 @@ state_pruning_methods = [state_reconstruction_filtering,
 
 class Searcher:
     def successors(self,state):
-        reductions = []
-        s = state.state
-        y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
-               .round().astype(int)
-        reductions.append(len(y))
-        for m in action_pruning_methods:
-            y = m(y)
+        try:
+            reductions = []
+            s = state.state
+            y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
+                   .round().astype(int)
             reductions.append(len(y))
-            if len(y) == 0:
-                return
 
-        t = y[:,self.N:]
+            for m in action_pruning_methods:
+                y = m(y)
+                reductions.append(len(y))
+                if len(y) == 0:
+                    return
 
-        for m in state_pruning_methods:
-            t = m(t)
-            reductions.append(len(t)) 
-            if len(t) == 0:
-                return
+            t = y[:,self.N:]
 
-        print("->".join(map(str,reductions)))
-        # for now, assume they are all valid
-        for i,succ in enumerate(t):
-            # print(succ)
-            hash_value = state_hash(succ)
-            if hash_value in self.close_list:
-                yield self.close_list[hash_value]
-            else:
-                _succ = State(succ)
-                self.close_list[hash_value] = _succ
-                yield _succ
+            for m in state_pruning_methods:
+                t = m(t)
+                reductions.append(len(t)) 
+                if len(t) == 0:
+                    return
+
+            # for now, assume they are all valid
+            for i,succ in enumerate(t):
+                # print(succ)
+                hash_value = state_hash(succ)
+                if hash_value in self.close_list:
+                    yield self.close_list[hash_value]
+                else:
+                    _succ = State(succ)
+                    self.close_list[hash_value] = _succ
+                    yield _succ
+        finally:
+            print("->".join(map(str,reductions)))
 
 class StateBasedGoalDetection:
     def goalp(self,state,goal):
