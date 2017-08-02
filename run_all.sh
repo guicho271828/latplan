@@ -30,6 +30,9 @@ parallel --bar --eta --timeout 50 --joblog parallel.log "./trivial-planner.py sa
 
 parallel --bar --eta --timeout 50 --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist3330_conv/ {1} > {1}/conv30.log" ::: trivial-planner-instances/latplan.puzzles.puzzle_mnist/*
 
+parallel --bar --eta --timeout 120 --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist3336_conv/ {1} GBFSRec > {1}/conv36.log" ::: instances-4step-highAD2/latplan.puzzles.puzzle_mnist/*
+
+
 ./strips.py fc puzzle_mandrill learn_plot_dump 3 3
 ./strips.py fc puzzle_lenna learn_plot_dump 3 3
 ./strips.py fc puzzle_spider learn_plot_dump 3 3
