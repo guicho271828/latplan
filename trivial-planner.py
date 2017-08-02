@@ -307,8 +307,13 @@ def main(network_dir, problem_dir):
     
     import subprocess
     subprocess.call(["rm", "-f", os.path.join(problem_dir,"path_{}.valid".format(get_ae_type(network_dir)))])
+    import sys
     if np.all(validation):
         subprocess.call(["touch", os.path.join(problem_dir,"path_{}.valid".format(get_ae_type(network_dir)))])
+        sys.exit(0)
+    else:
+        sys.exit(2)
+        
 
 if __name__ == '__main__':
     import sys
