@@ -29,10 +29,16 @@ def prepare(data):
         data_invalid = set_difference(data_invalid, data)
         return data_invalid
 
+    def generate_nop():
+        suc_invalid = np.copy(pre)
+        data_invalid = np.concatenate((pre,suc_invalid),axis=1)
+        data_invalid = set_difference(data_invalid, data)
+        return data_invalid
+
     data_valid   = np.repeat(data, inflation, axis=0)
 
     data_invalid = np.concatenate(
-        tuple([ generate() for i in range(inflation) ]), axis=0)
+        tuple([generate_nop(), *[ generate() for i in range(inflation-1) ]]), axis=0)
 
     return prepare_binary_classification_data(data_valid, data_invalid)
 
