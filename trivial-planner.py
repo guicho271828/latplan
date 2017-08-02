@@ -98,38 +98,35 @@ def inflate_actions(y):
 def action_discriminator_filtering(y):
     return y[np.where(np.squeeze(ad.discriminate(y)) > 0.5)[0]]
 
-action_pruning_methods = [action_reconstruction_filtering,
-                          # state_reconstruction_from_oae_filtering,
-                          inflate_actions,
-                          action_discriminator_filtering]
-
-def inflate_states(t):
-    from latplan.util import union
-    for i in range(inflation-1):
-        t = union(sae.autodecode_binary(t).round().astype(int), t)
-    return t
-            
-def state_reconstruction_filtering(t):
+def state_reconstruction_filtering(y):
+    N = y.shape[1]//2
     # filtering based on SAE reconstruction
-    images  = sae.decode_binary(t).round()
+    images  = sae.decode_binary(y[:,N:]).round()
     images2 = sae.autoencode(images).round()
     loss = absolute_error(images,images2,(1,2))
     # print(loss)
-    return t[np.where(loss < 0.01)].astype(int)
+    return y[np.where(loss < 0.01)].astype(int)
     
-def state_discriminator_filtering(t):
+def state_discriminator_filtering(y):
     # filtering based on State Discriminator
-    return t[np.where(np.squeeze(sd.discriminate(t)) > 0.5)[0]]
+    N = y.shape[1]//2
+    return y[np.where(np.squeeze(sd.discriminate(y[:,N:])) > 0.5)[0]]
 
-def state_discriminator3_filtering(t):
+def state_discriminator3_filtering(y):
+    N = y.shape[1]//2
     if "conv" in get_ae_type(sae.path):
-        return t[np.where(np.squeeze(combined_discriminate2(t,sae,sd3)) > 0.5)[0]]
+        return y[np.where(np.squeeze(combined_discriminate2(y[:,N:],sae,sd3)) > 0.5)[0]]
     else:
-        return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.5)[0]]
+        return y[np.where(np.squeeze(combined_discriminate(y[:,N:],sae,cae,sd3)) > 0.5)[0]]
 
-state_pruning_methods = [# inflate_states,
-                         state_reconstruction_filtering,
-                         state_discriminator3_filtering]
+pruning_methods = [
+    # action_reconstruction_filtering,           # if applied, this should be the first method
+    # state_reconstruction_from_oae_filtering,
+    # state_reconstruction_filtering
+    inflate_actions,
+    action_discriminator_filtering,
+    state_discriminator3_filtering
+]
 
 class Searcher:
     def successors(self,state):
@@ -140,22 +137,14 @@ class Searcher:
                    .round().astype(int)
             reductions.append(len(y))
 
-            for m in action_pruning_methods:
+            for m in pruning_methods:
                 y = m(y)
                 reductions.append(len(y))
                 if len(y) == 0:
                     return
 
-            t = y[:,self.N:]
-
-            for m in state_pruning_methods:
-                t = m(t)
-                reductions.append(len(t)) 
-                if len(t) == 0:
-                    return
-
             # for now, assume they are all valid
-            for i,succ in enumerate(t):
+            for i,succ in enumerate(y[:,self.N:]):
                 # print(succ)
                 hash_value = state_hash(succ)
                 if hash_value in self.close_list:
