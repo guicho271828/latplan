@@ -337,6 +337,10 @@ class AE(Network):
         self.load()
         return self.autoencoder.predict(data,**kwargs)
 
+    def autodecode(self,data,**kwargs):
+        self.load()
+        return self.autodecoder.predict(data,**kwargs)
+
     def summary(self,verbose=False):
         if verbose:
             self.encoder.summary()
@@ -388,6 +392,7 @@ class GumbelAE(AE):
 
     def _build(self,input_shape):
         self.gs = self.build_gs()
+        self.gs2 = self.build_gs()
 
         _encoder = self.build_encoder(input_shape)
         _decoder = self.build_decoder(input_shape)
@@ -398,6 +403,7 @@ class GumbelAE(AE):
          
         z2 = Input(shape=(self.parameters['N'], self.parameters['M']))
         y2 = Sequential(_decoder)(flatten(z2))
+        w2 = Sequential([*_encoder, self.gs2])(flatten(y2))
 
         data_dim = np.prod(input_shape)
         def loss(x, y):
@@ -407,12 +413,14 @@ class GumbelAE(AE):
             return reconstruction_loss + kl_loss
 
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.cool))
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
         self.loss = loss
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
-        self.net = Model(x, y)
-        self.autoencoder = self.net
+        self.autoencoder = Model(x, y)
+        self.autodecoder = Model(z2, w2)
+        self.net = self.autoencoder
         y2_downsample = Sequential([
             Reshape((*input_shape,1)),
             MaxPooling2D((2,2))
@@ -433,6 +441,11 @@ class GumbelAE(AE):
         M, N = self.parameters['M'], self.parameters['N']
         assert M == 2, "M={}, not 2".format(M)
         return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
+
+    def autodecode_binary(self,data,**kwargs):
+        M, N = self.parameters['M'], self.parameters['N']
+        assert M == 2, "M={}, not 2".format(M)
+        return self.autodecode(np.stack((data,1-data),axis=-1),**kwargs)[:,:,0].reshape(-1, N)
 
     def decode_downsample(self,data,**kwargs):
         self.load()
