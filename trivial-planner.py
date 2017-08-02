@@ -5,7 +5,7 @@ import numpy as np
 from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator, combined_discriminate, combined_discriminate2
 from latplan.util import get_ae_type
 from latplan.util.plot import plot_grid
-
+import os.path
 import keras.backend as K
 import tensorflow as tf
 import math
@@ -276,6 +276,12 @@ def main(network_dir, problem_dir):
     sd2  = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
     cae = default_networks['SimpleCAE'](sae.local("_cae/")).load(allow_failure=True)
     sd3  = PUDiscriminator(sae.local("_sd3/")).load()
+
+    def problem(path):
+        return os.path.join(problem_dir,path)
+    def network(path):
+        root, ext = os.path.splitext(path)
+        return "{}_{}{}".format(root, get_ae_type(network_dir), ext)
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
@@ -293,20 +299,20 @@ def main(network_dir, problem_dir):
         available_actions[i][0][pos] = 1
     
     from scipy import misc
-    import os.path
-    init_image = misc.imread(os.path.join(problem_dir,"init.png"))
-    goal_image = misc.imread(os.path.join(problem_dir,"goal.png"))
+
+    init_image = misc.imread(problem("init.png"))
+    goal_image = misc.imread(problem("goal.png"))
     
     init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
     goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
     plot_grid(
         sae.decode_binary(np.array([init,goal])),
-        path=os.path.join(problem_dir,"init_goal_reconstruction_{}.png".format(get_ae_type(network_dir))),verbose=True)
+        path=problem(network("init_goal_reconstruction.png")),verbose=True)
     # plan = np.array(astar(init,goal,goalcount).path())
     plan = np.array(gbfs(init,goal,goalcount).path())
     print(plan)
     plot_grid(sae.decode_binary(plan),
-              path=os.path.join(problem_dir,"path_{}.png".format(get_ae_type(network_dir))),verbose=True)
+              path=problem(network("path.png")),verbose=True)
 
     from latplan.util import ensure_directory
     module_name = ensure_directory(problem_dir).split("/")[-3]
@@ -319,10 +325,10 @@ def main(network_dir, problem_dir):
     print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
     
     import subprocess
-    subprocess.call(["rm", "-f", os.path.join(problem_dir,"path_{}.valid".format(get_ae_type(network_dir)))])
+    subprocess.call(["rm", "-f", problem(network("path.valid"))])
     import sys
     if np.all(validation):
-        subprocess.call(["touch", os.path.join(problem_dir,"path_{}.valid".format(get_ae_type(network_dir)))])
+        subprocess.call(["touch", problem(network("path.valid"))])
         sys.exit(0)
     else:
         sys.exit(2)
