@@ -23,6 +23,7 @@ sd3 = None
 cae = None
 
 available_actions = None
+inflation = 2
 
 OPEN   = 0
 CLOSED = 1
@@ -279,9 +280,12 @@ def main(network_dir, problem_dir, searcher):
         print("network does not explain all actions: only {} out of {} ({}%)".format(
             identified, total, identified * 100 // total ))
     available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+
     for i, pos in enumerate(np.where(histogram > 0)[0]):
         available_actions[i][0][pos] = 1
-    
+
+    # available_actions = available_actions.repeat(inflation,axis=0)
+        
     from scipy import misc
 
     init_image = misc.imread(problem("init.png"))
