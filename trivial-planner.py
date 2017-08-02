@@ -271,6 +271,9 @@ class GBFSRec(ReconstructionGoalDetection,GBFS):
 def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
+def blind(state,goal):
+    return 0
+
 def main(network_dir, problem_dir, searcher):
     global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
     
