@@ -86,18 +86,20 @@ if __name__ == '__main__':
     
     # test if the learned action is correct
 
-    actions_valid = np.loadtxt("{}/actions.csv".format(directory),dtype=int)
-    # actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=int)
+    # actions_valid = np.loadtxt("{}/actions.csv".format(directory),dtype=int)
+    actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=int)
     
     N = actions_valid.shape[1] // 2
     print("valid",actions_valid.shape)
-    # discriminator.report(actions_valid,  train_data_to=np.ones((len(actions_valid),)))
+    discriminator.report(actions_valid,  train_data_to=np.ones((len(actions_valid),)))
+    print("type1 error: ",np.sum(1-np.round(discriminator.discriminate(actions_valid,batch_size=1000))))
 
     # invalid actions generated from random bits
     actions_invalid = np.random.randint(0,2,(len(actions_valid),2*N))
     actions_invalid = set_difference(actions_invalid, actions_valid)
     print("invalid",actions_invalid.shape, "--- invalid actions generated from random bits")
     discriminator.report(actions_invalid,train_data_to=np.zeros((len(actions_invalid),)))
+    print("type2 error: ",np.sum(np.round(discriminator.discriminate(actions_invalid,batch_size=1000))))
 
     # invalid actions generated from swapping successors; predecessors/successors are both correct states
     pre, suc = actions_valid[:,:N], actions_valid[:,N:]
@@ -107,6 +109,7 @@ if __name__ == '__main__':
     actions_invalid2 = set_difference(actions_invalid2, actions_valid)
     print("invalid2",actions_invalid2.shape, "--- invalid actions generated from swapping successors; predecessors/successors are both correct states")
     discriminator.report(actions_invalid2,train_data_to=np.zeros((len(actions_invalid2),)))
+    print("type2 error: ",np.sum(np.round(discriminator.discriminate(actions_invalid2,batch_size=1000))))
 
     if 'check' in mode:
         from latplan.util import get_ae_type
@@ -116,7 +119,7 @@ if __name__ == '__main__':
         import latplan.puzzles.puzzle_mnist as p
         p.setup()
         import latplan.puzzles.model.puzzle as m
-        validation = m.validate_transitions([pre_images, suc_images], 3,3)
+        validation = m.validate_transitions([pre_images[:100000], suc_images[:100000]], 3,3)
         print(np.count_nonzero(validation),"valid actions in invalid2")
 
     actions_invalid3 = actions_invalid.copy()
