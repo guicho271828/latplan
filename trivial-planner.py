@@ -85,7 +85,7 @@ def state_reconstruction_from_oae_filtering(y):
     return y[np.where(loss < 0.01)]
 
 def action_discriminator_filtering(y):
-    return y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
+    return y[np.where(np.squeeze(ad.discriminate(y)) > 0.5)[0]]
 
 action_pruning_methods = [action_reconstruction_filtering,
                           # state_reconstruction_from_oae_filtering,
@@ -101,13 +101,13 @@ def state_reconstruction_filtering(t):
     
 def state_discriminator_filtering(t):
     # filtering based on State Discriminator
-    return t[np.where(np.squeeze(sd.discriminate(t)) > 0.8)[0]]
+    return t[np.where(np.squeeze(sd.discriminate(t)) > 0.5)[0]]
 
 def state_discriminator3_filtering(t):
     if "conv" in get_ae_type(sae.path):
-        return t[np.where(np.squeeze(combined_discriminate2(t,sae,sd3)) > 0.9)[0]]
+        return t[np.where(np.squeeze(combined_discriminate2(t,sae,sd3)) > 0.5)[0]]
     else:
-        return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.9)[0]]
+        return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.5)[0]]
 
 state_pruning_methods = [state_reconstruction_filtering,
                          state_discriminator3_filtering]
@@ -325,7 +325,6 @@ def main(network_dir, problem_dir):
     validation = m.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
     print(validation)
     print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
-    
     import subprocess
     subprocess.call(["rm", "-f", problem(network("path.valid"))])
     import sys
