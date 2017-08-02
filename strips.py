@@ -146,7 +146,8 @@ parameters = {
     'lr'         :[0.001],
 }
 
-def puzzle(type='mnist',width=3,height=3):
+def puzzle(type='mnist',width=3,height=3,N=36):
+    parameters['N'] = [N]
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
@@ -158,7 +159,7 @@ def puzzle(type='mnist',width=3,height=3):
     print(states.shape)
     train = states[:12000]
     test  = states[12000:]
-    ae = run("samples/puzzle_{}{}{}_{}/".format(type,width,height,encoder), train, test)
+    ae = run("samples/puzzle_{}{}{}{}_{}/".format(type,width,height,N,encoder), train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
