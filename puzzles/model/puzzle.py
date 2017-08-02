@@ -27,6 +27,10 @@ def generate(configs, width, height):
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
+def bce(x,y,axis):
+    return - (x * np.log(np.clip(y,1e-5,1)) + \
+              (1-x) * np.log(np.clip(1-y,1e-5,1))).mean(axis=axis)
+
 def validate_states(states, width, height, verbose=True):
     load(width, height)
     base = setting['base']
@@ -45,14 +49,15 @@ def validate_states(states, width, height, verbose=True):
     if verbose:
         print(matches.shape)
 
-    abs = states.copy()
-    mae = np.zeros((len(states), height, width))
+    # abs = states.copy()
+    error = np.zeros((len(states), height, width))
     for i, panel in enumerate(panels):
         if verbose:
             print(".",end="",flush=True)
-        np.absolute(states - panel, out=abs)
-        np.mean(abs, axis=(3,4), out=mae)
-        matches[(*np.where(mae < 0.01),i)] = 1
+        matches[(*np.where(bce(states,panel,(3,4)) < 0.01),i)] = 1
+        # np.absolute(states - panel, out=abs)
+        # np.mean(abs, axis=(3,4), out=mae)
+        # matches[(*np.where(mae < 0.1),i)] = 1
 
     num_matches = np.sum(matches, axis=3)
     if verbose:
