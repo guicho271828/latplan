@@ -3,7 +3,7 @@ import warnings
 import config
 import numpy as np
 from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator, combined_discriminate, combined_discriminate2
-from latplan.util import get_ae_type
+from latplan.util import get_ae_type, bce, mae
 from latplan.util.plot import plot_grid
 import os.path
 import keras.backend as K
@@ -27,14 +27,6 @@ inflation = 5
 
 OPEN   = 0
 CLOSED = 1
-
-def bce(x,y,axis):
-    return - (x * np.log(y+1e-5) + \
-              (1-x) * np.log(1-y+1e-5)).mean(axis=axis)
-
-def absolute_error(x,y,axis):
-    return np.sum(np.absolute(x - y),axis=axis)
-
 
 def state_hash(state):
     return np.sum(state << np.arange(len(state)))
@@ -63,7 +55,7 @@ def action_reconstruction_filtering(y):
     # filtering based on OAE action reconstruction
     action_reconstruction = oae.encode_action(y).round()
     # loss = bce(available_actions, action_reconstruction, (1,2))
-    loss = absolute_error(available_actions, action_reconstruction, (1,2))
+    loss = mae(available_actions, action_reconstruction, (1,2))
     # print(loss)
     return y[np.where(loss < 0.01)]
 
@@ -71,7 +63,7 @@ def state_reconstruction_from_oae_filtering(y):
     action_reconstruction = oae.encode_action(y)
     N = y.shape[1]//2
     y_reconstruction = oae.decode([y[:,:N], action_reconstruction])
-    loss = absolute_error(y, y_reconstruction, (1,))
+    loss = mae(y, y_reconstruction, (1,))
     # print(loss)
     return y[np.where(loss < 0.01)]
 
@@ -93,9 +85,9 @@ def state_reconstruction_filtering(y):
     # filtering based on SAE reconstruction
     images  = sae.decode_binary(y[:,N:]).round()
     images2 = sae.autoencode(images).round()
-    loss = absolute_error(images,images2,(1,2))
+    loss = bce(images,images2,(1,2))
     # print(loss)
-    return y[np.where(loss < 0.01)].astype(int)
+    return y[np.where(loss < 0.1)].astype(int)
     
 def state_discriminator_filtering(y):
     # filtering based on State Discriminator
