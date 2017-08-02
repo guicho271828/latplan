@@ -85,11 +85,22 @@ def state_reconstruction_from_oae_filtering(y):
     # print(loss)
     return y[np.where(loss < 0.01)]
 
+def inflate_actions(y):
+    from latplan.util import union
+    N = y.shape[1]//2
+    t = y[:,N:]
+    for i in range(inflation-1):
+        t = union(sae.autodecode_binary(t).round().astype(int), t)
+    y = y.repeat(inflation, axis=0)[:len(t)]
+    y[:,N:] = t
+    return y
+
 def action_discriminator_filtering(y):
     return y[np.where(np.squeeze(ad.discriminate(y)) > 0.5)[0]]
 
 action_pruning_methods = [action_reconstruction_filtering,
                           # state_reconstruction_from_oae_filtering,
+                          inflate_actions,
                           action_discriminator_filtering]
 
 def inflate_states(t):
@@ -116,7 +127,7 @@ def state_discriminator3_filtering(t):
     else:
         return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.5)[0]]
 
-state_pruning_methods = [inflate_states,
+state_pruning_methods = [# inflate_states,
                          state_reconstruction_filtering,
                          state_discriminator3_filtering]
 
