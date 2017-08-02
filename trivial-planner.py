@@ -305,6 +305,8 @@ def main(network_dir, problem_dir):
     
     init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
     goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
+    print(init)
+    print(goal)
     plot_grid(
         sae.decode_binary(np.array([init,goal])),
         path=problem(network("init_goal_reconstruction.png")),verbose=True)
