@@ -41,6 +41,7 @@ def plot_grid(images,w=10,path="plan.png",verbose=False):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     print(path) if verbose else None
+    plt.tight_layout()
     plt.savefig(path)
     plt.close()
 
@@ -65,6 +66,7 @@ def plot_grid2(images,w=10,path="plan.png",verbose=False):
     plt.figure(figsize=all_shape[::-1] * 0.01)
     plt.imshow(figure,interpolation='nearest',cmap='gray',)
     print(path) if verbose else None
+    plt.tight_layout()
     plt.savefig(path)
 
 def plot_ae(ae,data,path):
