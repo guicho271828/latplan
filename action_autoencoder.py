@@ -74,7 +74,17 @@ if __name__ == '__main__':
 
     aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
     aae.plot(data[12000:12008], "aae_test_decoded.png", ae=ae)
-    
+
+    N = data.shape[1]//2
+    transitions = aae.decode([np.repeat(data[:1,:N], 128, axis=0), np.identity(128).reshape((128,1,128))])
+    aae.plot(transitions, "aae_all_actions_for_a_state.png", ae=ae)
+    if 'check' in mode:
+        import latplan.puzzles.puzzle_mnist as p
+        p.setup()
+        import latplan.puzzles.model.puzzle as m
+        pre = ae.decode_binary(transitions[:,:N])
+        suc = ae.decode_binary(transitions[:,N:])
+        m.validate_transitions([pre,suc],3,3)
     
     actions = aae.encode_action(data, batch_size=1000)
     actions_r = actions.round()
