@@ -187,8 +187,8 @@ def successors(config,width,height):
 
 
 def validate_transitions(transitions, width, height):
-    pre = transitions[0]
-    suc = transitions[1]
+    pre = np.array(transitions[0])
+    suc = np.array(transitions[1])
 
     pre_validation = validate_states(pre, width, height)
     suc_validation = validate_states(suc, width, height)
