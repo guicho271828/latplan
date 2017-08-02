@@ -157,8 +157,8 @@ if __name__ == '__main__':
                                             'batch_size' :[1000],
                                             'full_epoch' :[1000],
                                             'activation' :['relu'],
-                                            'epoch'      :[1000],
-                                            'lr'         :[0.00005],
+                                            'epoch'      :[300],
+                                            'lr'         :[0.0001],
                                         })
         
     else:
