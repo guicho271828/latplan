@@ -45,6 +45,10 @@ def run_puzzle():
     
     gcs = [convert([0,1,2,3,4,5,6,7,8])]
 
+    print(os.path.split(__file__)[0])
+    os.chdir(os.path.split(__file__)[0])
+    import subprocess
+    subprocess.call(["rm","-rf",p.__name__])
     for i,init in enumerate(p.generate(ics,size,size)):
         for j,goal in enumerate(p.generate(gcs,size,size)):
             d = "{}/{}-{}".format(p.__name__,i,j)
