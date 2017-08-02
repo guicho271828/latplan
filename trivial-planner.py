@@ -28,16 +28,6 @@ inflation = 5
 OPEN   = 0
 CLOSED = 1
 
-# class State(object):
-#     def __init__(self, raw_state):
-#         self.raw_state  = raw_state
-# 
-#     def __hash__(self):
-#         return np.sum(self.raw_state << np.arange(len(self.raw_state)))
-# 
-#     def __repr__(self):
-#         return "State({})".format(self.raw_state)
-
 def bce(x,y,axis):
     return - (x * np.log(y+1e-5) + \
               (1-x) * np.log(1-y+1e-5)).mean(axis=axis)
