@@ -88,7 +88,7 @@ def action_discriminator_filtering(y):
     return y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
 
 action_pruning_methods = [action_reconstruction_filtering,
-                          state_reconstruction_from_oae_filtering,
+                          # state_reconstruction_from_oae_filtering,
                           action_discriminator_filtering]
 
 def state_reconstruction_filtering(t):
