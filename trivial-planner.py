@@ -75,10 +75,19 @@ def action_reconstruction_filtering(y):
     # print(loss)
     return y[np.where(loss < 0.01)]
 
+def state_reconstruction_from_oae_filtering(y):
+    action_reconstruction = oae.encode_action(y)
+    N = y.shape[1]//2
+    y_reconstruction = oae.decode([y[:,:N], action_reconstruction])
+    loss = absolute_error(y, y_reconstruction, (1,))
+    # print(loss)
+    return y[np.where(loss < 0.01)]
+
 def action_discriminator_filtering(y):
     return y[np.where(np.squeeze(ad.discriminate(y)) > 0.8)[0]]
 
 action_pruning_methods = [action_reconstruction_filtering,
+                          state_reconstruction_from_oae_filtering,
                           action_discriminator_filtering]
 
 def state_reconstruction_filtering(t):
