@@ -112,21 +112,8 @@ def state_discriminator3_filtering(t):
 state_pruning_methods = [state_reconstruction_filtering,
                          state_discriminator3_filtering]
 
-def astar(init,goal,distance):
-    
-    N = len(init)
-    heuristic = lambda x: distance(x, goal)
-    
-    _init = State(init, g=0, h=heuristic(init))
-    
-    import queue
-    open_list = queue.PriorityQueue()
-    open_list.put((_init.g + _init.h, _init.h, _init.hash()))
-
-    close_list = {}
-    close_list[_init.hash()] = _init
-    
-    def successors(state):
+class Searcher:
+    def successors(self,state):
         reductions = []
         s = state.state
         y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
@@ -137,130 +124,112 @@ def astar(init,goal,distance):
             reductions.append(len(y))
             if len(y) == 0:
                 return
-        
-        t = y[:,N:]
+
+        t = y[:,self.N:]
 
         for m in state_pruning_methods:
             t = m(t)
             reductions.append(len(t)) 
             if len(t) == 0:
                 return
-       
+
         print("->".join(map(str,reductions)))
         # for now, assume they are all valid
         for i,succ in enumerate(t):
             # print(succ)
             hash_value = state_hash(succ)
-            if hash_value in close_list:
-                yield close_list[hash_value]
+            if hash_value in self.close_list:
+                yield self.close_list[hash_value]
             else:
                 _succ = State(succ)
-                close_list[hash_value] = _succ
+                self.close_list[hash_value] = _succ
                 yield _succ
 
-    best_f = -1
-    best_h = math.inf
-    while True:
-        if open_list.empty():
-            raise Exception("Open list is empty!")
-        f, h, shash = open_list.get()
-        state = close_list[shash]
-        if state.status == CLOSED:
-            continue
-        
-        state.status = CLOSED
+class Astar(Searcher):
+    def search(self,init,goal,distance):
+        self.N = len(init)
+        heuristic = lambda x: distance(x, goal)
 
-        if best_f < f:
-            best_f = f
-            print("new f = {}".format(f))
-        if best_h > h:
-            best_h = h
-            print("new h = {}".format(h))
+        _init = State(init, g=0, h=heuristic(init))
 
-        if (state.state == goal).all():
-            return state
+        import queue
+        open_list = queue.PriorityQueue()
+        open_list.put((_init.g + _init.h, _init.h, _init.hash()))
 
-        for c in successors(state):
-            new_g = state.g + 1
-            if c.g > new_g:
-                c.g      = new_g
-                c.parent = state
-                c.status = OPEN
-                c.h      = heuristic(c.state)
-                open_list.put((c.g+c.h, c.h, c.hash()))
+        self.close_list = {}
+        self.close_list[_init.hash()] = _init
 
-def gbfs(init,goal,distance):
-    
-    N = len(init)
-    heuristic = lambda x: distance(x, goal)
-    
-    _init = State(init, g=0, h=heuristic(init))
-    
-    import queue
-    open_list = queue.PriorityQueue()
-    open_list.put((_init.h, _init.hash()))
+        best_f = -1
+        best_h = math.inf
+        while True:
+            if open_list.empty():
+                raise Exception("Open list is empty!")
+            f, h, shash = open_list.get()
+            state = self.close_list[shash]
+            if state.status == CLOSED:
+                continue
 
-    close_list = {}
-    close_list[_init.hash()] = _init
-    
-    def successors(state):
-        reductions = []
-        s = state.state
-        y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
-               .round().astype(int)
-        reductions.append(len(y))
-        for m in action_pruning_methods:
-            y = m(y)
-            reductions.append(len(y))
-            if len(y) == 0:
-                return
-        
-        t = y[:,N:]
+            state.status = CLOSED
 
-        for m in state_pruning_methods:
-            t = m(t)
-            reductions.append(len(t)) 
-            if len(t) == 0:
-                return
-       
-        print("->".join(map(str,reductions)))
-        # for now, assume they are all valid
-        for i,succ in enumerate(t):
-            # print(succ)
-            hash_value = state_hash(succ)
-            if hash_value in close_list:
-                yield close_list[hash_value]
-            else:
-                _succ = State(succ)
-                close_list[hash_value] = _succ
-                yield _succ
+            if best_f < f:
+                best_f = f
+                print("new f = {}".format(f))
+            if best_h > h:
+                best_h = h
+                print("new h = {}".format(h))
 
-    best_h = math.inf
-    while True:
-        if open_list.empty():
-            raise Exception("Open list is empty!")
-        h, shash = open_list.get()
-        state = close_list[shash]
-        if state.status == CLOSED:
-            continue
-        
-        state.status = CLOSED
+            if (state.state == goal).all():
+                return state
 
-        if best_h > h:
-            best_h = h
-            print("new h = {}".format(h))
+            for c in self.successors(state):
+                new_g = state.g + 1
+                if c.g > new_g:
+                    c.g      = new_g
+                    c.parent = state
+                    c.status = OPEN
+                    c.h      = heuristic(c.state)
+                    open_list.put((c.g+c.h, c.h, c.hash()))
 
-        if (state.state == goal).all():
-            return state
+class GBFS(Searcher):
+    def search(self,init,goal,distance):
+        self.N = len(init)
+        heuristic = lambda x: distance(x, goal)
 
-        for c in successors(state):
-            new_g = state.g + 1
-            if c.g > new_g:
-                c.g      = new_g
-                c.parent = state
-                c.status = OPEN
-                c.h      = heuristic(c.state)
-                open_list.put((c.h, c.hash()))
+        _init = State(init, g=0, h=heuristic(init))
+
+        import queue
+        open_list = queue.PriorityQueue()
+        open_list.put((_init.h, _init.hash()))
+
+        self.close_list = {}
+        self.close_list[_init.hash()] = _init
+
+        best_h = math.inf
+        while True:
+            if open_list.empty():
+                raise Exception("Open list is empty!")
+            h, shash = open_list.get()
+            state = self.close_list[shash]
+            if state.status == CLOSED:
+                continue
+
+            state.status = CLOSED
+
+            if best_h > h:
+                best_h = h
+                print("new h = {}".format(h))
+
+            if (state.state == goal).all():
+                return state
+
+            for c in self.successors(state):
+                new_g = state.g + 1
+                if c.g > new_g:
+                    c.g      = new_g
+                    c.parent = state
+                    c.status = OPEN
+                    c.h      = heuristic(c.state)
+                    open_list.put((c.h, c.hash()))
         
 def goalcount(state,goal):
     return np.abs(state-goal).sum()
@@ -310,8 +279,7 @@ def main(network_dir, problem_dir):
     plot_grid(
         sae.decode_binary(np.array([init,goal])),
         path=problem(network("init_goal_reconstruction.png")),verbose=True)
-    # plan = np.array(astar(init,goal,goalcount).path())
-    plan = np.array(gbfs(init,goal,goalcount).path())
+    plan = np.array(GBFS().search(init,goal,goalcount).path())
     print(plan)
     plot_grid(sae.decode_binary(plan),
               path=problem(network("path.png")),verbose=True)
