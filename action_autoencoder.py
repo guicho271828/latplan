@@ -61,19 +61,19 @@ if __name__ == '__main__':
         aae = ActionAE(directory_aae).load()
     except:
         aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae,
-                                    data[:12000], data[:12000],
-                                    data[12000:], data[12000:],),
+                                    data[:6000], data[:6000],
+                                    data[6000:], data[6000:],),
                               default_parameters,
                               parameters)
 
     aae.plot(data[:8], "aae_train.png")
-    aae.plot(data[12000:12008], "aae_test.png")
+    aae.plot(data[6000:6008], "aae_test.png")
 
     from latplan.util import get_ae_type
     ae = default_networks[get_ae_type(directory)](directory).load()
 
     aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
-    aae.plot(data[12000:12008], "aae_test_decoded.png", ae=ae)
+    aae.plot(data[6000:6008], "aae_test_decoded.png", ae=ae)
 
     N = data.shape[1]//2
     transitions = aae.decode([np.repeat(data[:1,:N], 128, axis=0), np.identity(128).reshape((128,1,128))])

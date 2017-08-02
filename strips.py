@@ -64,6 +64,23 @@ def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     except KeyboardInterrupt:
         print("dump stopped")
 
+def dump_actions(ae,transitions,name="actions.csv",repeat=1):
+    if 'dump' not in mode:
+        return
+    try:
+        print(ae.local(name))
+        with open(ae.local(name), 'wb') as f:
+            orig, dest = transitions[0], transitions[1]
+            orig_b = ae.encode_binary(orig,batch_size=1000).round().astype(int)
+            dest_b = ae.encode_binary(dest,batch_size=1000).round().astype(int)
+            actions = np.concatenate((orig_b,dest_b), axis=1)
+            np.savetxt(f,actions,"%d")
+    except AttributeError:
+        print("this AE does not support dumping")
+    except KeyboardInterrupt:
+        print("dump stopped")
+    import subprocess
+    
 def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
     if 'dump' not in mode:
         return
@@ -84,6 +101,20 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
         print("this AE does not support dumping")
     except KeyboardInterrupt:
         print("dump stopped")
+
+def dump_states(ae,states,name="states.csv",repeat=1):
+    if 'dump' not in mode:
+        return
+    try:
+        print(ae.local(name))
+        with open(ae.local(name), 'wb') as f:
+            np.savetxt(f,ae.encode_binary(states,batch_size=1000).round().astype(int),"%d")
+    except AttributeError:
+        print("this AE does not support dumping")
+    except KeyboardInterrupt:
+        print("dump stopped")
+    import subprocess
+    
 
 ################################################################
 
@@ -109,8 +140,8 @@ parameters = {
     'N'          :[36],  #[25,49],
     'dropout_z'  :[False],
     'activation' :['tanh'],
-    'full_epoch' :[500],
-    'epoch'      :[500],
+    'full_epoch' :[250],
+    'epoch'      :[250],
     'batch_size' :[2000],
     'lr'         :[0.001],
 }
@@ -121,15 +152,15 @@ def puzzle_mnist(width=3,height=3):
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    train       = p.states(width,height,train_c)
-    test        = p.states(width,height,test_c)
-    print(len(configs),len(train),len(test))
+    transitions = p.transitions(width,height,configs[:6500],one_per_state=True)
+    states = np.concatenate((transitions[0], transitions[1]), axis=0)
+    print(states.shape)
+    train = states[:12000]
+    test  = states[12000:]
     ae = run("samples/puzzle_mnist{}{}_{}/".format(width,height,encoder), train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
-    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(width,height,configs),"actions.csv")
-    dump_all_states(ae,configs[:13000],lambda configs: p.states(width,height,configs),"states.csv")
+    dump_actions(ae,transitions)
+    dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
