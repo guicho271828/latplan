@@ -55,7 +55,7 @@ parameters = {
     'full_epoch' :[1000],
     'activation' :['tanh'],
     # quick eval
-        'epoch'      :[50],
+    'epoch'      :[300],
     'lr'         :[0.0001],
 }
 
