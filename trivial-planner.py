@@ -23,7 +23,7 @@ sd3 = None
 cae = None
 
 available_actions = None
-inflation = 2
+inflation = 5
 
 OPEN   = 0
 CLOSED = 1
@@ -92,6 +92,12 @@ action_pruning_methods = [action_reconstruction_filtering,
                           # state_reconstruction_from_oae_filtering,
                           action_discriminator_filtering]
 
+def inflate_states(t):
+    from latplan.util import union
+    for i in range(inflation-1):
+        t = union(sae.autodecode_binary(t).round().astype(int), t)
+    return t
+            
 def state_reconstruction_filtering(t):
     # filtering based on SAE reconstruction
     images  = sae.decode_binary(t).round()
@@ -110,7 +116,8 @@ def state_discriminator3_filtering(t):
     else:
         return t[np.where(np.squeeze(combined_discriminate(t,sae,cae,sd3)) > 0.5)[0]]
 
-state_pruning_methods = [state_reconstruction_filtering,
+state_pruning_methods = [inflate_states,
+                         state_reconstruction_filtering,
                          state_discriminator3_filtering]
 
 class Searcher:
