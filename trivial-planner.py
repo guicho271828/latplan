@@ -199,7 +199,7 @@ class Astar(Searcher,StateBasedGoalDetection):
                 print("new h = {}".format(h))
 
             if self.goalp(state.state, goal):
-                return state
+                yield state
 
             for c in self.successors(state):
                 new_g = state.g + 1
@@ -240,7 +240,7 @@ class GBFS(Searcher,StateBasedGoalDetection):
                 print("new h = {}".format(h))
 
             if self.goalp(state.state, goal):
-                return state
+                yield state
 
             for c in self.successors(state):
                 new_g = state.g + 1
@@ -308,29 +308,27 @@ def main(network_dir, problem_dir, searcher):
     plot_grid(
         sae.decode_binary(np.array([init,goal])),
         path=problem(network("init_goal_reconstruction.png")),verbose=True)
-    plan = np.array( eval(searcher)().search(init,goal,goalcount).path())
-    print(plan)
-    plot_grid(sae.decode_binary(plan),
-              path=problem(network("path.png")),verbose=True)
+    for i, found_goal_state in enumerate(eval(searcher)().search(init,goal,goalcount)):
+        plan = np.array( found_goal_state.path())
+        print(plan)
+        plot_grid(sae.decode_binary(plan),
+                  path=problem(network("path_{}.png".format(i))),verbose=True)
 
-    from latplan.util import ensure_directory
-    module_name = ensure_directory(problem_dir).split("/")[-3]
-    from importlib import import_module
-    m = import_module(module_name)
-    m.setup()
+        from latplan.util import ensure_directory
+        module_name = ensure_directory(problem_dir).split("/")[-3]
+        from importlib import import_module
+        m = import_module(module_name)
+        m.setup()
 
-    validation = m.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
-    print(validation)
-    print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
-    import subprocess
-    subprocess.call(["rm", "-f", problem(network("path.valid"))])
-    import sys
-    if np.all(validation):
-        subprocess.call(["touch", problem(network("path.valid"))])
-        sys.exit(0)
-    else:
-        sys.exit(2)
-        
+        validation = m.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
+        print(validation)
+        print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
+        import subprocess
+        subprocess.call(["rm", "-f", problem(network("path_{}.valid".format(i)))])
+        import sys
+        if np.all(validation):
+            subprocess.call(["touch", problem(network("path_{}.valid".format(i)))])
+            sys.exit(0)
 
 if __name__ == '__main__':
     import sys
