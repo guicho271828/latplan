@@ -145,7 +145,16 @@ class Searcher:
                 self.close_list[hash_value] = _succ
                 yield _succ
 
-class Astar(Searcher):
+class StateBasedGoalDetection:
+    def goalp(self,state,goal):
+        return (state == goal).all()
+
+class ReconstructionGoalDetection:
+    def goalp(self,state,goal):
+        return np.all(0 == np.round(sae.decode_binary(np.expand_dims(state,0)) -
+                                    sae.decode_binary(np.expand_dims(goal,0))))
+
+class Astar(Searcher,StateBasedGoalDetection):
     def search(self,init,goal,distance):
         self.N = len(init)
         heuristic = lambda x: distance(x, goal)
@@ -178,7 +187,7 @@ class Astar(Searcher):
                 best_h = h
                 print("new h = {}".format(h))
 
-            if (state.state == goal).all():
+            if self.goalp(state.state, goal):
                 return state
 
             for c in self.successors(state):
@@ -190,7 +199,7 @@ class Astar(Searcher):
                     c.h      = heuristic(c.state)
                     open_list.put((c.g+c.h, c.h, c.hash()))
 
-class GBFS(Searcher):
+class GBFS(Searcher,StateBasedGoalDetection):
     def search(self,init,goal,distance):
         self.N = len(init)
         heuristic = lambda x: distance(x, goal)
@@ -219,7 +228,7 @@ class GBFS(Searcher):
                 best_h = h
                 print("new h = {}".format(h))
 
-            if (state.state == goal).all():
+            if self.goalp(state.state, goal):
                 return state
 
             for c in self.successors(state):
@@ -230,11 +239,17 @@ class GBFS(Searcher):
                     c.status = OPEN
                     c.h      = heuristic(c.state)
                     open_list.put((c.h, c.hash()))
-        
+
+
+class AstarRec(ReconstructionGoalDetection,Astar):
+    pass
+class GBFSRec(ReconstructionGoalDetection,GBFS):
+    pass
+
 def goalcount(state,goal):
     return np.abs(state-goal).sum()
 
-def main(network_dir, problem_dir):
+def main(network_dir, problem_dir, searcher):
     global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
     
     sae = default_networks[get_ae_type(network_dir)](network_dir).load()
@@ -279,7 +294,7 @@ def main(network_dir, problem_dir):
     plot_grid(
         sae.decode_binary(np.array([init,goal])),
         path=problem(network("init_goal_reconstruction.png")),verbose=True)
-    plan = np.array(GBFS().search(init,goal,goalcount).path())
+    plan = np.array( eval(searcher)().search(init,goal,goalcount).path())
     print(plan)
     plot_grid(sae.decode_binary(plan),
               path=problem(network("path.png")),verbose=True)
