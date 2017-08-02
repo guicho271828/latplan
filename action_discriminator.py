@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # test if the learned action is correct
 
     # actions_valid = np.loadtxt("{}/actions.csv".format(directory),dtype=int)
-    actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=int)
+    actions_valid = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
     
     N = actions_valid.shape[1] // 2
     print("valid",actions_valid.shape)
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     print("type1 error: ",np.sum(1-np.round(discriminator.discriminate(actions_valid,batch_size=1000))))
 
     # invalid actions generated from random bits
-    actions_invalid = np.random.randint(0,2,(len(actions_valid),2*N))
+    actions_invalid = np.random.randint(0,2,(len(actions_valid),2*N),dtype=np.int8)
     actions_invalid = set_difference(actions_invalid, actions_valid)
     print("invalid",actions_invalid.shape, "--- invalid actions generated from random bits")
     discriminator.report(actions_invalid,train_data_to=np.zeros((len(actions_invalid),)))
@@ -114,13 +114,36 @@ if __name__ == '__main__':
     if 'check' in mode:
         from latplan.util import get_ae_type
         ae = default_networks[get_ae_type(directory)](directory).load()
-        pre_images = ae.decode_binary(pre,batch_size=1000)
-        suc_images = ae.decode_binary(suc_invalid,batch_size=1000)
         import latplan.puzzles.puzzle_mnist as p
         p.setup()
         import latplan.puzzles.model.puzzle as m
-        validation = m.validate_transitions([pre_images[:100000], suc_images[:100000]], 3,3)
-        print(np.count_nonzero(validation),"valid actions in invalid2")
+        count = 0
+        batch = 10000
+        for i in range(len(pre)//batch):
+            pre_images = ae.decode_binary(pre        [batch*i:batch*(i+1)],batch_size=1000)
+            suc_images = ae.decode_binary(suc_invalid[batch*i:batch*(i+1)],batch_size=1000)
+            m.validate_transitions([pre_images, suc_images], 3,3)
+            count += np.count_nonzero(validation)
+        print(count,"valid actions in invalid2")
+    
+    pre2 = np.loadtxt("{}/all_states.csv".format(directory),dtype=np.int8)
+    suc2 = np.copy(pre2)
+    random.shuffle(suc2)
+    actions_invalid5 = np.concatenate((pre2,suc2),axis=1)
+    actions_invalid5 = set_difference(actions_invalid5, actions_valid)
+    print("invalid5",actions_invalid5.shape, "--- generated from shuffling all valid states; pre/suc are correct but possibly unknown states")
+    discriminator.report(actions_invalid5,train_data_to=np.zeros((len(actions_invalid5),)))
+    print("type2 error: ",np.sum(np.round(discriminator.discriminate(actions_invalid5,batch_size=1000))))
+    
+    if 'check' in mode:
+        count = 0
+        batch = 10000
+        for i in range(len(pre)//batch):
+            pre_images = ae.decode_binary(pre2[batch*i:batch*(i+1)],batch_size=1000)
+            suc_images = ae.decode_binary(suc2[batch*i:batch*(i+1)],batch_size=1000)
+            m.validate_transitions([pre_images, suc_images], 3,3)
+            count += np.count_nonzero(validation)
+        print(count,"valid actions in invalid2")
 
     actions_invalid3 = actions_invalid.copy()
     actions_invalid3[:,:N] = actions_valid[:len(actions_invalid),:N]
