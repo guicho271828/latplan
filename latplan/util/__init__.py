@@ -57,3 +57,12 @@ def union(a, b):
     return np.concatenate((b, d), axis=0)
 
  
+def bce(true,pred,axis=None):
+    x = true
+    y = pred
+    return - (x * np.log(np.clip(y,1e-5,1)) + \
+              (1-x) * np.log(np.clip(1-y,1e-5,1))).mean(axis=axis)
+
+def mae(x,y,axis=None):
+    return np.mean(np.absolute(x - y),axis=axis)
+

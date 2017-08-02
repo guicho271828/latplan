@@ -3,7 +3,7 @@ import warnings
 import config
 import numpy as np
 from latplan.model import PUDiscriminator, default_networks, combined_discriminate, combined_discriminate2
-from latplan.util        import curry, prepare_binary_classification_data, set_difference
+from latplan.util        import curry, prepare_binary_classification_data, set_difference, bce
 from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
@@ -24,10 +24,6 @@ threshold = 0.01
 rate_threshold = 0.99
 max_repeat = 50
 inflation = 1
-
-def bce(x,y,axis):
-    return - (x * np.log(y+1e-5) + \
-              (1-x) * np.log(1-y+1e-5)).mean(axis=axis)
 
 def regenerate(sae, data):
     images           = sae.decode_binary(data,batch_size=2000)

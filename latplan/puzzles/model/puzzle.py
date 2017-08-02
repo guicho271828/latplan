@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
+from latplan.util import bce
 
 setting = {
     'base' : None,
@@ -27,9 +28,6 @@ def generate(configs, width, height):
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
-def bce(x,y,axis):
-    return - (x * np.log(np.clip(y,1e-5,1)) + \
-              (1-x) * np.log(np.clip(1-y,1e-5,1))).mean(axis=axis)
 
 def validate_states(states, width, height, verbose=True):
     load(width, height)

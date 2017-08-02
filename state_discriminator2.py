@@ -3,7 +3,7 @@ import warnings
 import config
 import numpy as np
 from latplan.model import Discriminator, default_networks
-from latplan.util        import curry
+from latplan.util        import curry, bce
 from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
@@ -72,11 +72,6 @@ parameters = {
     'epoch'      :[200],
     'lr'         :[0.0001],
 }
-
-
-def bce(x,y,axis):
-    return - (x * np.log(y+1e-5) + \
-              (1-x) * np.log(1-y+1e-5)).mean(axis=axis)
 
 if __name__ == '__main__':
     import numpy.random as random
