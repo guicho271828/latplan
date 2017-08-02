@@ -4,6 +4,7 @@ import config
 import numpy as np
 from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator, combined_discriminate, combined_discriminate2
 from latplan.util import get_ae_type
+from latplan.util.plot import plot_grid
 
 import keras.backend as K
 import tensorflow as tf
@@ -298,11 +299,14 @@ def main(network_dir, problem_dir):
     
     init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
     goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
+    plot_grid(
+        sae.decode_binary(np.array([init,goal])),
+        path=os.path.join(problem_dir,"init_goal_reconstruction_{}.png".format(get_ae_type(network_dir))),verbose=True)
     # plan = np.array(astar(init,goal,goalcount).path())
     plan = np.array(gbfs(init,goal,goalcount).path())
     print(plan)
-    from latplan.util.plot import plot_grid
-    plot_grid(sae.decode_binary(plan),path=os.path.join(problem_dir,"path_{}.png".format(get_ae_type(network_dir))),verbose=True)
+    plot_grid(sae.decode_binary(plan),
+              path=os.path.join(problem_dir,"path_{}.png".format(get_ae_type(network_dir))),verbose=True)
 
     from latplan.util import ensure_directory
     module_name = ensure_directory(problem_dir).split("/")[-3]
