@@ -391,12 +391,11 @@ class GumbelAE(AE):
             Reshape(input_shape),]
 
     def _build(self,input_shape):
+        _encoder = self.build_encoder(input_shape)
+        _decoder = self.build_decoder(input_shape)
         self.gs = self.build_gs()
         self.gs2 = self.build_gs()
 
-        _encoder = self.build_encoder(input_shape)
-        _decoder = self.build_decoder(input_shape)
-        
         x = Input(shape=input_shape)
         z = Sequential([flatten, *_encoder, self.gs])(x)
         y = Sequential(_decoder)(flatten(z))
@@ -625,6 +624,42 @@ class Convolutional2GumbelAE(ConvolutionalGumbelAE):
                                 activation='sigmoid',border_mode='same'),
                 Cropping2D(crop),
                 Reshape(input_shape),]
+
+class AltConvGumbelAE(GumbelAE):
+    def build_encoder(self,input_shape):
+        last_convolution = np.array(input_shape) // 8
+        self.parameters['clayer'] = 8
+        self.parameters['N'] = int(np.prod(last_convolution)*self.parameters['clayer'] // self.parameters['M'])
+        return [Reshape((*input_shape,1)),
+                GaussianNoise(0.1),
+                BN(),
+                Convolution2D(16,(3,3),
+                              activation=self.parameters['activation'],padding='same', use_bias=False),
+                Dropout(self.parameters['dropout']),
+                BN(),
+                MaxPooling2D((2,2)),
+                
+                Convolution2D(64,(3,3),
+                              activation=self.parameters['activation'],padding='same', use_bias=False),
+                SpatialDropout2D(self.parameters['dropout']),
+                BN(),
+                MaxPooling2D((2,2)),
+                
+                Convolution2D(64,(3,3),
+                              activation=self.parameters['activation'],padding='same', use_bias=False),
+                SpatialDropout2D(self.parameters['dropout']),
+                BN(),
+                MaxPooling2D((2,2)),
+                
+                Convolution2D(64,(1,1),
+                              activation=self.parameters['activation'],padding='same', use_bias=False),
+                SpatialDropout2D(self.parameters['dropout']),
+                BN(),
+
+                Convolution2D(self.parameters['clayer'],(1,1),
+                              padding='same'),
+                flatten,
+        ]
 
 # mixin classes ###############################################################
 # Now effectively 3 subclasses; GumbelSoftmax in the output, Convolution, Gaussian.
@@ -1000,6 +1035,7 @@ default_networks = {
     'conv':ConvolutionalGumbelAE,
     'conv2':ConvolutionalGumbelAE2,
     'cc' : Convolutional2GumbelAE,
+    'aconv':AltConvGumbelAE,
     **{
         name: classobj \
         for name, classobj in globals().items() \
