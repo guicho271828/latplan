@@ -144,8 +144,8 @@ class StateBasedGoalDetection:
 
 class ReconstructionGoalDetection:
     def goalp(self,state,goal):
-        return np.all(0 == np.round(sae.decode_binary(np.expand_dims(state,0)) -
-                                    sae.decode_binary(np.expand_dims(goal,0))))
+        return bce(sae.decode_binary(np.expand_dims(state,0)),
+                   sae.decode_binary(np.expand_dims(goal, 0))) < 0.1
 
 class Astar(Searcher,StateBasedGoalDetection):
     def search(self,init,goal,distance):
