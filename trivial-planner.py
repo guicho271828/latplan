@@ -182,15 +182,15 @@ class Astar(Searcher,StateBasedGoalDetection):
 
             if self.goalp(state.state, goal):
                 yield state
-
-            for c in self.successors(state):
-                new_g = state.g + 1
-                if c.g > new_g:
-                    c.g      = new_g
-                    c.parent = state
-                    c.status = OPEN
-                    c.h      = heuristic(c.state)
-                    open_list.put((c.g+c.h, c.h, c.hash()))
+            else:
+                for c in self.successors(state):
+                    new_g = state.g + 1
+                    if c.g > new_g:
+                        c.g      = new_g
+                        c.parent = state
+                        c.status = OPEN
+                        c.h      = heuristic(c.state)
+                        open_list.put((c.g+c.h, c.h, c.hash()))
 
 class GBFS(Searcher,StateBasedGoalDetection):
     def search(self,init,goal,distance):
@@ -223,15 +223,15 @@ class GBFS(Searcher,StateBasedGoalDetection):
 
             if self.goalp(state.state, goal):
                 yield state
-
-            for c in self.successors(state):
-                new_g = state.g + 1
-                if c.g > new_g:
-                    c.g      = new_g
-                    c.parent = state
-                    c.status = OPEN
-                    c.h      = heuristic(c.state)
-                    open_list.put((c.h, c.hash()))
+            else:
+                for c in self.successors(state):
+                    new_g = state.g + 1
+                    if c.g > new_g:
+                        c.g      = new_g
+                        c.parent = state
+                        c.status = OPEN
+                        c.h      = heuristic(c.state)
+                        open_list.put((c.h, c.hash()))
 
 
 class AstarRec(ReconstructionGoalDetection,Astar):
