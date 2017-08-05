@@ -2,6 +2,7 @@ from . import trace
 from . import plot
 from . import mnist
 from . import tuning
+from . import timer
 
 def get_ae_type(directory):
     import os.path
