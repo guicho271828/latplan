@@ -989,12 +989,12 @@ class ActionAE(AE):
             by_pre_im, by_suc_im = ae.decode_binary(by[:,:dim]), ae.decode_binary(by[:,dim:])
             y_suc_r_im, by_suc_r_im = ae.decode_binary(y[:,dim:].round()), ae.decode_binary(by[:,dim:].round())
             images = []
-            for seq in zip(x_pre_im, x_suc_im, z, y_pre_im, y_suc_im, y_suc_r_im, b, by_pre_im, by_suc_im, by_suc_r_im):
+            for seq in zip(x_pre_im, x_suc_im, squarify(np.squeeze(z)), y_pre_im, y_suc_im, y_suc_r_im, squarify(np.squeeze(b)), by_pre_im, by_suc_im, by_suc_r_im):
                 images.extend(seq)
             plot_grid(images, w=10, path=self.local(path), verbose=verbose)
         else:
             images = []
-            for seq in zip(x_pre, x_suc, z, y_pre, y_suc, y_suc_r, b, by_pre, by_suc, by_suc_r):
+            for seq in zip(x_pre, x_suc, squarify(np.squeeze(z)), y_pre, y_suc, y_suc_r, squarify(np.squeeze(b)), by_pre, by_suc, by_suc_r):
                 images.extend(seq)
             plot_grid(images, w=10, path=self.local(path), verbose=verbose)
         return x,z,y,b,by
