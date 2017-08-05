@@ -191,9 +191,8 @@ class Network:
         self.build(train_data.shape[1:])
         if debug:
             self.summary()
-        print({"parameters":self.parameters,
-               "train_shape":train_data.shape,
-               "test_shape":test_data.shape})
+        print("parameters",self.parameters)
+        print("train_shape",train_data.shape, "test_shape",test_data.shape)
 
         if isinstance(self.loss,list):
             train_data_to = [ train_data_to for l in self.loss ]
