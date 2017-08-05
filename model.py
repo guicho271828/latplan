@@ -92,7 +92,7 @@ class UnitNormL1(Constraint):
 class Network:
     def __init__(self,path,parameters={}):
         import subprocess
-        subprocess.call(["mkdir",path])
+        subprocess.call(["mkdir","-p",path])
         self.path = path
         self.built = False
         self.loaded = False
