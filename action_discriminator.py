@@ -52,12 +52,16 @@ def generate_random_action(data, sae):
     actions_invalid = np.concatenate((pre, suc), axis=1)
     actions_invalid = set_difference(actions_invalid, data)
     return actions_invalid
-    
+
+def generate_random_action2(data):
+    return np.random.randint(0,2,data.shape,dtype=np.int8)
+
 def prepare(data):
     data_invalid = np.concatenate(
         tuple([generate_nop(data),
                *[ permute_suc(data) for i in range(inflation) ],
-               *[ generate_random_action(data, ae) for i in range(inflation) ]
+               *[ generate_random_action(data, ae) for i in range(inflation) ],
+               *[ generate_random_action2(data) for i in range(inflation) ]
         ]), axis=0)
 
     data_valid   = np.repeat(data, len(data_invalid)//len(data), axis=0)
