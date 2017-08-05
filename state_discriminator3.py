@@ -140,6 +140,7 @@ if __name__ == '__main__':
                                       'lr'         :[0.001],
                                   })
 
+            cae.save()
             train_in2, test_in2 = cae.encode(train_image), cae.encode(test_image)
         
         discriminator,_,_ = grid_search(curry(nn_task, PUDiscriminator, directory_sd,
@@ -156,6 +157,7 @@ if __name__ == '__main__':
                                             'epoch'      :[300],
                                             'lr'         :[0.0001],
                                         })
+        discriminator.save()
         
     else:
         if 'conv' not in aetype:

@@ -72,6 +72,7 @@ if __name__ == '__main__':
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         parameters)
+        discriminator.save()
         
     print("index, discrimination, action")
     show_n = 30
