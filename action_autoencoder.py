@@ -107,4 +107,22 @@ Input: a subset of valid action pairs.
 If the number of actions are too large, they simply does not appear in the
 training examples. This means those actions can be pruned, and you can lower the number of actions.
 
+
+TODO:
+verify all valid successors are generated, negative prior exploiting that fact
+
+consider changing the input data: all successors are provided, closed world assumption
+
+mearging action discriminator and state discriminator into one network
+
+
+AD: use the minimum activation among the correct actions as a threshold
+or use 1.0
+
+AD: use action label as an additional input to discriminaotr (??)
+
+AD: ensemble
+
+
+
 """
