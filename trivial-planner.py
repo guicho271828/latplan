@@ -102,12 +102,12 @@ def state_discriminator3_filtering(y):
         return y[np.where(np.squeeze(combined_discriminate(y[:,N:],sae,cae,sd3)) > 0.5)[0]]
 
 pruning_methods = [
-    # action_reconstruction_filtering,           # if applied, this should be the first method
+    action_reconstruction_filtering,           # if applied, this should be the first method
     # state_reconstruction_from_oae_filtering,
-    # state_reconstruction_filtering
     inflate_actions,
     action_discriminator_filtering,
-    state_discriminator3_filtering
+    state_reconstruction_filtering,
+    state_discriminator3_filtering,
 ]
 
 class Searcher:
