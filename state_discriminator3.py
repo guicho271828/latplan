@@ -20,65 +20,62 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 
 # negative examples (random bitstrings) are pre-filtered using SAE reconstruction
 
-threshold = 0.01
-rate_threshold = 0.99
-max_repeat = 50
 inflation = 1
 
-def regenerate(sae, data):
-    images           = sae.decode_binary(data,batch_size=2000)
-    data_invalid_rec = sae.encode_binary(images,batch_size=2000)
-    return data_invalid_rec
+def generate_random(data,sae):
+    threshold = 0.01
+    rate_threshold = 0.99
+    max_repeat = 50
 
-def regenerate_many(sae, data):
-    loss = 1000000000
-    for i in range(max_repeat):
-        data_rec = regenerate(sae, data)
-        prev_loss = loss
-        loss    = bce(data,data_rec,(0,1,))
-        print(loss, loss / prev_loss)
-        data = data_rec
-        if loss / prev_loss > rate_threshold:
-            break
-        if loss < threshold:
-            break
-    return data.round().astype(np.int8)
+    def regenerate(sae, data):
+        images           = sae.decode_binary(data,batch_size=2000)
+        data_invalid_rec = sae.encode_binary(images,batch_size=2000)
+        return data_invalid_rec
 
-def prune_unreconstructable(sae,data):
-    rec = regenerate(sae,data)
-    loss = bce(data,rec,(1,))
-    return data[np.where(loss < 0.01)[0]]
+    def regenerate_many(sae, data):
+        loss = 1000000000
+        for i in range(max_repeat):
+            data_rec = regenerate(sae, data)
+            prev_loss = loss
+            loss    = bce(data,data_rec)
+            print(loss, loss / prev_loss)
+            data = data_rec
+            if loss / prev_loss > rate_threshold:
+                print("improvement saturated: loss / prev_loss = ", loss / prev_loss, ">", rate_threshold)
+                break
+            # if loss < threshold:
+            #     print("good amount of loss:", loss, "<", threshold)
+            #     break
+        return data.round().astype(np.int8)
+    
+    def prune_unreconstructable(sae,data):
+        rec = regenerate(sae,data)
+        loss = bce(data,rec,(1,))
+        return data[np.where(loss < threshold)[0]]
+    
+    batch = data.shape[0]
+    N     = data.shape[1]
+    data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
+    data_invalid = regenerate_many(sae, data_invalid)
+    data_invalid = prune_unreconstructable(sae, data_invalid)
+    from latplan.util import set_difference
+    data_invalid = set_difference(data_invalid.round(), data.round())
+    return data_invalid
 
 def prepare(data_valid, sae):
-    print(data_valid.shape)
+    data_invalid = generate_random(data_valid, sae)
+
     batch = data_valid.shape[0]
-    N = data_valid.shape[1]
-
-    def generate():
-        data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
-        data_invalid = regenerate_many(sae, data_invalid)
-        data_invalid = prune_unreconstructable(sae, data_invalid)
-        from latplan.util import set_difference
-        data_invalid = set_difference(data_invalid.round(), data_valid.round())
-        return data_invalid
-
-    data_invalid = generate()
     for i in range(inflation-1):
         data_invalid = np.concatenate((data_invalid,
                                        set_difference(generate(),data_invalid))
                                       , axis=0)
         print(batch, "->", len(data_invalid), "invalid examples")
-
     if inflation != 1:
         real_inflation = len(data_invalid)//batch
         data_invalid = data_invalid[:batch*real_inflation]
         data_valid   = np.repeat(data_valid, real_inflation, axis=0)
 
-    # image_valid = sae.decode_binary(data_valid).reshape((batch, -1))
-    # image_invalid = sae.decode_binary(data_invalid).reshape((len(data_invalid), -1))
-    # image_invalid = set_difference(image_invalid.round(), image_valid.round())
-    # print(batch, " -> ", len(image_invalid), "invalid examples (rounded image)")
-    
     train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
     return train_in, train_out, test_in, test_out, data_valid, data_invalid
 
