@@ -65,6 +65,7 @@ if __name__ == '__main__':
                                     data[6000:], data[6000:],),
                               default_parameters,
                               parameters)
+        aae.save()
 
     aae.plot(data[:8], "aae_train.png")
     aae.plot(data[6000:6008], "aae_test.png")

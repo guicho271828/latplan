@@ -128,6 +128,7 @@ def run(path,train,test):
                                default_parameters,
                                parameters,
                                report = lambda ae: dump_autoencoding_image(ae,test,train))
+        ae.save()
     else:
         ae = default_networks[encoder](path).load()
         ae.summary()

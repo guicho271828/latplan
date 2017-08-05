@@ -89,6 +89,7 @@ if __name__ == '__main__':
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         parameters)
+        discriminator.save()
     
     # test if the learned action is correct
 
