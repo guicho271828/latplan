@@ -29,7 +29,7 @@ def generate(configs, width, height):
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
 
-def validate_states(states, width, height, verbose=True):
+def validate_states_cpu(states, width, height, verbose=True, **kwargs):
     load(width, height)
     base = setting['base']
     
@@ -85,7 +85,84 @@ def validate_states(states, width, height, verbose=True):
 
     return np.logical_and(panels_ok, coverage_ok)
 
+def validate_states_gpu(states, width, height, verbose=True, **kwargs):
+    load(width, height)
+    base = setting['base']
+    
+    from keras.layers import Input, Lambda, Reshape
+    from keras.models import Model
+    from keras import backend as K
+    import tensorflow as tf
 
+    def wrap(x,y,**kwargs):
+        "wrap arbitrary operation"
+        return Lambda(lambda x:y,**kwargs)(x)
+
+    def build():
+        states = Input(shape=(height*base,width*base))
+        s = states
+        s = K.permute_dimensions(
+            K.reshape(K.round(s),
+                      [-1,height,base,width,base]),
+            [0,1,3,2,4])
+        # a h w y x
+        s = K.reshape(s,[-1,height,width,1,base,base])
+        s = K.tile(s, [1,1,1,len(setting['panels']),1,1,])
+        # a h w panel y x
+        
+        allpanels = K.variable(np.array(setting['panels']))
+        allpanels = K.reshape(allpanels, [1,1,1,-1,base,base])
+        allpanels = K.tile(allpanels, [K.shape(s)[0], height, width, 1, 1, 1])
+ 
+        error = K.binary_crossentropy(s, allpanels)
+        error = K.mean(error, axis=(4,5))
+
+        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        # a, h, w, panel
+        
+        num_matches = K.sum(matches, axis=3)
+        panels_ok = K.all(K.equal(num_matches, 1), (1,2))
+        panels_ng = K.any(K.not_equal(num_matches, 1), (1,2))
+        panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2))
+        panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2))
+
+        panel_coverage = K.sum(matches,axis=(1,2))
+        # ideally, this should be [[1,1,1,1,1,1,1,1,1], ...]
+        coverage_ok = K.all(K.less_equal(panel_coverage, 1), 1)
+        coverage_ng = K.any(K.greater(panel_coverage, 1), 1)
+        validity = tf.logical_and(panels_ok, coverage_ok)
+
+        if verbose:
+            return Model(states,
+                         [ wrap(states, x) for x in [panels_ok,
+                                                     panels_ng,
+                                                     panels_nomatch,
+                                                     panels_ambiguous,
+                                                     coverage_ok,
+                                                     coverage_ng,
+                                                     validity]])
+        else:
+            return Model(states, wrap(states, validity))
+
+    model = build()
+    #     model.summary()
+    if verbose:
+        panels_ok, panels_ng, panels_nomatch, panels_ambiguous, \
+            coverage_ok, coverage_ng, validity = model.predict(states, **kwargs)
+        print(np.count_nonzero(panels_ng),       "images have some panels which match 0 or >2 panels, out of which")
+        print(np.count_nonzero(panels_nomatch),  "images have some panels which are unlike any panels")
+        print(np.count_nonzero(panels_ambiguous),"images have some panels which match >2 panels")
+        print(np.count_nonzero(panels_ok),       "images have panels (all of them) which match exactly 1 panel each")
+        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
+        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
+        return validity
+    else:
+        validity = model.predict(states, **kwargs)
+        return validity
+
+
+validate_states = validate_states_gpu
+    
 def to_configs(states, width, height, verbose=True):
     load(width, height)
     base = setting['base']
@@ -189,12 +266,12 @@ def successors(config,width,height):
         print((c,x,y,width,height))
 
 
-def validate_transitions(transitions, width, height):
+def validate_transitions(transitions, width, height, **kwargs):
     pre = np.array(transitions[0])
     suc = np.array(transitions[1])
 
-    pre_validation = validate_states(pre, width, height)
-    suc_validation = validate_states(suc, width, height)
+    pre_validation = validate_states(pre, width, height, **kwargs)
+    suc_validation = validate_states(suc, width, height, **kwargs)
 
     results = []
     for pre, suc, pre_validation, suc_validation in zip(pre, suc, pre_validation, suc_validation):
