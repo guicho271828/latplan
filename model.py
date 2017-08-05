@@ -249,7 +249,9 @@ class GumbelSoftmax:
     def call(self,logits):
         u = K.random_uniform(K.shape(logits), 0, 1)
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
-        return K.softmax( ( logits + gumbel ) / self.tau )
+        return K.in_train_phase(
+            K.softmax( ( logits + gumbel ) / self.tau ),
+            K.softmax( ( logits + gumbel ) / self.min ))
     
     def __call__(self,prev):
         if hasattr(self,'logits'):
