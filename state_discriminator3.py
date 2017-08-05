@@ -151,7 +151,7 @@ if __name__ == '__main__':
                                             'batch_size' :[1000],
                                             'full_epoch' :[1000],
                                             'activation' :['relu'],
-                                            'epoch'      :[300],
+                                            'epoch'      :[3000],
                                             'lr'         :[0.0001],
                                         })
         discriminator.save()
