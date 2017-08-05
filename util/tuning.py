@@ -64,7 +64,8 @@ def grid_search(task, default_parameters, parameters,
             else:
                 del artifact
     finally:
-        print("Best parameter:\n{}\neval: {}".format(best_params,best_eval))
+        from colors import bold
+        print(bold("*** Best parameter: ***\n{}\neval: {}".format(best_params,best_eval)))
         print(results)
     return best_artifact,best_params,best_eval
 
