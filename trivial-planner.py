@@ -73,7 +73,8 @@ def inflate_actions(y):
     t = y[:,N:]
     for i in range(inflation-1):
         t = union(sae.autodecode_binary(t).round().astype(int), t)
-    y = y.repeat(inflation, axis=0)[:len(t)]
+    import math
+    y = y.repeat(math.ceil(len(t)/len(y)), axis=0)[:len(t)]
     y[:,N:] = t
     return y
 
