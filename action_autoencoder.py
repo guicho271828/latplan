@@ -67,25 +67,67 @@ if __name__ == '__main__':
                               parameters)
         aae.save()
 
-    aae.plot(data[:8], "aae_train.png")
-    aae.plot(data[6000:6008], "aae_test.png")
-
+    N = data.shape[1]//2
+    all_labels = np.identity(128).reshape((128,1,128))
+    
     from latplan.util import get_ae_type
     ae = default_networks[get_ae_type(directory)](directory).load()
+    
+    if 'plot' in mode:
+        aae.plot(data[:8], "aae_train.png")
+        aae.plot(data[6000:6008], "aae_test.png")
 
-    aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
-    aae.plot(data[6000:6008], "aae_test_decoded.png", ae=ae)
 
-    N = data.shape[1]//2
-    transitions = aae.decode([np.repeat(data[:1,:N], 128, axis=0), np.identity(128).reshape((128,1,128))])
-    aae.plot(transitions, "aae_all_actions_for_a_state.png", ae=ae)
+        aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
+        aae.plot(data[6000:6008], "aae_test_decoded.png", ae=ae)
+
+        transitions = aae.decode([np.repeat(data[:1,:N], 128, axis=0), all_labels])
+        aae.plot(transitions, "aae_all_actions_for_a_state.png", ae=ae)
+    
     if 'check' in mode:
         import latplan.puzzles.puzzle_mnist as p
         p.setup()
         import latplan.puzzles.model.puzzle as m
-        pre = ae.decode_binary(transitions[:,:N])
-        suc = ae.decode_binary(transitions[:,N:])
-        m.validate_transitions([pre,suc],3,3)
+
+        from latplan.util.timer import Timer
+        with Timer("loading csv..."):
+            all_actions = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
+
+        with Timer("shuffling"):
+            random.shuffle(all_actions)
+        all_actions = all_actions[:10000]
+
+        count = 0
+        try:
+            pre_states = all_actions[:,:N]
+            suc_states = all_actions[:,N:]
+            pre_images = ae.decode_binary(pre_states,batch_size=1000)
+            suc_images = ae.decode_binary(suc_states,batch_size=1000)
+
+            import progressbar as pb
+            bar = pb.ProgressBar(
+                max_value=len(all_actions),
+                widgets=[
+                    pb.Timer("Elap: %(elapsed) "),
+                    pb.AbsoluteETA("Est: %(elapsed) "),
+                    pb.Bar(),
+                ])
+            for pre_state,suc_state,pre_image,suc_image in bar(zip(pre_states,suc_states,pre_images,suc_images)):
+                
+                generated_transitions = aae.decode([
+                    np.repeat([pre_state],128,axis=0),
+                    all_labels,
+                ],batch_size=1000)
+                generated_suc_states = generated_transitions[:,N:]
+                generated_suc_images = ae.decode_binary(generated_suc_states,batch_size=1000)
+
+                from latplan.util import bce
+                errors = bce(generated_suc_images, np.repeat([suc_image],128,axis=0), axis=(1,2))
+                min_error = np.amin(errors)
+                if min_error < 0.01:
+                    count += 1
+        finally:
+            print({"count": count, "total":len(all_actions)})
     
     actions = aae.encode_action(data, batch_size=1000)
     actions_r = actions.round()
