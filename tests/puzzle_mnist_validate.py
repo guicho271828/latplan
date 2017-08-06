@@ -65,3 +65,10 @@ with Timer(style("************************* transitions_old one_per_state ******
 with Timer(style("************************* transitions one_per_state ***************************")):
     transitions = m.transitions(3,3,configs=c,one_per_state=True)
 
+
+with Timer(style("************************* validate_transitions_cpu_old ***************************")):
+    print(m.validate_transitions_cpu_old(transitions,3,3,batch_size=1000)[:3])
+
+with Timer(style("************************* validate_transitions_cpu ***************************")):
+    print(m.validate_transitions_cpu(transitions,3,3,batch_size=1000)[:3])
+
