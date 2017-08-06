@@ -12,14 +12,11 @@ def setup():
         from ..util.mnist import mnist
         base = setting['base']
         x_train, y_train, _, _ = mnist()
-        filters = [ np.equal(i,y_train) for i in range(10) ]
+        filters = [ np.equal(i,y_train) for i in range(9) ]
         imgs    = [ x_train[f] for f in filters ]
         panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
         panels[8] = imgs[8][3].reshape((28,28))
         panels[1] = imgs[8][3].reshape((28,28))
-        panels.append(np.random.uniform(0,1,(28,28)))
-        panels.append(np.zeros((28,28)))
-        panels.append(np.ones((28,28))*255)
         panels = np.array(panels)
         stepy = panels[0].shape[0]//base
         stepx = panels[0].shape[1]//base
