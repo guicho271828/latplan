@@ -13,7 +13,7 @@ def load(width,height,force=False):
     if setting['panels'] is None or force is True:
         setting['panels'] = setting['loader'](width,height)
 
-def generate(configs, width, height):
+def generate_cpu(configs, width, height, **kwargs):
     assert width*height <= 9
     load(width, height)
     dim_x = setting['base']*width
@@ -28,6 +28,38 @@ def generate(configs, width, height):
         return figure
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
 
+def generate_gpu(configs, width, height, **kwargs):
+    assert width*height <= 9
+    load(width, height)
+
+    from keras.layers import Input, Lambda, Reshape
+    from keras.models import Model
+    from keras import backend as K
+    import tensorflow as tf
+    
+    def wrap(x,y,**kwargs):
+        "wrap arbitrary operation"
+        return Lambda(lambda x:y,**kwargs)(x)
+    
+    def build():
+        base = setting['base']
+        P = len(setting['panels'])
+        configs = Input(shape=(P,))
+        configs_one_hot = K.one_hot(K.cast(configs,'int32'), width*height)
+        matches = K.permute_dimensions(configs_one_hot, [0,2,1])
+        matches = K.reshape(matches,[-1,P])
+        panels = K.variable(setting['panels'])
+        panels = K.reshape(panels, [P, base*base])
+        states = tf.matmul(matches, panels)
+        states = K.reshape(states, [-1, height, width, base, base])
+        states = K.permute_dimensions(states, [0, 1, 3, 2, 4])
+        states = K.reshape(states, [-1, height*base, width*base])
+        return Model(configs, wrap(configs, states))
+
+    model = build()
+    return model.predict(configs,**kwargs)
+
+generate = generate_gpu
 
 def validate_states_cpu(states, width, height, verbose=True, **kwargs):
     load(width, height)
@@ -240,11 +272,11 @@ def to_configs_gpu(states, width, height, verbose=True, **kwargs):
 
 to_configs = to_configs_gpu
 
-def states(width, height, configs=None):
+def states(width, height, configs=None, **kwargs):
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
-    return generate(configs,width,height)
+    return generate(configs,width,height, **kwargs)
 
 def transitions(width, height, configs=None, one_per_state=False):
     digit = width * height
