@@ -50,3 +50,18 @@ with Timer(style("************************* to_configs on gpu, batch=100 *******
 
 with Timer(style("************************* to_configs on gpu, batch=1000 ***************************")):
     print(m.to_configs_gpu(s,3,3,batch_size=1000)[:3])
+
+c = c[:10]
+
+with Timer(style("************************* transitions_old ***************************")):
+    transitions = m.transitions_old(3,3,configs=c)
+
+with Timer(style("************************* transitions ***************************")):
+    transitions = m.transitions(3,3,configs=c)
+
+with Timer(style("************************* transitions_old one_per_state ***************************")):
+    transitions = m.transitions_old(3,3,configs=c,one_per_state=True)
+
+with Timer(style("************************* transitions one_per_state ***************************")):
+    transitions = m.transitions(3,3,configs=c,one_per_state=True)
+
