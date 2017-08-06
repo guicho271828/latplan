@@ -364,13 +364,12 @@ def successors(config,width,height):
         print(dir)
         print((c,x,y,width,height))
 
-
-def validate_transitions(transitions, width, height, **kwargs):
+def validate_transitions_cpu_old(transitions, width, height, **kwargs):
     pre = np.array(transitions[0])
     suc = np.array(transitions[1])
 
-    pre_validation = validate_states(pre, width, height, **kwargs)
-    suc_validation = validate_states(suc, width, height, **kwargs)
+    pre_validation = validate_states(pre, width, height, verbose=False, **kwargs)
+    suc_validation = validate_states(suc, width, height, verbose=False, **kwargs)
 
     results = []
     for pre, suc, pre_validation, suc_validation in zip(pre, suc, pre_validation, suc_validation):
@@ -383,3 +382,27 @@ def validate_transitions(transitions, width, height, **kwargs):
             results.append(False)
     
     return results
+
+def validate_transitions_cpu(transitions, width, height, **kwargs):
+    pre = np.array(transitions[0])
+    suc = np.array(transitions[1])
+
+    pre_validation = validate_states(pre, width, height, verbose=False, **kwargs)
+    suc_validation = validate_states(suc, width, height, verbose=False, **kwargs)
+
+    pre_configs = to_configs(pre, width, height, verbose=False, **kwargs)
+    suc_configs = to_configs(suc, width, height, verbose=False, **kwargs)
+    
+    results = []
+    for pre_c, suc_c, pre_validation, suc_validation in zip(pre_configs, suc_configs, pre_validation, suc_validation):
+        
+        if pre_validation and suc_validation:
+            succs = successors(pre_c, width, height)
+            results.append(np.any(np.all(np.equal(succs, suc_c), axis=1)))
+        else:
+            results.append(False)
+    
+    return results
+
+
+validate_transitions = validate_transitions_cpu
