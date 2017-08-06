@@ -49,6 +49,7 @@ def plot_grid(images,path="plan.png",w=6,verbose=False):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     print(path) if verbose else None
+    plt.tight_layout()
     plt.savefig(path)
 
 
