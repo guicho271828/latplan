@@ -278,7 +278,8 @@ def states(width, height, configs=None, **kwargs):
         configs = generate_configs(digit)
     return generate(configs,width,height, **kwargs)
 
-def transitions(width, height, configs=None, one_per_state=False):
+# old definition, slow
+def transitions_old(width, height, configs=None, one_per_state=False):
     digit = width * height
     if configs is None:
         configs = generate_configs(digit)
@@ -294,6 +295,23 @@ def transitions(width, height, configs=None, one_per_state=False):
         transitions = np.array([ generate([c1,c2],width,height)
                                  for c1 in configs for c2 in successors(c1,width,height) ])
     return np.einsum('ab...->ba...',transitions)
+
+def transitions(width, height, configs=None, one_per_state=False, **kwargs):
+    digit = width * height
+    if configs is None:
+        configs = generate_configs(digit)
+    if one_per_state:
+        def pickone(thing):
+            index = np.random.randint(0,len(thing))
+            return thing[index]
+        pre = generate(configs, width, height, **kwargs)
+        suc = generate(np.array([pickone(successors(c1,width,height)) for c1 in configs ]), width, height, **kwargs)
+        return np.array([pre, suc])
+    else:
+        transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1,width,height) ])
+        pre = generate(transitions[:,0,:],width,height, **kwargs)
+        suc = generate(transitions[:,1,:],width,height, **kwargs)
+        return np.array([pre, suc])
 
 def generate_configs(digit=9):
     import itertools
