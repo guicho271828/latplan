@@ -162,8 +162,8 @@ def validate_states_gpu(states, width, height, verbose=True, **kwargs):
 
 
 validate_states = validate_states_gpu
-    
-def to_configs(states, width, height, verbose=True):
+
+def to_configs_cpu(states, width, height, verbose=True, **kwargs):
     load(width, height)
     base = setting['base']
     
@@ -190,6 +190,55 @@ def to_configs(states, width, height, verbose=True):
     npos, vpos, hpos, ppos = np.where(matches == 1)
     configs[npos,ppos] = vpos * height + hpos
     return configs
+
+def to_configs_gpu(states, width, height, verbose=True, **kwargs):
+    load(width, height)
+    base = setting['base']
+
+    from keras.layers import Input, Lambda, Reshape
+    from keras.models import Model
+    from keras import backend as K
+    import tensorflow as tf
+    
+    def wrap(x,y,**kwargs):
+        "wrap arbitrary operation"
+        return Lambda(lambda x:y,**kwargs)(x)
+
+    def build():
+        P = len(setting['panels'])
+        states = Input(shape=(height*base,width*base))
+        s = states
+        s = K.permute_dimensions(
+            K.reshape(K.round(s),
+                      [-1,height,base,width,base]),
+            [0,1,3,2,4])
+        # a h w y x
+        s = K.reshape(s,[-1,height,width,1,base,base])
+        s = K.tile(s, [1,1,1,P,1,1,])
+        # a h w panel y x
+        
+        allpanels = K.variable(np.array(setting['panels']))
+        allpanels = K.reshape(allpanels, [1,1,1,-1,base,base])
+        allpanels = K.tile(allpanels, [K.shape(s)[0], height, width, 1, 1, 1])
+        
+        error = K.binary_crossentropy(s, allpanels)
+        error = K.mean(error, axis=(4,5))
+
+        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        # a, h, w, panel
+        matches = K.reshape(matches, [K.shape(s)[0], height * width, -1])
+        # a, pos, panel
+        matches = K.permute_dimensions(matches, [0,2,1])
+        # a, panel, pos
+        config = matches * K.arange(height*width,dtype='float')
+        config = K.sum(config, axis=-1)
+        return Model(states, wrap(states, config))
+    
+    model = build()
+    return model.predict(states, **kwargs)
+
+
+to_configs = to_configs_gpu
 
 def states(width, height, configs=None):
     digit = width * height
