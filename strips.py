@@ -147,7 +147,7 @@ parameters = {
     'lr'         :[0.001],
 }
 
-def puzzle(type='mnist',width=3,height=3,N=36):
+def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     parameters['N'] = [N]
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
@@ -155,7 +155,6 @@ def puzzle(type='mnist',width=3,height=3,N=36):
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
-    num_examples = 6500
     transitions = p.transitions(width,height,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     print(states.shape)
