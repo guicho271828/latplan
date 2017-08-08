@@ -19,7 +19,7 @@ parallel --eta --timeout 120 --joblog parallel.log "./trivial-planner.py samples
 
 ./strips.py fc hanoi learn_plot_dump 3
 ./strips.py fc hanoi learn_plot_dump 4
-./strips.py fc xhanoi learn_plot_dump 4
+./strips.py fc hanoi learn_plot_dump 7 4
 
 ./strips.py fc digital_lightsout learn_plot_dump 4
 ./strips.py fc digital_lightsout_skewed learn_plot_dump 3
