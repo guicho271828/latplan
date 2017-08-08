@@ -160,7 +160,7 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     print(states.shape)
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
-    ae = run("samples/puzzle_{}{}{}{}_{}/".format(type,width,height,N,encoder), train, test)
+    ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
