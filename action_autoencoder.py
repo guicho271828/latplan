@@ -61,8 +61,8 @@ if __name__ == '__main__':
         aae = ActionAE(directory_aae).load()
     except:
         aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae,
-                                    data[:6000], data[:6000],
-                                    data[6000:], data[6000:],),
+                                    data[:int(len(data)*0.9)], data[:int(len(data)*0.9)],
+                                    data[int(len(data)*0.9):], data[int(len(data)*0.9):],),
                               default_parameters,
                               parameters)
         aae.save()
@@ -75,11 +75,11 @@ if __name__ == '__main__':
     
     if 'plot' in mode:
         aae.plot(data[:8], "aae_train.png")
-        aae.plot(data[6000:6008], "aae_test.png")
+        aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test.png")
 
 
         aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
-        aae.plot(data[6000:6008], "aae_test_decoded.png", ae=ae)
+        aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test_decoded.png", ae=ae)
 
         transitions = aae.decode([np.repeat(data[:1,:N], 128, axis=0), all_labels])
         aae.plot(transitions, "aae_all_actions_for_a_state.png", ae=ae)

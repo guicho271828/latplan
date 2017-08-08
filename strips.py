@@ -155,11 +155,12 @@ def puzzle(type='mnist',width=3,height=3,N=36):
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
     random.shuffle(configs)
-    transitions = p.transitions(width,height,configs[:6500],one_per_state=True)
+    num_examples = 6500
+    transitions = p.transitions(width,height,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     print(states.shape)
-    train = states[:12000]
-    test  = states[12000:]
+    train = states[:int(len(states)*0.9)]
+    test  = states[int(len(states)*0.9):]
     ae = run("samples/puzzle_{}{}{}{}_{}/".format(type,width,height,N,encoder), train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
