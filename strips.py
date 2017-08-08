@@ -143,7 +143,7 @@ parameters = {
     'activation' :['tanh'],
     'full_epoch' :[250],
     'epoch'      :[250],
-    'batch_size' :[2000],
+    'batch_size' :[1000],
     'lr'         :[0.001],
 }
 
