@@ -99,7 +99,9 @@ class Network:
         self.verbose = True
         self.parameters = parameters
         self.custom_log_functions = {}
-        self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update)]
+        import datetime
+        self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update),
+                          keras.callbacks.TensorBoard(log_dir=self.local('logs/{}'.format(datetime.datetime.now().isoformat())), write_graph=False)]
         
     def build(self,input_shape):
         if self.built:
