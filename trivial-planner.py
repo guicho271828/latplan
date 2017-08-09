@@ -308,6 +308,12 @@ def main(network_dir, problem_dir, searcher):
         validation = m.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
         print(validation)
         print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
+
+        print(m.validate_states(sae.decode_binary(plan),3,3))
+        if "conv" in get_ae_type(sae.path):
+            print(combined_discriminate2(plan,sae,sd3).flatten())
+        else:
+            print(combined_discriminate(plan,sae,cae,sd3).flatten())
         import subprocess
         subprocess.call(["rm", "-f", problem(network("path_{}.valid".format(i)))])
         import sys
