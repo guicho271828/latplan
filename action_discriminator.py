@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import PUDiscriminator, default_networks
+from latplan.model import default_networks
 from latplan.util        import curry, set_difference, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
 
@@ -70,6 +70,48 @@ def prepare(data):
 
     return prepare_binary_classification_data(data_valid, data_invalid)
 
+def prepare_oae_validated(known_transisitons):
+    # This is a cheating, since we assume validation oracle
+    
+    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
+    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+    identified, total = np.squeeze(histogram.sum()), len(actions)
+    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+    for i, pos in enumerate(np.where(histogram > 0)[0]):
+        available_actions[i][0][pos] = 1
+
+    N = known_transisitons.shape[1] // 2
+    states = known_transisitons.reshape(-1, N)
+    # states = states[:5000]
+    y = oae.decode([np.repeat(states, len(available_actions), axis=0),
+                    np.repeat(available_actions, len(states), axis=0)], batch_size=1000) \
+           .round().astype(int)
+
+    random.shuffle(y)
+    
+    answers = np.zeros(len(y),dtype=int)
+    import latplan.puzzles.puzzle_mnist as p
+    p.setup()
+    import latplan.puzzles.model.puzzle as m
+    batch = 100000
+    for i in range(1+len(y)//batch):
+        print(i,"/",len(y)//batch)
+        pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
+        suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        answers[batch*i:batch*(i+1)] = np.array(m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+
+    l = len(y)
+    positive = np.count_nonzero(answers)
+    print(positive,l-positive)
+
+    y_positive = y[answers.astype(bool)]
+    y_negative = y[(1-answers).astype(bool)]
+    y_negative = y_negative[:len(y_positive)]
+    
+    return prepare_binary_classification_data(y_positive, y_negative)
+
+
 # default values
 default_parameters = {
     'lr'              : 0.0001,
@@ -108,13 +150,21 @@ if __name__ == '__main__':
     try:
         if 'learn' in mode:
             raise Exception('learn')
-        discriminator = PUDiscriminator(directory_ad).load()
+        if input_type is prepare_oae_validated:
+            discriminator = default_networks['Discriminator'](directory_ad).load()
+        else:
+            discriminator = default_networks['PUDiscriminator'](directory_ad).load()
     except:
         data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
         load_ae(directory)
-        train_in, train_out, test_in, test_out = prepare(data)
-
-        discriminator,_,_ = grid_search(curry(nn_task, PUDiscriminator, directory_ad,
+        # train_in, train_out, test_in, test_out = prepare(data)
+        # 
+        # discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], directory_ad,
+        #                                       train_in, train_out, test_in, test_out,),
+        #                                 default_parameters,
+        #                                 parameters)
+        train_in, train_out, test_in, test_out = prepare_oae_validated(data)
+        discriminator,_,_ = grid_search(curry(nn_task, default_networks['Discriminator'], directory_ad,
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         parameters)
