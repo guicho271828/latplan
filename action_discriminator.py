@@ -5,7 +5,7 @@ import numpy as np
 from latplan.model import default_networks
 from latplan.util        import curry, set_difference, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
-
+import numpy.random as random
 import keras.backend as K
 import tensorflow as tf
 
@@ -174,17 +174,9 @@ parameters = {
     'lr'         :[0.0001],
 }
 
-
-if __name__ == '__main__':
-    import numpy.random as random
-
-    import sys
-    if len(sys.argv) != 3:
-        sys.exit("{} [directory] [mode]".format(sys.argv[0]))
-
-    directory = sys.argv[1]
+def main(directory, mode, input_type=prepare_oae_PU):
     directory_ad = "{}/_ad/".format(directory)
-    mode = sys.argv[2]
+    print(directory, mode, input_type)
 
     try:
         if 'learn' in mode:
@@ -196,17 +188,18 @@ if __name__ == '__main__':
     except:
         data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
         load_ae(directory)
-        # train_in, train_out, test_in, test_out = prepare(data)
-        # 
-        # discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], directory_ad,
-        #                                       train_in, train_out, test_in, test_out,),
-        #                                 default_parameters,
-        #                                 parameters)
-        train_in, train_out, test_in, test_out = prepare_oae_validated(data)
-        discriminator,_,_ = grid_search(curry(nn_task, default_networks['Discriminator'], directory_ad,
-                                              train_in, train_out, test_in, test_out,),
-                                        default_parameters,
-                                        parameters)
+        if input_type is prepare_oae_validated:
+            train_in, train_out, test_in, test_out = prepare_oae_validated(data)
+            discriminator,_,_ = grid_search(curry(nn_task, default_networks['Discriminator'], directory_ad,
+                                                  train_in, train_out, test_in, test_out,),
+                                            default_parameters,
+                                            parameters)
+        else:
+            train_in, train_out, test_in, test_out = input_type(data)
+            discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], directory_ad,
+                                                  train_in, train_out, test_in, test_out,),
+                                            default_parameters,
+                                            parameters)
         discriminator.save()
     
     if 'check' in mode:
@@ -300,7 +293,7 @@ if __name__ == '__main__':
 
     c = 0
     def type2(actions_invalid, message):
-        global c
+        nonlocal c
         c += 1
         actions_invalid = set_difference(actions_invalid, actions_valid)
         print("invalid",c,actions_invalid.shape, "---", message)
@@ -394,3 +387,13 @@ Mean Absolute Error:
 
 
 """
+
+if __name__ == '__main__':
+    import sys
+    def myeval(str):
+        try:
+            return eval(str)
+        except:
+            return str
+    print(list(map(myeval,sys.argv[1:])))
+    main(*map(myeval,sys.argv[1:]))
