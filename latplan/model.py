@@ -19,7 +19,7 @@ from keras.datasets import mnist
 from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse, mae
-from keras.callbacks import LambdaCallback, LearningRateScheduler
+from keras.callbacks import LambdaCallback, LearningRateScheduler, EarlyStopping
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 
@@ -702,7 +702,9 @@ class Discriminator(Network):
         self.loss = bce
         self.net = Model(x, y)
         self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
+        self.callbacks.append(EarlyStopping(verbose=1,patience=5))
         self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
+        
         
     def _save(self):
         super()._save()
