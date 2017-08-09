@@ -13,9 +13,7 @@ wait
 parallel -j 1 ./strips.py {1} puzzle learn_plot mnist 3 3 36 {2} ::: conv aconv ::: 6500 13000 26000
 parallel ./strips.py {1} puzzle dump mnist 3 3 36 {2} ::: conv aconv ::: 6500 13000 26000
 
-parallel --eta --timeout 120 --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist3336_conv/ {1} GBFSRec > {1}/conv36.log" ::: instances-4step-highAD2/latplan.puzzles.puzzle_mnist/*
-
-parallel --eta --timeout 120 --joblog parallel.log "./trivial-planner.py samples/puzzle_mnist3336_aconv/ {1} GBFSRec > {1}/aconv36.log" ::: instances-4step-highAD2/latplan.puzzles.puzzle_mnist/*
+parallel --eta --timeout 120 --joblog parallel.log "./trivial-planner.py samples/{1} {2} GBFSRec > {2}/{1}.log" ::: $(basename -a samples/puzzle_mnist*) ::: instances/latplan.puzzles.puzzle_mnist/*
 
 
 parallel -j 2 "./state_discriminator3.py samples/puzzle_mnist_3_3_36_{1}_{2}/ learn &> samples/puzzle_mnist_3_3_36_{1}_{2}/sd3.log" ::: 6500 13000 26000 ::: conv aconv
