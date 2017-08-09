@@ -701,9 +701,9 @@ class Discriminator(Network):
 
         self.loss = bce
         self.net = Model(x, y)
-        self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
-        self.callbacks.append(EarlyStopping(verbose=1,patience=5))
-        self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
+        # self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
+        self.callbacks.append(EarlyStopping(verbose=1,patience=50))
+        # self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
         
     def _save(self):
