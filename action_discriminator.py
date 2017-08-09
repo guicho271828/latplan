@@ -58,6 +58,26 @@ def generate_random_action2(data):
     # completely random strings
     return np.random.randint(0,2,data.shape,dtype=np.int8)
 
+def generate_oae_action(known_transisitons):
+    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
+    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+    identified, total = np.squeeze(histogram.sum()), len(actions)
+    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+    for i, pos in enumerate(np.where(histogram > 0)[0]):
+        available_actions[i][0][pos] = 1
+
+    N = known_transisitons.shape[1] // 2
+    states = known_transisitons.reshape(-1, N)
+    y = oae.decode([np.repeat(states, len(available_actions), axis=0),
+                    np.repeat(available_actions, len(states), axis=0)], batch_size=1000) \
+           .round().astype(np.int8)
+
+    y = set_difference(y, known_transisitons)
+    random.shuffle(y)
+
+    return y
+
 def prepare(data):
     data_invalid = np.concatenate(
         tuple([generate_nop(data),
@@ -110,6 +130,25 @@ def prepare_oae_validated(known_transisitons):
     y_negative = y_negative[:len(y_positive)]
     
     return prepare_binary_classification_data(y_positive, y_negative)
+
+def prepare_oae_PU(known_transisitons):
+    y = generate_oae_action(known_transisitons)
+    y = y[:len(known_transisitons)]
+    # normalize
+    return prepare_binary_classification_data(known_transisitons, y)
+
+def prepare2(data):
+    data_invalid = np.concatenate(
+        tuple([generate_nop(data),
+               *[ permute_suc(data) for i in range(inflation) ],
+               *[ generate_random_action(data, ae) for i in range(inflation) ],
+               *[ generate_random_action2(data) for i in range(inflation) ],
+               generate_oae_action(known_transisitons),
+        ]), axis=0)
+
+    data_valid   = np.repeat(data, len(data_invalid)//len(data), axis=0)
+
+    return prepare_binary_classification_data(data_valid, data_invalid)
 
 
 # default values
