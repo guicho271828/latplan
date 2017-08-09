@@ -19,7 +19,7 @@ from keras.datasets import mnist
 from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse, mae
-from keras.callbacks import LambdaCallback, LearningRateScheduler, EarlyStopping
+from keras.callbacks import LambdaCallback, LearningRateScheduler, Callback
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 
@@ -240,6 +240,52 @@ class Network:
             return float(ratios[-1])
         return LearningRateScheduler(fn)
 
+class GradientEarlyStopping(Callback):
+    def __init__(self, monitor='val_loss',
+                 min_grad=-0.0001, epoch=1, verbose=0, smooth=3):
+        super(GradientEarlyStopping, self).__init__()
+        self.monitor = monitor
+        self.verbose = verbose
+        self.min_grad = min_grad
+        self.history = []
+        self.epoch = epoch
+        self.stopped_epoch = 0
+        assert epoch >= 2
+        if epoch > smooth*2:
+            self.smooth = smooth
+        else:
+            print("epoch is too small for smoothing!")
+            self.smooth = epoch//2
+
+    def on_train_begin(self, logs=None):
+        # Allow instances to be re-used
+        self.wait = 0
+        self.stopped_epoch = 0
+
+    def gradient(self):
+        h = np.array(self.history)
+        return (h[-self.smooth:] - h[:self.smooth]).mean()/self.epoch
+        
+    def on_epoch_end(self, epoch, logs=None):
+        import warnings
+        current = logs.get(self.monitor)
+        if current is None:
+            warnings.warn('Early stopping requires %s available!' %
+                          (self.monitor), RuntimeWarning)
+
+        self.history.append(current)
+        if len(self.history) > self.epoch:
+            self.history.pop(0)
+            if self.gradient() >= self.min_grad:
+                self.model.stop_training = True
+                self.stopped_epoch = epoch
+                
+    def on_train_end(self, logs=None):
+        if self.stopped_epoch > 0 and self.verbose > 0:
+            print('\nEpoch %05d: early stopping' % (self.stopped_epoch))
+            print('history:',self.history)
+            print('min_grad:',self.min_grad,"gradient:",self.gradient())
+    
 def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return math.log(max/min) / epoch
@@ -702,7 +748,7 @@ class Discriminator(Network):
         self.loss = bce
         self.net = Model(x, y)
         # self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
-        self.callbacks.append(EarlyStopping(verbose=1,patience=50))
+        self.callbacks.append(GradientEarlyStopping(verbose=1,epoch=50))
         # self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
         
