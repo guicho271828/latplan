@@ -3,7 +3,7 @@ import warnings
 import config
 import numpy as np
 from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator, combined_discriminate, combined_discriminate2
-from latplan.util import get_ae_type, bce, mae
+from latplan.util import get_ae_type, bce, mae, ensure_directory
 from latplan.util.plot import plot_grid
 import os.path
 import keras.backend as K
@@ -262,7 +262,7 @@ def main(network_dir, problem_dir, searcher):
         return os.path.join(problem_dir,path)
     def network(path):
         root, ext = os.path.splitext(path)
-        return "{}_{}{}".format(root, get_ae_type(network_dir), ext)
+        return "{}_{}{}".format(ensure_directory(network_dir).split("/")[-2], root, ext)
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
@@ -300,7 +300,6 @@ def main(network_dir, problem_dir, searcher):
         plot_grid(sae.decode_binary(plan),
                   path=problem(network("path_{}.png".format(i))),verbose=True)
 
-        from latplan.util import ensure_directory
         module_name = ensure_directory(problem_dir).split("/")[-3]
         from importlib import import_module
         m = import_module(module_name)
