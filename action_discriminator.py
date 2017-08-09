@@ -43,6 +43,7 @@ def permute_suc(data):
     return data_invalid
 
 def generate_random_action(data, sae):
+    # reconstructable, maybe invalid
     dim = data.shape[1]//2
     pre, suc = data[:,:dim], data[:,dim:]
     from state_discriminator3 import generate_random
@@ -54,6 +55,7 @@ def generate_random_action(data, sae):
     return actions_invalid
 
 def generate_random_action2(data):
+    # completely random strings
     return np.random.randint(0,2,data.shape,dtype=np.int8)
 
 def prepare(data):
@@ -117,6 +119,83 @@ if __name__ == '__main__':
                                         default_parameters,
                                         parameters)
         discriminator.save()
+    
+    if 'check' in mode:
+        load_ae(directory)
+        print("--- additional testing on OAE-generated actions")
+        oae = default_networks['ActionAE'](ae.local("_aae/")).load()
+
+        known_transisitons = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
+        actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+        histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+        print(histogram)
+        print(np.count_nonzero(histogram),"actions valid")
+        print("valid actions:")
+        print(np.where(histogram > 0)[0])
+        identified, total = np.squeeze(histogram.sum()), len(actions)
+        if total != identified:
+            print("network does not explain all actions: only {} out of {} ({}%)".format(
+                identified, total, identified * 100 // total ))
+        available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+
+        for i, pos in enumerate(np.where(histogram > 0)[0]):
+            available_actions[i][0][pos] = 1
+
+        N = known_transisitons.shape[1] // 2
+        states = known_transisitons.reshape(-1, N)
+        states = states[:500]
+        y = oae.decode([np.repeat(states, len(available_actions), axis=0),
+                        np.repeat(available_actions, len(states), axis=0)]) \
+               .round().astype(int)
+
+        answers = np.zeros(len(y),dtype=int)
+        import latplan.puzzles.puzzle_mnist as p
+        p.setup()
+        import latplan.puzzles.model.puzzle as m
+        batch = 100000
+        for i in range(1+len(y)//batch):
+            print(i,"/",len(y)//batch)
+            pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
+            suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+            answers[batch*i:batch*(i+1)] = np.array(m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+
+        # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
+        predictions = discriminator.discriminate(y,batch_size=1000)
+
+        def bce(x,y):
+            from keras.layers import Input
+            from keras.models import Model
+            i = Input(shape=x.shape[1:])
+            m = Model(i,i)
+            m.compile(optimizer="adam", loss='binary_crossentropy')
+            return m.evaluate(x,y,batch_size=1000,verbose=0)
+
+        def mae(x,y):
+            from keras.layers import Input
+            from keras.models import Model
+            i = Input(shape=x.shape[1:])
+            m = Model(i,i)
+            m.compile(optimizer="adam", loss='mean_absolute_error')
+            return m.evaluate(x,y,batch_size=1000,verbose=0)
+            
+        print("BCE:", bce(predictions, answers))
+              
+        sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
+        from latplan.util import get_ae_type
+        from latplan.model import combined_discriminate, combined_discriminate2
+        
+        if "conv" not in get_ae_type(directory):
+            cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
+            ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
+        else:
+            ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
+        print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
+        print("accuracy (w/o invalid states by sd3):", mae(predictions[ind].round(), answers[ind])*100, "%")
+
+        ind = m.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
+        print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
+        print("accuracy (w/o invalid states by validator):", mae(predictions[ind].round(), answers[ind])*100, "%")
+        
     
     # test if the learned action is correct
 
