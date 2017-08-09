@@ -162,17 +162,32 @@ default_parameters = {
     'M'               : 2,
 }
 
+# exhaustive tuning
 parameters = {
-    'num_layers' :[2],
-    'layer'      :[300],# [400,4000],
-    'dropout'    :[0.1], #[0.1,0.4],
-    'batch_size' :[1000],
+    'num_layers' :[1,2,3],
+    'layer'      :[50,300,1000],# [400,4000],
+    'dropout'    :[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],    #[0.1,0.4], #0.6,0.7,
+    'batch_size' :[4000],
     'full_epoch' :[1000],
-    'activation' :['tanh'],
+    'activation' :['tanh','relu'],
     # quick eval
-    'epoch'      :[300],
-    'lr'         :[0.0001],
+    'epoch'      :[3000],
+    'lr'         :[0.001],
 }
+
+# tuned results
+parameters = {
+    'num_layers' :[1],
+    'layer'      :[300],# [400,4000],
+    'dropout'    :[0.8],    #[0.1,0.4], #0.6,0.7,
+    'batch_size' :[4000],
+    'full_epoch' :[1000],
+    'activation' :['relu'],
+    # quick eval
+    'epoch'      :[3000],
+    'lr'         :[0.001],
+}
+
 
 def main(directory, mode, input_type=prepare_oae_PU):
     directory_ad = "{}/_ad/".format(directory)
