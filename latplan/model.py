@@ -75,6 +75,7 @@ def ResUnit (*layers):
     return Residual(
         Sequential(layers))
 
+   
 from keras.constraints import Constraint, maxnorm,nonneg,unitnorm
 class UnitNormL1(Constraint):
     def __init__(self, axis=0):
@@ -225,6 +226,19 @@ class Network:
                train_data_to=None,
                test_data_to=None):
         pass
+    
+    def linear_schedule(self, schedules, rate):
+        schedules = np.array([-1]+schedules) * self.parameters['full_epoch']
+        ratios = np.ones_like(schedules)
+        print(schedules,ratios)
+        for i in range(len(ratios)):
+            ratios[i] = self.parameters['lr'] * (rate**i)
+        def fn(epoch):
+            for i,s in enumerate(schedules):
+                if epoch < s:
+                    return float(ratios[i-1])
+            return float(ratios[-1])
+        return LearningRateScheduler(fn)
 
 def anneal_rate(epoch,min=0.1,max=5.0):
     import math
@@ -687,6 +701,8 @@ class Discriminator(Network):
 
         self.loss = bce
         self.net = Model(x, y)
+        self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
+        self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
     def _save(self):
         super()._save()
