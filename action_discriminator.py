@@ -358,6 +358,10 @@ def main(directory, mode, input_type=prepare_oae_PU):
         discriminator.save()
     
     test_oae_generated(directory,discriminator)
+
+    # skipping the rest of the tests
+    import sys
+    sys.exit(0)
     
     # test if the learned action is correct
 
