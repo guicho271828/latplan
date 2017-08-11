@@ -131,6 +131,70 @@ def prepare_oae_validated(known_transisitons):
     
     return prepare_binary_classification_data(y_positive, y_negative)
 
+def prepare_oae_validated2(known_transisitons):
+    # This is a cheating, since we assume validation oracle
+    
+    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
+    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+    identified, total = np.squeeze(histogram.sum()), len(actions)
+    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+    for i, pos in enumerate(np.where(histogram > 0)[0]):
+        available_actions[i][0][pos] = 1
+
+    N = known_transisitons.shape[1] // 2
+    states = known_transisitons.reshape(-1, N)
+    # states = states[:50]
+    y = oae.decode([np.repeat(states, len(available_actions), axis=0),
+                    np.repeat(available_actions, len(states), axis=0)], batch_size=1000) \
+           .round().astype(int)
+
+    random.shuffle(y)
+
+    # sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
+    # from latplan.util import get_ae_type
+    # from latplan.model import combined_discriminate, combined_discriminate2
+    # 
+    # if "conv" not in get_ae_type(directory):
+    #     cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
+    #     ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
+    # else:
+    #     ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
+    # 
+    # y = y[ind]
+    
+    import latplan.puzzles.puzzle_mnist as p
+    p.setup()
+    import latplan.puzzles.model.puzzle as m
+    batch = 100000
+    valid_suc = np.zeros(len(y),dtype=bool)
+    for i in range(1+len(y)//batch):
+        print(i,"/",len(y)//batch)
+        suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        valid_suc[batch*i:batch*(i+1)] = m.validate_states(suc_images, 3,3,verbose=False,batch_size=1000)
+    
+    before_len = len(y)
+    y = y[valid_suc]
+    print("removing invalid successor states:",before_len,"->",len(y))
+
+    answers = np.zeros(len(y),dtype=int)
+    for i in range(1+len(y)//batch):
+        print(i,"/",len(y)//batch)
+        pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
+        suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        answers[batch*i:batch*(i+1)] = np.array(m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+    
+    l = len(y)
+    positive = np.count_nonzero(answers)
+    print(positive,l-positive)
+
+    y_positive = y[answers.astype(bool)]
+    y_negative = y[(1-answers).astype(bool)]
+    y_negative = y_negative[:len(y_positive)]
+    
+    return prepare_binary_classification_data(y_positive, y_negative)
+
+
 def prepare_oae_PU(known_transisitons):
     y = generate_oae_action(known_transisitons)
     y = y[:len(known_transisitons)]
