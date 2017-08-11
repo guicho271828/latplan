@@ -251,7 +251,10 @@ def main(network_dir, problem_dir, searcher):
     
     sae = default_networks[get_ae_type(network_dir)](network_dir).load()
     oae = ActionAE(sae.local("_aae/")).load()
-    ad  = PUDiscriminator(sae.local("_ad/")).load()
+    try:
+        ad  = PUDiscriminator(sae.local("_ad/")).load()
+    except:
+        ad  = Discriminator(sae.local("_ad/")).load()
     # sd  = Discriminator(sae.local("_sd/")).load(allow_failure=True)
     # ad2 = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
     # sd2 = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
