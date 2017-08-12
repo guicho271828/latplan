@@ -249,23 +249,49 @@ def blind(state,goal):
 def main(network_dir, problem_dir, searcher):
     global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
     
-    sae = default_networks[get_ae_type(network_dir)](network_dir).load()
-    oae = ActionAE(sae.local("_aae/")).load()
+    sae = default_networks[get_ae_type(network_dir)](network_dir).load(allow_failure=True)
+    oae = ActionAE(sae.local("_aae/")).load(allow_failure=True)
     try:
-        ad  = PUDiscriminator(sae.local("_ad/")).load()
+        ad  = PUDiscriminator(sae.local("_ad/")).load(allow_failure=True)
     except:
-        ad  = Discriminator(sae.local("_ad/")).load()
+        ad  = Discriminator(sae.local("_ad/")).load(allow_failure=True)
     # sd  = Discriminator(sae.local("_sd/")).load(allow_failure=True)
     # ad2 = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
     # sd2 = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
     cae = default_networks['SimpleCAE'](sae.local("_cae/")).load(allow_failure=True)
-    sd3 = PUDiscriminator(sae.local("_sd3/")).load()
+    sd3 = PUDiscriminator(sae.local("_sd3/")).load(allow_failure=True)
 
     def problem(path):
         return os.path.join(problem_dir,path)
     def network(path):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(ensure_directory(network_dir).split("/")[-2], root, ext)
+
+    from scipy import misc
+
+    init_image = misc.imread(problem("init.png"))
+    goal_image = misc.imread(problem("goal.png"))
+    init_image = init_image / init_image.max()
+    goal_image = goal_image / goal_image.max()
+    
+    init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
+    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
+    print(init)
+    print(goal)
+    rec = sae.decode_binary(np.array([init,goal]))
+    init_rec, goal_rec = rec
+    plot_grid([init_image,init_rec,goal_image,goal_rec],
+              path=problem(network("init_goal_reconstruction.png")),verbose=True)
+
+    import sys
+    if bce(init_image,init_rec) > 0.1:
+        print("BCE:",bce(init_image,init_rec))
+        print("Initial state reconstruction failed!")
+        sys.exit(3)
+    if bce(goal_image,goal_rec) > 0.1:
+        print("BCE:",bce(goal_image,goal_rec))
+        print("Goal state reconstruction failed!")
+        sys.exit(4)
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
@@ -285,18 +311,6 @@ def main(network_dir, problem_dir, searcher):
 
     # available_actions = available_actions.repeat(inflation,axis=0)
         
-    from scipy import misc
-
-    init_image = misc.imread(problem("init.png"))
-    goal_image = misc.imread(problem("goal.png"))
-    
-    init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
-    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
-    print(init)
-    print(goal)
-    plot_grid(
-        sae.decode_binary(np.array([init,goal])),
-        path=problem(network("init_goal_reconstruction.png")),verbose=True)
     for i, found_goal_state in enumerate(eval(searcher)().search(init,goal,goalcount)):
         plan = np.array( found_goal_state.path())
         print(plan)
@@ -319,7 +333,6 @@ def main(network_dir, problem_dir, searcher):
             print(combined_discriminate(plan,sae,cae,sd3).flatten())
         import subprocess
         subprocess.call(["rm", "-f", problem(network("path_{}.valid".format(i)))])
-        import sys
         if np.all(validation):
             subprocess.call(["touch", problem(network("path_{}.valid".format(i)))])
             sys.exit(0)
