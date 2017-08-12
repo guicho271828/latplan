@@ -58,19 +58,27 @@ def generate_random_action2(data):
     # completely random strings
     return np.random.randint(0,2,data.shape,dtype=np.int8)
 
+
+def repeat_over(array, repeats, axis=0):
+    array = np.expand_dims(array, axis)
+    array = np.repeat(array, repeats, axis)
+    return np.reshape(array,(*array.shape[:axis],-1,*array.shape[axis+2:]))
+
 def generate_oae_action(known_transisitons):
     oae = default_networks['ActionAE'](ae.local("_aae/")).load()
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
     histogram = np.squeeze(actions.sum(axis=0,dtype=int))
-    identified, total = np.squeeze(histogram.sum()), len(actions)
     available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
     for i, pos in enumerate(np.where(histogram > 0)[0]):
         available_actions[i][0][pos] = 1
 
     N = known_transisitons.shape[1] // 2
     states = known_transisitons.reshape(-1, N)
-    y = oae.decode([np.repeat(states, len(available_actions), axis=0),
-                    np.repeat(available_actions, len(states), axis=0)], batch_size=1000) \
+    y = oae.decode([
+        # s1,s2,s3,s1,s2,s3,....
+        repeat_over(states, len(available_actions), axis=0),
+        # a1,a1,a1,a2,a2,a2,....
+        np.repeat(available_actions, len(states), axis=0),], batch_size=1000) \
            .round().astype(np.int8)
 
     y = set_difference(y, known_transisitons)
@@ -79,6 +87,8 @@ def generate_oae_action(known_transisitons):
     return y
 
 def prepare(data):
+    print("discriminate correct transitions and nop, suc-permutation, reconstructable, and random bits combined")
+    print("**** does not discriminate OEA-generated states quite well, do not use ****")
     data_invalid = np.concatenate(
         tuple([generate_nop(data),
                *[ permute_suc(data) for i in range(inflation) ],
@@ -90,79 +100,16 @@ def prepare(data):
 
     return prepare_binary_classification_data(data_valid, data_invalid)
 
+
 def prepare_oae_validated(known_transisitons):
     # This is a cheating, since we assume validation oracle
-    
-    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
-    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
-    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
-    identified, total = np.squeeze(histogram.sum()), len(actions)
-    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
-    for i, pos in enumerate(np.where(histogram > 0)[0]):
-        available_actions[i][0][pos] = 1
-
+    print("generate many actions from states using OEA (at least one action for each state is correct)",
+          "validate it with validators, then discriminate the correct vs wrong transitions.",
+          sep="\n")
+    print("**** CHEATING ****")
     N = known_transisitons.shape[1] // 2
-    states = known_transisitons.reshape(-1, N)
-    # states = states[:5000]
-    y = oae.decode([np.repeat(states, len(available_actions), axis=0),
-                    np.repeat(available_actions, len(states), axis=0)], batch_size=1000) \
-           .round().astype(int)
+    y = generate_oae_action(known_transisitons)
 
-    random.shuffle(y)
-    
-    answers = np.zeros(len(y),dtype=int)
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
-    import latplan.puzzles.model.puzzle as m
-    batch = 100000
-    for i in range(1+len(y)//batch):
-        print(i,"/",len(y)//batch)
-        pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
-        suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
-        answers[batch*i:batch*(i+1)] = np.array(m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
-
-    l = len(y)
-    positive = np.count_nonzero(answers)
-    print(positive,l-positive)
-
-    y_positive = y[answers.astype(bool)]
-    y_negative = y[(1-answers).astype(bool)]
-    y_negative = y_negative[:len(y_positive)]
-    
-    return prepare_binary_classification_data(y_positive, y_negative)
-
-def prepare_oae_validated2(known_transisitons):
-    # This is a cheating, since we assume validation oracle
-    
-    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
-    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
-    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
-    identified, total = np.squeeze(histogram.sum()), len(actions)
-    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
-    for i, pos in enumerate(np.where(histogram > 0)[0]):
-        available_actions[i][0][pos] = 1
-
-    N = known_transisitons.shape[1] // 2
-    states = known_transisitons.reshape(-1, N)
-    # states = states[:50]
-    y = oae.decode([np.repeat(states, len(available_actions), axis=0),
-                    np.repeat(available_actions, len(states), axis=0)], batch_size=1000) \
-           .round().astype(int)
-
-    random.shuffle(y)
-
-    # sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
-    # from latplan.util import get_ae_type
-    # from latplan.model import combined_discriminate, combined_discriminate2
-    # 
-    # if "conv" not in get_ae_type(directory):
-    #     cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
-    #     ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
-    # else:
-    #     ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
-    # 
-    # y = y[ind]
-    
     import latplan.puzzles.puzzle_mnist as p
     p.setup()
     import latplan.puzzles.model.puzzle as m
@@ -172,6 +119,7 @@ def prepare_oae_validated2(known_transisitons):
         print(i,"/",len(y)//batch)
         suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
         valid_suc[batch*i:batch*(i+1)] = m.validate_states(suc_images, 3,3,verbose=False,batch_size=1000)
+        # This state validation is just for reducing the later effort for validating transitions
     
     before_len = len(y)
     y = y[valid_suc]
@@ -194,26 +142,55 @@ def prepare_oae_validated2(known_transisitons):
     
     return prepare_binary_classification_data(y_positive, y_negative)
 
-
 def prepare_oae_PU(known_transisitons):
+    print("discriminate correct transitions and other transitions generated by OAE")
     y = generate_oae_action(known_transisitons)
+    # normalize
+    y = y[:len(known_transisitons)]
+    return prepare_binary_classification_data(known_transisitons, y)
+
+def prepare_oae_PU2(known_transisitons):
+    print("discriminate correct transitions and other transitions generated by OAE, filtered by state validator")
+    print("**** CHEATING ****")
+    N = known_transisitons.shape[1] // 2
+    y = generate_oae_action(known_transisitons)
+    import latplan.puzzles.puzzle_mnist as p
+    p.setup()
+    import latplan.puzzles.model.puzzle as m
+    batch = 100000
+    valid_suc = np.zeros(len(y),dtype=bool)
+    for i in range(1+len(y)//batch):
+        print(i,"/",len(y)//batch)
+        suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        valid_suc[batch*i:batch*(i+1)] = m.validate_states(suc_images, 3,3,verbose=False,batch_size=1000)
+    
+    before_len = len(y)
+    y = y[valid_suc]
+    print("removing invalid successor states:",before_len,"->",len(y))
     y = y[:len(known_transisitons)]
     # normalize
     return prepare_binary_classification_data(known_transisitons, y)
 
-def prepare2(data):
-    data_invalid = np.concatenate(
-        tuple([generate_nop(data),
-               *[ permute_suc(data) for i in range(inflation) ],
-               *[ generate_random_action(data, ae) for i in range(inflation) ],
-               *[ generate_random_action2(data) for i in range(inflation) ],
-               generate_oae_action(known_transisitons),
-        ]), axis=0)
-
-    data_valid   = np.repeat(data, len(data_invalid)//len(data), axis=0)
-
-    return prepare_binary_classification_data(data_valid, data_invalid)
-
+def prepare_oae_PU3(known_transisitons):
+    print("discriminate the correct transitions and the other transitions generated by OAE,",
+          " filtered by the learned state discriminator",
+          sep="\n")
+    N = known_transisitons.shape[1] // 2
+    y = generate_oae_action(known_transisitons)
+    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
+    from latplan.util import get_ae_type
+    from latplan.model import combined_discriminate, combined_discriminate2
+    
+    if "conv" not in get_ae_type(ae.path):
+        cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
+        ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
+    else:
+        ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
+    
+    y = y[ind]
+    y = y[:len(known_transisitons)]
+    # normalize
+    return prepare_binary_classification_data(known_transisitons, y)
 
 # default values
 default_parameters = {
@@ -258,28 +235,9 @@ def test_oae_generated(directory,discriminator):
     oae = default_networks['ActionAE'](ae.local("_aae/")).load()
 
     known_transisitons = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
-    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
-    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
-    print(histogram)
-    print(np.count_nonzero(histogram),"actions valid")
-    print("valid actions:")
-    print(np.where(histogram > 0)[0])
-    identified, total = np.squeeze(histogram.sum()), len(actions)
-    if total != identified:
-        print("network does not explain all actions: only {} out of {} ({}%)".format(
-            identified, total, identified * 100 // total ))
-    available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
-
-    for i, pos in enumerate(np.where(histogram > 0)[0]):
-        available_actions[i][0][pos] = 1
-
+    y = generate_oae_action(known_transisitons)
     N = known_transisitons.shape[1] // 2
-    states = known_transisitons.reshape(-1, N)
-    states = states[:500]
-    y = oae.decode([np.repeat(states, len(available_actions), axis=0),
-                    np.repeat(available_actions, len(states), axis=0)]) \
-           .round().astype(int)
-
+    
     answers = np.zeros(len(y),dtype=int)
     import latplan.puzzles.puzzle_mnist as p
     p.setup()
@@ -311,6 +269,7 @@ def test_oae_generated(directory,discriminator):
         return m.evaluate(x,y,batch_size=1000,verbose=0)
 
     print("BCE:", bce(predictions, answers))
+    print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
 
     sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
     from latplan.util import get_ae_type
@@ -322,11 +281,11 @@ def test_oae_generated(directory,discriminator):
     else:
         ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
-    print("accuracy (w/o invalid states by sd3):", mae(predictions[ind].round(), answers[ind])*100, "%")
+    print("accuracy (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
     ind = m.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
     print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
-    print("accuracy (w/o invalid states by validator):", mae(predictions[ind].round(), answers[ind])*100, "%")
+    print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
     
 
 def main(directory, mode, input_type=prepare_oae_PU):
