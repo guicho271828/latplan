@@ -192,6 +192,68 @@ def prepare_oae_PU3(known_transisitons):
     # normalize
     return prepare_binary_classification_data(known_transisitons, y)
 
+def prepare_oae_PU4(known_transisitons):
+    print("Learn from pre + action label",
+          "*** INCOMPATIBLE MODEL! ***",
+          sep="\n")
+    N = known_transisitons.shape[1] // 2
+    
+    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
+    
+    y = generate_oae_action(known_transisitons)
+    
+    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
+    from latplan.util import get_ae_type
+    from latplan.model import combined_discriminate, combined_discriminate2
+    
+    if "conv" not in get_ae_type(ae.path):
+        cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
+        ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
+    else:
+        ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
+    
+    y = y[ind]
+
+    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+    positive = np.concatenate((known_transisitons[:,:N], np.squeeze(actions)), axis=1)
+    actions = oae.encode_action(y, batch_size=1000).round()
+    negative = np.concatenate((y[:,:N], np.squeeze(actions)), axis=1)
+    random.shuffle(negative)
+    negative = negative[:len(positive)]
+    # normalize
+    return prepare_binary_classification_data(positive, negative)
+
+def prepare_oae_PU5(known_transisitons):
+    print("Learn from pre + suc + action label",
+          "*** INCOMPATIBLE MODEL! ***",
+          sep="\n")
+    N = known_transisitons.shape[1] // 2
+       
+    y = generate_oae_action(known_transisitons)
+    
+    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
+    from latplan.util import get_ae_type
+    from latplan.model import combined_discriminate, combined_discriminate2
+    
+    if "conv" not in get_ae_type(ae.path):
+        cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
+        ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
+    else:
+        ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
+    
+    y = y[ind]
+
+    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
+    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+    positive = np.concatenate((known_transisitons, np.squeeze(actions)), axis=1)
+    actions = oae.encode_action(y, batch_size=1000).round()
+    negative = np.concatenate((y, np.squeeze(actions)), axis=1)
+    random.shuffle(negative)
+    negative = negative[:len(positive)]
+    # normalize
+    return prepare_binary_classification_data(positive, negative)
+
+
 # default values
 default_parameters = {
     'lr'              : 0.0001,
@@ -269,8 +331,8 @@ def test_oae_generated(directory,discriminator):
         m.compile(optimizer="adam", loss='mean_absolute_error')
         return m.evaluate(x,y,batch_size=1000,verbose=0)
 
-    print("BCE:", bce(predictions, answers))
-    print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
+    # print("BCE:", bce(predictions, answers))
+    # print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
 
     sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
     from latplan.util import get_ae_type
