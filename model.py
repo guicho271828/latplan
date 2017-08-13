@@ -846,13 +846,16 @@ class PUDiscriminator(Discriminator):
                       **kwargs)
         
         s = self.net.predict(test_data[test_data_to == 1],batch_size=batch_size)
-        c = s.mean()
-        print("PU constant c =", c)
-        K.set_value(self.c, c)
-        self.parameters['c'] = float(c)
-        # prevent saving before setting c
-        if save:
-            self.save()
+        if np.count_nonzero(test_data_to == 1) > 0:
+            c = s.mean()
+            print("PU constant c =", c)
+            K.set_value(self.c, c)
+            self.parameters['c'] = float(c)
+            # prevent saving before setting c
+            if save:
+                self.save()
+        else:
+            raise Exception("there are no positive data in the validation set; Training failed.")
     
 class SimpleCAE(AE):
     def build_encoder(self,input_shape):
