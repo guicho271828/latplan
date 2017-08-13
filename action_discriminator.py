@@ -302,6 +302,7 @@ def main(directory, mode, input_type=prepare_oae_PU):
             discriminator = default_networks['PUDiscriminator'](directory_ad).load()
     except:
         data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
+        # data = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
         load_ae(directory)
         if input_type is prepare_oae_validated:
             train_in, train_out, test_in, test_out = prepare_oae_validated(data)
