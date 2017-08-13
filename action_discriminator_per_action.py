@@ -44,11 +44,14 @@ def prepare_oae_per_action_PU3(known_transisitons):
     
     histogram = np.squeeze(actions.sum(axis=0))
     print(histogram)
-    print("in this implementation, we do not care if some labels are unused, for the sake of code simplicity")
 
     sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
-    from latplan.util import get_ae_type
-    from latplan.model import combined_discriminate, combined_discriminate2
+    try:
+        cae = default_networks['SimpleCAE'](sae.local("_cae/")).load()
+        combined_discriminator = default_networks['CombinedDiscriminator'](ae,cae,sd3)
+    except:
+        combined_discriminator = default_networks['CombinedDiscriminator2'](ae,sd3)
+
     for label in range(L):
         print("label",label)
         known_transisitons_for_this_label = known_transisitons[np.where(actions[:,:,label] > 0.5)[0]]
@@ -61,12 +64,7 @@ def prepare_oae_per_action_PU3(known_transisitons):
             y = oae.decode([states,_actions], batch_size=1000).round().astype(np.int8)
 
             # prune invalid states
-            if "conv" not in get_ae_type(ae.path):
-                cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
-                ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
-            else:
-                ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
-
+            ind = np.where(np.squeeze(combined_discriminator(y[:,N:],batch_size=1000)) > 0.5)[0]
             y = y[ind]
 
             y = set_difference(y, known_transisitons_for_this_label)
