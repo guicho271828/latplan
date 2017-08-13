@@ -8,7 +8,7 @@ assuming the input/output image is binarized
 import numpy as np
 from functools import reduce
 from keras.layers import Input, Dense, Dropout, Convolution2D, Deconvolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D, merge
-from keras.layers.merge import Concatenate
+from keras.layers.merge import Concatenate, Dot
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 import keras.optimizers
@@ -1097,6 +1097,47 @@ class ActionAE(AE):
                 images.extend(seq)
             plot_grid(images, w=10, path=self.local(path), verbose=verbose)
         return x,z,y,b,by
+
+class ActionDiscriminator(Discriminator):
+    def __init__(self,oae,path,parameters={}):
+        super(ActionDiscriminator,self).__init__(path,parameters=parameters)
+        self.encoder = oae.encoder
+        set_trainable(self.encoder,False)
+        self.parameters['num_actions'] = oae.parameters['M']
+        
+    def _build(self,input_shape):
+        x = Input(shape=input_shape)
+        N = input_shape[0] // 2
+
+        pre, action = self.encoder(x)
+
+        action = Reshape((self.parameters['num_actions'],))(action)
+
+        ys = []
+        for i in range(self.parameters['num_actions']):
+            _x = Input(shape=(N,))
+            _y = Sequential([
+                flatten,
+                *[Sequential([BN(),
+                              Dense(self.parameters['layer'],activation=self.parameters['activation']),
+                              Dropout(self.parameters['dropout']),])
+              for i in range(self.parameters['num_layers']) ],
+                Dense(1,activation="sigmoid")
+            ])(_x)
+            _m = Model(_x,_y,name="action_"+str(i))
+            ys.append(_m(pre))
+
+        ys = Concatenate()(ys)
+        y  = Dot(-1)([ys,action])
+
+        self.loss = bce
+        self.net = Model(x, y)
+        # self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
+        self.callbacks.append(GradientEarlyStopping(verbose=1,epoch=50,min_grad=self.parameters['min_grad']))
+        # self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
+
+class ActionPUDiscriminator(PUDiscriminator,ActionDiscriminator):
+    pass
 
 def main ():
     import matplotlib.pyplot as plt
