@@ -102,6 +102,16 @@ def state_discriminator3_filtering(y):
     else:
         return y[np.where(np.squeeze(combined_discriminate(y[:,N:],sae,cae,sd3)) > 0.5)[0]]
 
+
+def cheating_validation_filtering(y):
+    N = y.shape[1]//2
+    import latplan.puzzles.puzzle_mnist as p
+    p.setup()
+    import latplan.puzzles.model.puzzle as m
+    pre_images = sae.decode_binary(y[:,:N],batch_size=1000)
+    suc_images = sae.decode_binary(y[:,N:],batch_size=1000)
+    return y[m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)]
+
 pruning_methods = [
     action_reconstruction_filtering,           # if applied, this should be the first method
     # state_reconstruction_from_oae_filtering,
