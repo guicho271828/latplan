@@ -2,7 +2,7 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator, combined_discriminate, combined_discriminate2
+from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator
 from latplan.util import get_ae_type, bce, mae, ensure_directory
 from latplan.util.plot import plot_grid
 import os.path
@@ -21,6 +21,7 @@ ad2  = None
 sd2  = None
 sd3 = None
 cae = None
+combined_discriminator = None
 
 available_actions = None
 inflation = 5
@@ -97,11 +98,7 @@ def state_discriminator_filtering(y):
 
 def state_discriminator3_filtering(y):
     N = y.shape[1]//2
-    if "conv" in get_ae_type(sae.path):
-        return y[np.where(np.squeeze(combined_discriminate2(y[:,N:],sae,sd3)) > 0.5)[0]]
-    else:
-        return y[np.where(np.squeeze(combined_discriminate(y[:,N:],sae,cae,sd3)) > 0.5)[0]]
-
+    return y[np.where(np.squeeze(combined_discriminator(y[:,N:])) > 0.5)[0]]
 
 def cheating_validation_filtering(y):
     N = y.shape[1]//2
@@ -257,7 +254,7 @@ def blind(state,goal):
     return 0
 
 def main(network_dir, problem_dir, searcher):
-    global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
+    global sae, oae, ad, ad2, sd, sd2, sd3, cae, combined_discriminator, available_actions
     
     sae = default_networks[get_ae_type(network_dir)](network_dir).load(allow_failure=True)
     oae = ActionAE(sae.local("_aae/")).load(allow_failure=True)
@@ -268,8 +265,12 @@ def main(network_dir, problem_dir, searcher):
     # sd  = Discriminator(sae.local("_sd/")).load(allow_failure=True)
     # ad2 = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
     # sd2 = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
-    cae = default_networks['SimpleCAE'](sae.local("_cae/")).load(allow_failure=True)
-    sd3 = PUDiscriminator(sae.local("_sd3/")).load(allow_failure=True)
+    sd3 = PUDiscriminator(sae.local("_sd3/")).load()
+    try:
+        cae = default_networks['SimpleCAE'](sae.local("_cae/")).load()
+        combined_discriminator = default_networks['CombinedDiscriminator'](sae,cae,sd3)
+    except:
+        combined_discriminator = default_networks['CombinedDiscriminator2'](sae,sd3)
 
     def problem(path):
         return os.path.join(problem_dir,path)
@@ -337,10 +338,7 @@ def main(network_dir, problem_dir, searcher):
         print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
 
         print(m.validate_states(sae.decode_binary(plan),3,3))
-        if "conv" in get_ae_type(sae.path):
-            print(combined_discriminate2(plan,sae,sd3).flatten())
-        else:
-            print(combined_discriminate(plan,sae,cae,sd3).flatten())
+        print(combined_discriminator(plan).flatten())
         import subprocess
         subprocess.call(["rm", "-f", problem(network("path_{}.valid".format(i)))])
         if np.all(validation):
