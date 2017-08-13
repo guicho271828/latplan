@@ -920,9 +920,14 @@ def combined_discriminate(data,sae,cae,discriminator,**kwargs):
     return discriminator.discriminate(data2,**kwargs)
 
 def combined_discriminate2(data,sae,discriminator,**kwargs):
-    images = sae.decode_binary(data,**kwargs)
-    data2  = sae.get_features(images,**kwargs)
-    return discriminator.discriminate(data2,**kwargs)
+    _data        = Input(shape=data.shape[1:])
+    _data2       = Reshape((*data.shape[1:],1))(_data)
+    _categorical = wrap(_data,K.concatenate([_data2, 1-_data2],-1),name="categorical")
+    _images      = sae.decoder(_categorical)
+    _features    = sae.features(_images)
+    _results     = discriminator.net(_features)
+    m            = Model(_data, _results)
+    return m.predict(data,**kwargs)
 
 # action autoencoder ################################################################
 
