@@ -929,6 +929,31 @@ def combined_discriminate2(data,sae,discriminator,**kwargs):
     m            = Model(_data, _results)
     return m.predict(data,**kwargs)
 
+class CombinedDiscriminator:
+    def __init__(self,sae,cae,discriminator):
+        _data        = Input(shape=(sae.parameters['N'],))
+        _data2       = Reshape((sae.parameters['N'],1))(_data)
+        _categorical = wrap(_data,K.concatenate([_data2, 1-_data2],-1),name="categorical")
+        _images      = sae.decoder(_categorical)
+        _features    = cae.encoder(_images)
+        _results     = discriminator.net(_features)
+        m            = Model(_data, _results)
+        self.model = m
+    
+    def __call__(self,data,**kwargs):
+        return self.model.predict(data,**kwargs)
+
+class CombinedDiscriminator2(CombinedDiscriminator):
+    def __init__(self,sae,discriminator):
+        _data        = Input(shape=(sae.parameters['N'],))
+        _data2       = Reshape((sae.parameters['N'],1))(_data)
+        _categorical = wrap(_data,K.concatenate([_data2, 1-_data2],-1),name="categorical")
+        _images      = sae.decoder(_categorical)
+        _features    = sae.features(_images)
+        _results     = discriminator.net(_features)
+        m            = Model(_data, _results)
+        self.model = m
+
 # action autoencoder ################################################################
 
 class ActionAE(AE):
