@@ -15,13 +15,8 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 ################################################################
 
 ae = None
-
-def load_ae(directory):
-    global ae
-    if ae is None:
-        from latplan.util import get_ae_type
-        ae = default_networks[get_ae_type(directory)](directory).load()
-    return ae
+oae = None
+sd3 = None
 
 inflation = 1
 
@@ -65,7 +60,6 @@ def repeat_over(array, repeats, axis=0):
     return np.reshape(array,(*array.shape[:axis],-1,*array.shape[axis+2:]))
 
 def generate_oae_action(known_transisitons):
-    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
     histogram = np.squeeze(actions.sum(axis=0,dtype=int))
     available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
@@ -177,7 +171,6 @@ def prepare_oae_PU3(known_transisitons):
           sep="\n")
     N = known_transisitons.shape[1] // 2
     y = generate_oae_action(known_transisitons)
-    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
     from latplan.util import get_ae_type
     from latplan.model import combined_discriminate, combined_discriminate2
     
@@ -198,11 +191,8 @@ def prepare_oae_PU4(known_transisitons):
           sep="\n")
     N = known_transisitons.shape[1] // 2
     
-    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
-    
     y = generate_oae_action(known_transisitons)
     
-    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
     from latplan.util import get_ae_type
     from latplan.model import combined_discriminate, combined_discriminate2
     
@@ -231,7 +221,6 @@ def prepare_oae_PU5(known_transisitons):
        
     y = generate_oae_action(known_transisitons)
     
-    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
     from latplan.util import get_ae_type
     from latplan.model import combined_discriminate, combined_discriminate2
     
@@ -243,7 +232,6 @@ def prepare_oae_PU5(known_transisitons):
     
     y = y[ind]
 
-    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
     positive = np.concatenate((known_transisitons, np.squeeze(actions)), axis=1)
     actions = oae.encode_action(y, batch_size=1000).round()
@@ -293,9 +281,7 @@ parameters = {
 }
 
 def test_oae_generated(directory,discriminator):
-    load_ae(directory)
     print("--- additional testing on OAE-generated actions")
-    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
 
     known_transisitons = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
     y = generate_oae_action(known_transisitons)
@@ -334,7 +320,6 @@ def test_oae_generated(directory,discriminator):
     # print("BCE:", bce(predictions, answers))
     # print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
 
-    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
     from latplan.util import get_ae_type
     from latplan.model import combined_discriminate, combined_discriminate2
 
@@ -354,6 +339,11 @@ def test_oae_generated(directory,discriminator):
 def main(directory, mode, input_type=prepare_oae_PU):
     directory_ad = "{}/_ad/".format(directory)
     print(directory, mode, input_type)
+    from latplan.util import get_ae_type
+    global ae, oae, sd3
+    ae = default_networks[get_ae_type(directory)](directory).load()
+    oae = default_networks['ActionAE'](ae.local("_aae/")).load()
+    sd3 = default_networks['PUDiscriminator'](ae.local("_sd3/")).load()
 
     try:
         if 'learn' in mode:
@@ -365,7 +355,6 @@ def main(directory, mode, input_type=prepare_oae_PU):
     except:
         data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
         # data = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
-        load_ae(directory)
         if input_type is prepare_oae_validated:
             train_in, train_out, test_in, test_out = prepare_oae_validated(data)
             discriminator,_,_ = grid_search(curry(nn_task, default_networks['Discriminator'], directory_ad,
@@ -424,7 +413,6 @@ def main(directory, mode, input_type=prepare_oae_PU):
     type2(np.random.randint(0,2,(len(actions_valid),2*N),dtype=np.int8),
           "invalid actions generated from random bits (both pre and suc)")
         
-    load_ae(directory)
     type2(generate_random_action(actions_valid, ae),
           "sucessors are random reconstructable states (incl. invalid states such as those with duplicated tiles)")
     
