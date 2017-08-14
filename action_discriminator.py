@@ -280,6 +280,22 @@ parameters = {
     'lr'         :[0.001],
 }
 
+def bce(x,y):
+    from keras.layers import Input
+    from keras.models import Model
+    i = Input(shape=x.shape[1:])
+    m = Model(i,i)
+    m.compile(optimizer="adam", loss='binary_crossentropy')
+    return m.evaluate(x,y,batch_size=1000,verbose=0)
+
+def mae(x,y):
+    from keras.layers import Input
+    from keras.models import Model
+    i = Input(shape=x.shape[1:])
+    m = Model(i,i)
+    m.compile(optimizer="adam", loss='mean_absolute_error')
+    return m.evaluate(x,y,batch_size=1000,verbose=0)
+
 def test_oae_generated(directory,discriminator):
     print("--- additional testing on OAE-generated actions")
 
@@ -301,21 +317,6 @@ def test_oae_generated(directory,discriminator):
     # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
     predictions = discriminator.discriminate(y,batch_size=1000)
 
-    def bce(x,y):
-        from keras.layers import Input
-        from keras.models import Model
-        i = Input(shape=x.shape[1:])
-        m = Model(i,i)
-        m.compile(optimizer="adam", loss='binary_crossentropy')
-        return m.evaluate(x,y,batch_size=1000,verbose=0)
-
-    def mae(x,y):
-        from keras.layers import Input
-        from keras.models import Model
-        i = Input(shape=x.shape[1:])
-        m = Model(i,i)
-        m.compile(optimizer="adam", loss='mean_absolute_error')
-        return m.evaluate(x,y,batch_size=1000,verbose=0)
 
     # print("BCE:", bce(predictions, answers))
     # print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
