@@ -277,6 +277,10 @@ def main(network_dir, problem_dir, searcher):
     def network(path):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(ensure_directory(network_dir).split("/")[-2], root, ext)
+    def search(path):
+        root, ext = os.path.splitext(path)
+        return "{}_{}{}".format(searcher, root, ext)
+
 
     from scipy import misc
 
@@ -326,7 +330,7 @@ def main(network_dir, problem_dir, searcher):
         plan = np.array( found_goal_state.path())
         print(plan)
         plot_grid(sae.decode_binary(plan),
-                  path=problem(network("path_{}.png".format(i))),verbose=True)
+                  path=problem(network(search("path_{}.png".format(i)))),verbose=True)
 
         module_name = ensure_directory(problem_dir).split("/")[-3]
         from importlib import import_module
@@ -340,9 +344,9 @@ def main(network_dir, problem_dir, searcher):
         print(m.validate_states(sae.decode_binary(plan),3,3))
         print(combined_discriminator(plan).flatten())
         import subprocess
-        subprocess.call(["rm", "-f", problem(network("path_{}.valid".format(i)))])
+        subprocess.call(["rm", "-f", problem(network(search("path_{}.valid".format(i))))])
         if np.all(validation):
-            subprocess.call(["touch", problem(network("path_{}.valid".format(i)))])
+            subprocess.call(["touch", problem(network(search("path_{}.valid".format(i))))])
             sys.exit(0)
 
 if __name__ == '__main__':
