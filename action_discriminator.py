@@ -181,7 +181,7 @@ def prepare_oae_PU3(known_transisitons):
         ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
     
     y = y[ind]
-    y = y[:len(known_transisitons)]
+    # y = y[:len(known_transisitons)]
     # normalize
     return prepare_binary_classification_data(known_transisitons, y)
 
@@ -208,8 +208,8 @@ def prepare_oae_PU4(known_transisitons):
     positive = np.concatenate((known_transisitons[:,:N], np.squeeze(actions)), axis=1)
     actions = oae.encode_action(y, batch_size=1000).round()
     negative = np.concatenate((y[:,:N], np.squeeze(actions)), axis=1)
-    random.shuffle(negative)
-    negative = negative[:len(positive)]
+    # random.shuffle(negative)
+    # negative = negative[:len(positive)]
     # normalize
     return prepare_binary_classification_data(positive, negative)
 
@@ -236,8 +236,8 @@ def prepare_oae_PU5(known_transisitons):
     positive = np.concatenate((known_transisitons, np.squeeze(actions)), axis=1)
     actions = oae.encode_action(y, batch_size=1000).round()
     negative = np.concatenate((y, np.squeeze(actions)), axis=1)
-    random.shuffle(negative)
-    negative = negative[:len(positive)]
+    # random.shuffle(negative)
+    # negative = negative[:len(positive)]
     # normalize
     return prepare_binary_classification_data(positive, negative)
 
