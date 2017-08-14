@@ -89,6 +89,7 @@ default_parameters = {
     'max_temperature' : 2.0,
     'min_temperature' : 0.1,
     'M'               : 2,
+    'min_grad'        : 0.0,
 }
 
 
