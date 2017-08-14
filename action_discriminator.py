@@ -416,7 +416,7 @@ def test_oae_pre_suc_label(directory,discriminator):
     print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
 
-def main(directory, mode, input_type=prepare_oae_PU):
+def main(directory, mode, input_type=prepare_oae_PU3):
     directory_ad = "{}/_ad/".format(directory)
     print(directory, mode, input_type)
     from latplan.util import get_ae_type
