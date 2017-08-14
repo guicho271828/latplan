@@ -1099,22 +1099,15 @@ class ActionAE(AE):
         return x,z,y,b,by
 
 class ActionDiscriminator(Discriminator):
-    def __init__(self,oae,path,parameters={}):
-        super(ActionDiscriminator,self).__init__(path,parameters=parameters)
-        self.encoder = oae.encoder
-        set_trainable(self.encoder,False)
-        self.parameters['num_actions'] = oae.parameters['M']
-        
     def _build(self,input_shape):
+        num_actions = 128
+        N = input_shape[0] - num_actions
         x = Input(shape=input_shape)
-        N = input_shape[0] // 2
-
-        pre, action = self.encoder(x)
-
-        action = Reshape((self.parameters['num_actions'],))(action)
+        pre    = wrap(x,tf.slice(x, [0,0], [-1,N]),name="pre")
+        action = wrap(x,tf.slice(x, [0,N], [-1,num_actions]),name="action")
 
         ys = []
-        for i in range(self.parameters['num_actions']):
+        for i in range(num_actions):
             _x = Input(shape=(N,))
             _y = Sequential([
                 flatten,
@@ -1132,9 +1125,7 @@ class ActionDiscriminator(Discriminator):
 
         self.loss = bce
         self.net = Model(x, y)
-        # self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
         self.callbacks.append(GradientEarlyStopping(verbose=1,epoch=50,min_grad=self.parameters['min_grad']))
-        # self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
 
 class ActionPUDiscriminator(PUDiscriminator,ActionDiscriminator):
     pass
