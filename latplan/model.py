@@ -7,8 +7,8 @@ assuming the input/output image is binarized
 
 import numpy as np
 from functools import reduce
-from keras.layers import Input, Dense, Dropout, Convolution2D, Deconvolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D, merge
-from keras.layers.merge import Concatenate, Dot
+from keras.layers import Input, Dense, Dropout, Convolution2D, Deconvolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D
+from keras.layers.merge import Concatenate, Dot, average
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 import keras.optimizers
@@ -1129,6 +1129,58 @@ class ActionDiscriminator(Discriminator):
 
 class ActionPUDiscriminator(PUDiscriminator,ActionDiscriminator):
     pass
+
+# imbalanced data ################################################################
+
+# Undersampling + bagging
+class UBDiscriminator(Discriminator):
+    def _build(self,input_shape):
+        x = Input(shape=input_shape)
+
+        self.discriminators = []
+        for i in range(self.parameters['bagging']):
+            d = Discriminator(self.path+"/"+str(i),self.parameters)
+            d.build(input_shape)
+            self.discriminators.append(d)
+
+        y = average([ d.net(x) for d in self.discriminators ])
+        y = wrap(y,K.round(y))
+        self.net = Model(x,y)
+        self.net.compile(optimizer='adam',loss=bce)
+        
+    def train(self,train_data,
+              train_data_to=None,
+              test_data=None,
+              test_data_to=None,
+              *args,**kwargs):
+
+        self.build(train_data.shape[1:])
+        
+        num   = len(test_data_to)
+        num_p = np.count_nonzero(test_data_to)
+        num_n = num-num_p
+        assert num_n > num_p
+        print("positive : negative = ",num_p,":",num_n,"negative ratio",num_n/num_p)
+
+        ind_p = np.where(test_data_to == 1)[0]
+        ind_n = np.where(test_data_to == 0)[0]
+        
+        from numpy.random import shuffle
+        shuffle(ind_n)
+        
+        per_bag = num_n // len(self.discriminators)
+        for i, d in enumerate(self.discriminators):
+            print("training",i+1,"/",len(self.discriminators),"th discriminator")
+            ind_n_per_bag = ind_n[per_bag*i:per_bag*(i+1)]
+            ind = np.concatenate((ind_p,ind_n_per_bag))
+            d.train(train_data[ind],
+                    train_data_to=train_data_to[ind],
+                    test_data=test_data,
+                    test_data_to=test_data_to,
+                    *args,**kwargs)
+
+    def discriminate(self,data,**kwargs):
+        return self.net.predict(data,**kwargs)
 
 def main ():
     import matplotlib.pyplot as plt
