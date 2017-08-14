@@ -317,6 +317,45 @@ def test_oae_generated(directory,discriminator):
     # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
     predictions = discriminator.discriminate(y,batch_size=1000)
 
+    # print("BCE:", bce(predictions, answers))
+    # print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
+
+    from latplan.util import get_ae_type
+    from latplan.model import combined_discriminate, combined_discriminate2
+
+    if "conv" not in get_ae_type(directory):
+        cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
+        ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
+    else:
+        ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
+    print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
+    print("accuracy (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
+
+    ind = m.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
+    print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
+    print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
+
+def test_oae_pre_label(directory,discriminator):
+    print("--- additional testing on OAE-generated actions")
+
+    known_transisitons = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
+    y = generate_oae_action(known_transisitons)
+    N = known_transisitons.shape[1] // 2
+    
+    answers = np.zeros(len(y),dtype=int)
+    import latplan.puzzles.puzzle_mnist as p
+    p.setup()
+    import latplan.puzzles.model.puzzle as m
+    batch = 100000
+    for i in range(1+len(y)//batch):
+        print(i,"/",len(y)//batch)
+        pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
+        suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        answers[batch*i:batch*(i+1)] = np.array(m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+
+    # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
+    actions = oae.encode_action(y, batch_size=1000).round()
+    predictions = discriminator.discriminate(np.concatenate((y[:,:N], np.squeeze(actions)), axis=1),batch_size=1000)
 
     # print("BCE:", bce(predictions, answers))
     # print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
@@ -335,7 +374,47 @@ def test_oae_generated(directory,discriminator):
     ind = m.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
     print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
+
+def test_oae_pre_suc_label(directory,discriminator):
+    print("--- additional testing on OAE-generated actions")
+
+    known_transisitons = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
+    y = generate_oae_action(known_transisitons)
+    N = known_transisitons.shape[1] // 2
     
+    answers = np.zeros(len(y),dtype=int)
+    import latplan.puzzles.puzzle_mnist as p
+    p.setup()
+    import latplan.puzzles.model.puzzle as m
+    batch = 100000
+    for i in range(1+len(y)//batch):
+        print(i,"/",len(y)//batch)
+        pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
+        suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        answers[batch*i:batch*(i+1)] = np.array(m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+
+    # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
+    actions = oae.encode_action(y, batch_size=1000).round()
+    predictions = discriminator.discriminate(np.concatenate((y, np.squeeze(actions)), axis=1),batch_size=1000)
+
+    # print("BCE:", bce(predictions, answers))
+    # print("accuracy:", 100-mae(predictions.round(), answers)*100, "%")
+
+    from latplan.util import get_ae_type
+    from latplan.model import combined_discriminate, combined_discriminate2
+
+    if "conv" not in get_ae_type(directory):
+        cae = default_networks['SimpleCAE'](ae.local("_cae/")).load()
+        ind = np.where(np.squeeze(combined_discriminate(y[:,N:],ae,cae,sd3,batch_size=1000)) > 0.5)[0]
+    else:
+        ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
+    print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
+    print("accuracy (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
+
+    ind = m.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
+    print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
+    print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
+
 
 def main(directory, mode, input_type=prepare_oae_PU):
     directory_ad = "{}/_ad/".format(directory)
@@ -369,8 +448,13 @@ def main(directory, mode, input_type=prepare_oae_PU):
                                             default_parameters,
                                             parameters)
         discriminator.save()
-    
-    test_oae_generated(directory,discriminator)
+
+    if input_type is prepare_oae_PU4:
+        test_oae_pre_label(directory,discriminator)
+    elif input_type is prepare_oae_PU5:
+        test_oae_pre_suc_label(directory,discriminator)
+    else:
+        test_oae_generated(directory,discriminator)
 
     # skipping the rest of the tests
     import sys
