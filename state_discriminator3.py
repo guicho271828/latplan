@@ -176,10 +176,15 @@ if __name__ == '__main__':
     type1_error = np.sum(1- type1_d)
     print("type1 error:",type1_error,"/",len(states_valid),
           "Error ratio:", type1_error/len(states_valid) * 100, "%")
-    plot_grid(sae.decode_binary(states_valid[np.where(type1_d < 0.1)[0]])[:120],
-              w=20,
-              path=discriminator.local("type1_error.png"))
 
+    type1_error_images = sae.decode_binary(states_valid[np.where(type1_d < 0.1)[0]])[:120]
+    if len(type1_error_images) == 0:
+        print("We observed ZERO type1-error! Hooray!")
+    else:
+        plot_grid(type1_error_images,
+                  w=20,
+                  path=discriminator.local("type1_error.png"))
+    
     inflation = 1
     _,_,_,_, _, states_invalid = prepare(states_valid,sae)
 
@@ -202,9 +207,14 @@ if __name__ == '__main__':
     type2_error = np.sum(type2_d)
     print("type2 error:",type2_error,"/",len(states_invalid),
           "Error ratio:", type2_error/len(states_invalid) * 100, "%")
-    plot_grid(sae.decode_binary(states_invalid[np.where(type2_d > 0.9)[0]])[:120],
-              w=20,
-              path=discriminator.local("type2_error.png"))
+
+    type2_error_images = sae.decode_binary(states_invalid[np.where(type2_d > 0.9)[0]])[:120]
+    if len(type2_error_images) == 0:
+        print("We observed ZERO type2-error! Hooray!")
+    else:
+        plot_grid(type2_error_images,
+                  w=20,
+                  path=discriminator.local("type2_error.png"))
     
 """
 
