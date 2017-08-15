@@ -15,6 +15,10 @@ configs = generate_configs(disks,towers)
 puzzles = generate(configs,disks,towers)
 print(puzzles.shape)
 print(puzzles[10])
+
+for line in puzzles[10]:
+    print(line)
+
 plot_image(puzzles[0],"hanoi.png")
 plot_grid(puzzles[:36],"hanois.png")
 _transitions = transitions(disks,towers)

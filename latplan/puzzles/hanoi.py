@@ -4,28 +4,29 @@ from .model.hanoi import generate_configs, successors, config_state
 import math
 from .util import wrap
 from .util import preprocess
+
+from keras.layers import Input
+from keras.models import Model
+from keras import backend as K
+import tensorflow as tf
+
 ## code ##############################################################
+
+disk_height = 2
+disk_inc = disk_height // 2
+base_disk_width_factor = 2
+base_disk_width = disk_height * base_disk_width_factor
+
+border = 1
+tile_factor = 1
 
 def generate1(config,disks,towers):
     l = len(config)
-    disk_height = 2
-    disk_inc = disk_height // 2
-    # disk_inc = disk_height
-    base_disk_width_factor = 2
-    base_disk_width = disk_height * base_disk_width_factor
-
-    border = 1
     tower_width  = disks * (2*disk_inc) + base_disk_width + border
     tower_height = disks*disk_height
-
-    tile_factor = 1
-    
     figure = np.ones([tower_height,
                       tower_width*towers],dtype=np.int8)
     state = config_state(config,disks,towers)
-    # print(l,figure.shape)
-    # print(config)
-    # print(state)
     for i, tower in enumerate(state):
         tower.reverse()
         # print(i,tower)
@@ -73,6 +74,168 @@ def transitions(disks, towers, configs=None, one_per_state=False):
 
 def setup():
     pass
+
+def get_panels(disks, tower_width):
+    panels = np.ones([disks+1, disk_height, tower_width], dtype=np.int8)
+    x_center = disks * disk_inc # lacks base_disk_width
+    for disk, panel in enumerate(panels):
+        if disk != disks:
+            # last panel is empty
+            panel[:,
+                x_center - disk * disk_inc :
+                x_center + disk * disk_inc + base_disk_width] \
+                = 0
+    return panels
+
+
+def build_error(s, disks, towers, tower_width, panels):
+    s = K.reshape(s,[-1,disks, disk_height, towers, tower_width])
+    s = K.permute_dimensions(s, [0,1,3,2,4])
+    s = K.reshape(s,[-1,disks,towers,1,    disk_height,tower_width])
+    s = K.tile   (s,[1, 1, 1, disks+1,1, 1,])
+
+    allpanels = K.variable(panels)
+    allpanels = K.reshape(allpanels, [1,1,1,disks+1,disk_height,tower_width])
+    allpanels = K.tile(allpanels, [K.shape(s)[0], disks, towers, 1, 1, 1])
+
+    error = K.binary_crossentropy(s, allpanels)
+    error = K.mean(error, axis=(4,5))
+    return error
+    
+
+def validate_states(states,verbose=True, **kwargs):
+    tower_height = states.shape[1]
+    disks = tower_height // disk_height
+    
+    tower_width  = disks * (2*disk_inc) + base_disk_width + border
+    towers = states.shape[2] // tower_width
+    panels = get_panels(disks, tower_width)
+
+    def build():
+        states = Input(shape=(tower_height, tower_width*towers))
+        error = build_error(states, disks, towers, tower_width, panels)
+        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+
+        num_matches = K.sum(matches, axis=3)
+        panels_ok = K.all(K.equal(num_matches, 1), (1,2))
+        panels_ng = K.any(K.not_equal(num_matches, 1), (1,2))
+        panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2))
+        panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2))
+
+        panel_coverage = K.sum(matches,axis=(1,2))
+        # ideally, this should be [[1,1,1...1,1,1,disks*tower-disk], ...]
+        
+        ideal_coverage = np.ones(disks+1)
+        ideal_coverage[-1] = disks*towers-disks
+        ideal_coverage = K.variable(ideal_coverage)
+        coverage_ok = K.all(K.equal(panel_coverage, ideal_coverage), 1)
+        coverage_ng = K.any(K.not_equal(panel_coverage, ideal_coverage), 1)
+        validity = tf.logical_and(panels_ok, coverage_ok)
+
+        if verbose:
+            return Model(states,
+                         [ wrap(states, x) for x in [panels_ok,
+                                                     panels_ng,
+                                                     panels_nomatch,
+                                                     panels_ambiguous,
+                                                     coverage_ok,
+                                                     coverage_ng,
+                                                     validity]])
+        else:
+            return Model(states, wrap(states, validity))
+
+    model = build()
+    #     model.summary()
+    if verbose:
+        panels_ok, panels_ng, panels_nomatch, panels_ambiguous, \
+            coverage_ok, coverage_ng, validity = model.predict(states, **kwargs)
+        print(np.count_nonzero(panels_ng),       "images have some panels which match 0 or >2 panels, out of which")
+        print(np.count_nonzero(panels_nomatch),  "images have some panels which are unlike any panels")
+        print(np.count_nonzero(panels_ambiguous),"images have some panels which match >2 panels")
+        print(np.count_nonzero(panels_ok),       "images have panels (all of them) which match exactly 1 panel each")
+        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
+        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
+        return validity
+    else:
+        validity = model.predict(states, **kwargs)
+        return validity
+
+
+def to_configs(states,verbose=True, **kwargs):
+    tower_height = states.shape[1]
+    disks = tower_height // disk_height
+    
+    tower_width  = disks * (2*disk_inc) + base_disk_width + border
+    towers = states.shape[2] // tower_width
+    panels = get_panels(disks, tower_width)
+
+    def build():
+        states = Input(shape=(tower_height, tower_width*towers))
+        error = build_error(states, disks, towers, tower_width, panels)
+        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        # matches: a h w p
+        # when [[012][][]] this is:
+        # [[[1000][0001][0001]]  --- w,h=0,0 is panel 0, others are panel 3 (empty panel)
+        #  [[0100][0001][0001]]  --- w,h=0,1 is panel 1, others are panel 3 (empty panel)
+        #  [[0010][0001][0001]]] --- w,h=0,2 is panel 2, others are panel 3 (empty panel)
+        # which corresponds to [0,0,0]
+        
+        # we need: a p w  --- height is irrelevant
+        config = K.permute_dimensions(matches, [0,3,2,1])
+        # now a p w h
+        # [ [[100] [000] [000]]      --- panel 0 exists in w,h=0,0
+        #   [[010] [000] [000]]      --- panel 1 exists in w,h=0,1
+        #   [[001] [000] [000]]      --- panel 2 exists in w,h=0,2
+        #   [[000] [111] [111]] ]   
+        # you don't need panel 3 (empty panel)
+        config = config[:, 0:3, :, :]
+        # you don't need the height info
+        config = K.sum(config, -1)
+        # now a p w.
+        # [ [1 0 0]      --- panel 0 exists in w,h=0,0
+        #   [1 0 0]      --- panel 1 exists in w,h=0,1
+        #   [1 0 0]      --- panel 2 exists in w,h=0,2
+        # ]
+        # now you can get the position:
+        config = config * K.arange(0,disks,dtype='float32')
+        config = K.sum(config, -1)
+        config = K.cast(config, 'int32')
+        # you get [ 0, 0, 0 ]
+        return Model(states, wrap(states, config))
+
+    return build().predict(states, **kwargs)
+
+def validate_transitions(transitions, check_states=True, **kwargs):
+    pre = np.array(transitions[0])
+    suc = np.array(transitions[1])
+
+    tower_height = pre.shape[1]
+    disks = tower_height // disk_height
+    
+    tower_width  = disks * (2*disk_inc) + base_disk_width + border
+    towers = pre.shape[2] // tower_width
+    
+    if check_states:
+        pre_validation = validate_states(pre, verbose=False, **kwargs)
+        suc_validation = validate_states(suc, verbose=False, **kwargs)
+
+    pre_configs = to_configs(pre, verbose=False, **kwargs)
+    suc_configs = to_configs(suc, verbose=False, **kwargs)
+    
+    results = []
+    if check_states:
+        for pre_c, suc_c, pre_validation, suc_validation in zip(pre_configs, suc_configs, pre_validation, suc_validation):
+
+            if pre_validation and suc_validation:
+                succs = successors(pre_c, disks, towers)
+                results.append(np.any(np.all(np.equal(succs, suc_c), axis=1)))
+            else:
+                results.append(False)
+    else:
+        for pre_c, suc_c in zip(pre_configs, suc_configs):
+            succs = successors(pre_c, disks, towers)
+            results.append(np.any(np.all(np.equal(succs, suc_c), axis=1)))
+    return results
 
 ## patterns ##############################################################
 
