@@ -143,9 +143,9 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
         'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' :['tanh'],
-        'full_epoch' :[250],
-        'epoch'      :[250],
-        'batch_size' :[1000],
+        'full_epoch' :[300],
+        'epoch'      :[300],
+        'batch_size' :[4000],
         'lr'         :[0.001],
     }
     import importlib
