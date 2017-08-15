@@ -15,6 +15,8 @@ off= [[0, 0, 0, 0, 0,],
       [0, 0, 0, 0, 0,],
       [0, 0, 0, 0, 0,],]
 
+# config representation: on = 1, off = -1 , not zero!!
+
 def generate(configs):
     import math
     size = int(math.sqrt(len(configs[0])))
