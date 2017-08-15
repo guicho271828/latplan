@@ -76,7 +76,7 @@ def puzzle_plot(p):
     random.shuffle(configs)
     configs = configs[:10]
     puzzles = p.generate(configs, 3, 3)
-    print(puzzles.shape)
+    print(puzzles.shape, "mean", puzzles.mean(), "stdev", np.std(puzzles))
     plot_image(puzzles[-1], name("{}.png"))
     plot_grid(puzzles, name("{}s.png"))
     _transitions = p.transitions(3,3,configs=configs)
