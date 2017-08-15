@@ -100,6 +100,7 @@ class Network:
         self.verbose = True
         self.parameters = parameters
         self.custom_log_functions = {}
+        self.metrics = []
         import datetime
         self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update),
                           keras.callbacks.TensorBoard(log_dir=self.local('logs/{}'.format(datetime.datetime.now().isoformat())), write_graph=False)]
@@ -203,7 +204,7 @@ class Network:
         validation = (test_data,test_data_to) if test_data is not None else None
         try:
             self.max_epoch = epoch
-            self.net.compile(optimizer=o, loss=self.loss)
+            self.net.compile(optimizer=o, loss=self.loss, metrics=self.metrics)
             self.net.fit(
                 train_data, train_data_to,
                 epochs=epoch, batch_size=batch_size,
@@ -468,16 +469,19 @@ class GumbelAE(AE):
         w2 = Sequential([*_encoder, self.gs2])(flatten(y2))
 
         data_dim = np.prod(input_shape)
+        def rec(x, y):
+            #return K.mean(K.binary_crossentropy(x,y))
+            return bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                       K.reshape(y,(K.shape(x)[0],data_dim,)))
+
         def loss(x, y):
-            kl_loss = self.gs.loss()
-            reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                                      K.reshape(y,(K.shape(x)[0],data_dim,)))
-            return reconstruction_loss + kl_loss
+            return rec(x,y) + self.gs.loss()
 
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.cool))
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
         self.loss = loss
+        self.metrics.append(rec)
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.autoencoder = Model(x, y)
@@ -612,17 +616,18 @@ class GumbelAE2(GumbelAE):
                         Lambda(take_true),
                         Reshape(input_shape)])(z2)
 
+        def rec(x, y):
+            return bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                       K.reshape(y,(K.shape(x)[0],data_dim,)))
         def loss(x, y):
-            kl_loss = self.gs.loss() + self.gs2.loss()
-            reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                                      K.reshape(y,(K.shape(x)[0],data_dim,)))
-            return reconstruction_loss + kl_loss
+            return rec(x,y) + self.gs.loss() + self.gs2.loss()
 
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.cool))
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.cool))
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs3.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
         self.loss = loss
+        self.metrics.append(rec)
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.net = Model(x, y)
