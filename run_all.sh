@@ -2,20 +2,13 @@
 
 trap exit SIGINT
 
-./strips.py conv puzzle learn_plot_dump mnist 3 3 36 6500
-./state_discriminator3.py samples/puzzle_mnist_3_3_36_6500_conv/ learn &
-./action_autoencoder.py   samples/puzzle_mnist_3_3_36_6500_conv/ learn &
-./action_discriminator.py samples/puzzle_mnist_3_3_36_6500_conv/ learn prepare_oae_PU3 &
-
-wait
-./trivial-planner.py samples/puzzle_mnist3336_conv/ trivial-planner-instances/latplan.puzzles.puzzle_mnist/0-0/
-
 ./strips.py conv puzzle learn_plot_dump mnist 3 3 36 40000
 ./state_discriminator3.py samples/puzzle_mnist_3_3_36_40000_conv/ learn
 ./action_autoencoder.py   samples/puzzle_mnist_3_3_36_40000_conv/ learn
 ./action_discriminator.py samples/puzzle_mnist_3_3_36_40000_conv/ learn
-parallel --eta --timeout 900 --joblog parallel.log "./trivial-planner.py samples/{1} {2} GBFSRec > {2}/{1}_GBFSRec.log" ::: puzzle_mnist_3_3_36_40000_conv ::: instances/latplan.puzzles.puzzle_mnist/*
+
 parallel --eta --timeout 900 --joblog parallel.log "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" ::: puzzle_mnist_3_3_36_40000_conv ::: instances/latplan.puzzles.puzzle_mnist/*
+
 
 
 
