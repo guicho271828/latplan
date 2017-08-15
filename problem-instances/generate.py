@@ -109,8 +109,8 @@ def digital_lightsout(size=4):
     gcs = np.full((1,size*size),-1)
     generate(p, ics, gcs)
 
-def digital_lightsout_skewed(size=4):
-    import latplan.puzzles.digital_lightsout_skewed as p
+def lightsout_twisted(size=4):
+    import latplan.puzzles.lightsout_twisted as p
     ics = [
         random_walk(np.full(size*size,-1), steps, lambda config: p.successors(config))
         for i in range(instances)

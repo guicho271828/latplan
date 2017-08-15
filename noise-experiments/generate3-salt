@@ -2,11 +2,11 @@
 
 h=blind
 s=0.0$1
-name=$h-salt-lightout-skewed3-$s
+name=$h-salt-lightout-twisted3-$s
 
 cat > $name.sh <<EOF
 #!/bin/bash
-./plan_noise.py $h $s salt 'run_lightsout3 ( "samples/digital_lightsout_skewed_3_fc"       ,"fc", import_module("puzzles.digital_lightsout_skewed"        ) )' |& tee \$(dirname \$0)/$name.log
+./plan_noise.py $h $s salt 'run_lightsout3 ( "samples/lightsout_twisted_3_fc"       ,"fc", import_module("puzzles.lightsout_twisted"        ) )' |& tee \$(dirname \$0)/$name.log
 EOF
 
 chmod +x $name.sh
