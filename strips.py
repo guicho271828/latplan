@@ -120,7 +120,7 @@ def dump_states(ae,states,name="states.csv",repeat=1):
 
 # note: lightsout has epoch 200
 
-def run(path,train,test):
+def run(path,train,test,parameters):
     if 'learn' in mode:
         from latplan.util import curry
         ae, _, _ = grid_search(curry(nn_task, default_networks[encoder], path,
@@ -134,21 +134,20 @@ def run(path,train,test):
         ae.summary()
     return ae
 
-parameters = {
-    'layer'      :[2000],# [400,4000],
-    'clayer'     :[16],# [400,4000],
-    'dropout'    :[0.4], #[0.1,0.4],
-    'N'          :[36],  #[25,49],
-    'dropout_z'  :[False],
-    'activation' :['tanh'],
-    'full_epoch' :[250],
-    'epoch'      :[250],
-    'batch_size' :[1000],
-    'lr'         :[0.001],
-}
 
 def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
-    parameters['N'] = [N]
+    parameters = {
+        'layer'      :[2000],# [400,4000],
+        'clayer'     :[16],# [400,4000],
+        'dropout'    :[0.4], #[0.1,0.4],
+        'N'          :[N],  #[25,49],
+        'dropout_z'  :[False],
+        'activation' :['tanh'],
+        'full_epoch' :[250],
+        'epoch'      :[250],
+        'batch_size' :[1000],
+        'lr'         :[0.001],
+    }
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
@@ -160,7 +159,7 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     print(states.shape)
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
-    ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test)
+    ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test, parameters)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
@@ -168,35 +167,19 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
 def hanoi(disks=5,towers=3):
-    global parameters
-    if 'fc' in encoder:
-        parameters = {
-            'layer'      :[2000],# [400,4000],
-            'clayer'     :[9],# [400,4000],
-            'dropout'    :[0.4], #[0.1,0.4],
-            'N'          :[49],  #[25,49],
-            'dropout_z'  :[False],
-            'activation' : ['relu'],
-            'full_epoch' :[1000],
-            'epoch'      :[1000],
-            'batch_size' :[500],
-            'optimizer'  :['adam'],
-            'lr'         :[0.001],
-        }
-    else:
-        parameters = {
-            'layer'      :[1000],# [400,4000],
-            'clayer'     :[12],# [400,4000],
-            'dropout'    :[0.4], #[0.1,0.4],
-            'N'          :[49],  #[25,49],
-            'dropout_z'  :[False],
-            'activation' : ['relu'],
-            'full_epoch' :[1000],
-            'epoch'      :[1000],
-            'batch_size' :[500],
-            'optimizer'  :['adam'],
-            'lr'         :[0.001],
-        }
+    parameters = {
+        'layer'      :[1000],# [400,4000],
+        'clayer'     :[12],# [400,4000],
+        'dropout'    :[0.4], #[0.1,0.4],
+        'N'          :[49],  #[25,49],
+        'dropout_z'  :[False],
+        'activation' : ['relu'],
+        'full_epoch' :[1000],
+        'epoch'      :[1000],
+        'batch_size' :[500],
+        'optimizer'  :['adam'],
+        'lr'         :[0.001],
+    }
     import latplan.puzzles.hanoi as p
     configs = p.generate_configs(disks,towers)
     configs = np.array([ c for c in configs ])
@@ -209,7 +192,7 @@ def hanoi(disks=5,towers=3):
     train       = p.states(disks,towers,train_c)
     test        = p.states(disks,towers,test_c)
     print(len(configs),len(train),len(test))
-    ae = run("samples/hanoi{}{}_{}/".format(disks,towers,encoder), train, test)
+    ae = run("samples/hanoi{}{}_{}/".format(disks,towers,encoder), train, test, parameters)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,lambda configs: p.transitions(disks,towers,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),)
@@ -217,7 +200,6 @@ def hanoi(disks=5,towers=3):
     dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),)
 
 def lightsout_digital(size=4):
-    global parameters
     parameters = {
         'layer'      :[2000],# [400,4000],
         'clayer'     :[16],# [400,4000],
@@ -241,13 +223,12 @@ def lightsout_digital(size=4):
     test        = p.states(size,test_c)
 
     print(len(configs),len(train),len(test))
-    ae = run("samples/lightsout_digital_{}_{}/".format(size,encoder), train, test)
+    ae = run("samples/lightsout_digital_{}_{}/".format(size,encoder), train, test, parameters)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
 
 def lightsout_twisted(size=3):
-    global parameters
     parameters = {
         'layer'      :[4000],
         'dropout'    :[0.4],
@@ -265,13 +246,12 @@ def lightsout_twisted(size=3):
     train       = p.states(size,train_c)
     test        = p.states(size,test_c)
     print(len(configs),len(train),len(test))
-    ae = run("samples/lightsout_twisted_{}_{}/".format(size,encoder), train, test)
+    ae = run("samples/lightsout_twisted_{}_{}/".format(size,encoder), train, test, parameters)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs))
 
 def counter_mnist():
-    global parameters
     parameters = {
         'layer'      :[4000],
         'dropout'    :[0.4],
@@ -285,13 +265,12 @@ def counter_mnist():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run("samples/counter_mnist_{}/".format(encoder), train, test)
+    ae = run("samples/counter_mnist_{}/".format(encoder), train, test, parameters)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
 
 def counter_random_mnist():
-    global parameters
     parameters = {
         'layer'      :[4000],
         'dropout'    :[0.4],
@@ -305,7 +284,7 @@ def counter_random_mnist():
     train       = states[:int(len(states)*(0.8))]
     test        = states[int(len(states)*(0.8)):]
     print(len(configs),len(train),len(test))
-    ae = run("samples/counter_random_mnist_{}/".format(encoder), train, test)
+    ae = run("samples/counter_random_mnist_{}/".format(encoder), train, test, parameters)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
