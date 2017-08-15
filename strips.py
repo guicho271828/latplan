@@ -246,7 +246,7 @@ def digital_lightsout(size=4):
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
 
-def digital_lightsout_skewed(size=3):
+def lightsout_twisted(size=3):
     global parameters
     parameters = {
         'layer'      :[4000],
@@ -255,7 +255,7 @@ def digital_lightsout_skewed(size=3):
         'epoch'      :[1000],
         'batch_size' :[2000]
     }
-    import latplan.puzzles.digital_lightsout_skewed as p
+    import latplan.puzzles.lightsout_twisted as p
     print('generating configs...')
     configs = p.generate_configs(size)
     random.shuffle(configs)
@@ -265,7 +265,7 @@ def digital_lightsout_skewed(size=3):
     train       = p.states(size,train_c)
     test        = p.states(size,test_c)
     print(len(configs),len(train),len(test))
-    ae = run("samples/digital_lightsout_skewed_{}_{}/".format(size,encoder), train, test)
+    ae = run("samples/lightsout_twisted_{}_{}/".format(size,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs))

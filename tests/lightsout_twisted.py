@@ -4,16 +4,16 @@ import numpy as np
 import sys
 sys.path.append('../../')
 
-from latplan.puzzles.digital_lightsout_skewed import generate_configs, successors, generate, states, transitions
+from latplan.puzzles.lightsout_twisted import generate_configs, successors, generate, states, transitions
 
 from plot import plot_image, plot_grid
 
 configs = generate_configs(3)
 puzzles = generate([configs[-1]])
-plot_image(puzzles[0],"digital_lightsout_skewed.png")
+plot_image(puzzles[0],"lightsout_twisted.png")
 # puzzles = generate(configs)
-# plot_image(puzzles[10],"digital_lightsout_skewed.png")
-# plot_grid(puzzles[:36],"digital_lightsout_skeweds.png")
+# plot_image(puzzles[10],"lightsout_twisted.png")
+# plot_grid(puzzles[:36],"lightsout_twisteds.png")
 # _transitions = transitions(3)
 # import numpy.random as random
 # indices = random.randint(0,_transitions[0].shape[0],18)
@@ -23,4 +23,4 @@ plot_image(puzzles[0],"digital_lightsout_skewed.png")
 #     np.einsum('ba...->ab...',_transitions) \
 #       .reshape((-1,)+_transitions.shape[2:])
 # print(transitions_for_show.shape)
-# plot_grid(transitions_for_show,"digital_lightsout_skewed_transitions.png")
+# plot_grid(transitions_for_show,"lightsout_twisted_transitions.png")

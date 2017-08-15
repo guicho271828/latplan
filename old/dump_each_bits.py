@@ -17,7 +17,7 @@ def run(ae):
     plot_grid(ys,w=1,path=path)
 
 run(GumbelAE2("samples/digital_lightsout_4_fc2"))
-run(GumbelAE( "samples/digital_lightsout_skewed_3_fc"))
+run(GumbelAE( "samples/lightsout_twisted_3_fc"))
 run(GumbelAE2("samples/hanoi3_fc2"))
 run(GumbelAE2("samples/hanoi4_fc2"))
 run(GumbelAE2("samples/mandrill_puzzle33_fc2"))
