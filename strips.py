@@ -153,6 +153,8 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     p.setup()
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
+    assert len(configs) > num_examples
+    print(len(configs))
     random.shuffle(configs)
     transitions = p.transitions(width,height,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
@@ -166,12 +168,12 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
-def hanoi(disks=5,towers=3):
+def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     parameters = {
         'layer'      :[1000],# [400,4000],
         'clayer'     :[12],# [400,4000],
         'dropout'    :[0.4], #[0.1,0.4],
-        'N'          :[49],  #[25,49],
+        'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' : ['relu'],
         'full_epoch' :[1000],
@@ -183,28 +185,27 @@ def hanoi(disks=5,towers=3):
     import latplan.puzzles.hanoi as p
     configs = p.generate_configs(disks,towers)
     configs = np.array([ c for c in configs ])
+    assert len(configs) > num_examples
+    print(len(configs))
     random.shuffle(configs)
-    print(len(configs))
-    configs = configs[:min(8000,len(configs))]
-    print(len(configs))
-    train_c = configs[:int(0.9*len(configs))]
-    test_c  = configs[int(0.9*len(configs)):]
-    train       = p.states(disks,towers,train_c)
-    test        = p.states(disks,towers,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run("samples/hanoi{}{}_{}/".format(disks,towers,encoder), train, test, parameters)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs,lambda configs: p.transitions(disks,towers,configs),"actions.csv")
+    transitions = p.transitions(disks,towers,configs[:num_examples],one_per_state=True)
+    states = np.concatenate((transitions[0], transitions[1]), axis=0)
+    print(states.shape)
+    train = states[:int(len(states)*0.9)]
+    test  = states[int(len(states)*0.9):]
+    ae = run("_".join(map(str,("samples/hanoi",disks,towers,N,num_examples,encoder))), train, test, parameters)
+    dump_autoencoding_image(ae,test[:1000],train[:1000])
+    dump_actions(ae,transitions)
+    dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),)
-    dump_all_states(ae,configs,lambda configs: p.states(disks,towers,configs),"states.csv")
     dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),)
 
-def lightsout_digital(size=4):
+def lightsout(type='digital',size=4,N=36,num_examples=6500):
     parameters = {
         'layer'      :[2000],# [400,4000],
         'clayer'     :[16],# [400,4000],
         'dropout'    :[0.4], #[0.1,0.4],
-        'N'          :[28],  #[25,49],
+        'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' : ['tanh'],
         'full_epoch' :[1000],
@@ -212,83 +213,24 @@ def lightsout_digital(size=4):
         'batch_size' :[2000],
         'lr'         :[0.001],
     }
-    import latplan.puzzles.lightsout_digital as p
-    print('generating configs...')
+    import importlib
+    p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     configs = p.generate_configs(size)
+    configs = np.array([ c for c in configs ])
+    assert len(configs) > num_examples
+    print(len(configs))
     random.shuffle(configs)
-    train_c = configs[:12000]
-    test_c  = configs[12000:13000]
-    print('generating figures...')
-    train       = p.states(size,train_c)
-    test        = p.states(size,test_c)
-
-    print(len(configs),len(train),len(test))
-    ae = run("samples/lightsout_digital_{}_{}/".format(size,encoder), train, test, parameters)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(size,configs),"actions.csv")
+    transitions = p.transitions(size,configs[:num_examples],one_per_state=True)
+    states = np.concatenate((transitions[0], transitions[1]), axis=0)
+    print(states.shape)
+    train = states[:int(len(states)*0.9)]
+    test  = states[int(len(states)*0.9):]
+    ae = run("_".join(map(str,("samples/lightsout",type,size,N,num_examples,encoder))), train, test, parameters)
+    dump_autoencoding_image(ae,test[:1000],train[:1000])
+    dump_actions(ae,transitions)
+    dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
-
-def lightsout_twisted(size=3):
-    parameters = {
-        'layer'      :[4000],
-        'dropout'    :[0.4],
-        'N'          :[49],
-        'epoch'      :[1000],
-        'batch_size' :[2000]
-    }
-    import latplan.puzzles.lightsout_twisted as p
-    print('generating configs...')
-    configs = p.generate_configs(size)
-    random.shuffle(configs)
-    train_c = configs[:int(len(configs)*0.9)]
-    test_c  = configs[int(len(configs)*0.9):]
-    print('generating figures...')
-    train       = p.states(size,train_c)
-    test        = p.states(size,test_c)
-    print(len(configs),len(train),len(test))
-    ae = run("samples/lightsout_twisted_{}_{}/".format(size,encoder), train, test, parameters)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs))
-
-def counter_mnist():
-    parameters = {
-        'layer'      :[4000],
-        'dropout'    :[0.4],
-        'N'          :[36],
-        'epoch'      :[1000],
-        'batch_size' :[3500]
-    }
-    import latplan.puzzles.counter_mnist as p
-    configs = np.repeat(p.generate_configs(10),10000,axis=0)
-    states = p.states(10,configs)
-    train       = states[:int(len(states)*(0.8))]
-    test        = states[int(len(states)*(0.8)):]
-    print(len(configs),len(train),len(test))
-    ae = run("samples/counter_mnist_{}/".format(encoder), train, test, parameters)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
-
-def counter_random_mnist():
-    parameters = {
-        'layer'      :[4000],
-        'dropout'    :[0.4],
-        'N'          :[36],
-        'epoch'      :[1000],
-        'batch_size' :[3500]
-    }
-    import latplan.puzzles.counter_random_mnist as p
-    configs = np.repeat(p.generate_configs(10),10000,axis=0)
-    states = p.states(10,configs)
-    train       = states[:int(len(states)*(0.8))]
-    test        = states[int(len(states)*(0.8)):]
-    print(len(configs),len(train),len(test))
-    ae = run("samples/counter_random_mnist_{}/".format(encoder), train, test, parameters)
-    dump_autoencoding_image(ae,test,train)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs),"actions.csv")
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(10,configs))
-
+    dump_all_states(ae,configs,        lambda configs: p.states(size,configs),)
 
 def main():
     global encoder, mode
