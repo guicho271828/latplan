@@ -31,7 +31,7 @@ parallel -j 2 "./action_autoencoder.py   samples/puzzle_mnist_3_3_36_{1}_{2}/ le
 ./strips.py fc hanoi learn_plot_dump 4
 ./strips.py fc hanoi learn_plot_dump 7 4
 
-./strips.py fc digital_lightsout learn_plot_dump 4
+./strips.py fc lightsout_digital learn_plot_dump 4
 ./strips.py fc lightsout_twisted learn_plot_dump 3
 
 

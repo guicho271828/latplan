@@ -216,7 +216,7 @@ def hanoi(disks=5,towers=3):
     dump_all_states(ae,configs,lambda configs: p.states(disks,towers,configs),"states.csv")
     dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),)
 
-def digital_lightsout(size=4):
+def lightsout_digital(size=4):
     global parameters
     parameters = {
         'layer'      :[2000],# [400,4000],
@@ -230,7 +230,7 @@ def digital_lightsout(size=4):
         'batch_size' :[2000],
         'lr'         :[0.001],
     }
-    import latplan.puzzles.digital_lightsout as p
+    import latplan.puzzles.lightsout_digital as p
     print('generating configs...')
     configs = p.generate_configs(size)
     random.shuffle(configs)
@@ -241,7 +241,7 @@ def digital_lightsout(size=4):
     test        = p.states(size,test_c)
 
     print(len(configs),len(train),len(test))
-    ae = run("samples/digital_lightsout_{}_{}/".format(size,encoder), train, test)
+    ae = run("samples/lightsout_digital_{}_{}/".format(size,encoder), train, test)
     dump_autoencoding_image(ae,test,train)
     dump_all_actions(ae,configs[:13000],lambda configs: p.transitions(size,configs),"actions.csv")
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)

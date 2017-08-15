@@ -16,7 +16,7 @@ def run(ae):
     path = ae.local("each-bit-neg.png")
     plot_grid(ys,w=1,path=path)
 
-run(GumbelAE2("samples/digital_lightsout_4_fc2"))
+run(GumbelAE2("samples/lightsout_digital_4_fc2"))
 run(GumbelAE( "samples/lightsout_twisted_3_fc"))
 run(GumbelAE2("samples/hanoi3_fc2"))
 run(GumbelAE2("samples/hanoi4_fc2"))
