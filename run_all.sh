@@ -2,12 +2,15 @@
 
 trap exit SIGINT
 
-./strips.py conv puzzle learn_plot_dump mnist 3 3 36 40000
-./state_discriminator3.py samples/puzzle_mnist_3_3_36_40000_conv/ learn
-./action_autoencoder.py   samples/puzzle_mnist_3_3_36_40000_conv/ learn
-./action_discriminator.py samples/puzzle_mnist_3_3_36_40000_conv/ learn
+./strips.py conv puzzle learn_plot_dump mnist 3 3 36 10000
+./state_discriminator3.py samples/puzzle_mnist_3_3_36_10000_conv/ learn
+./action_autoencoder.py   samples/puzzle_mnist_3_3_36_10000_conv/ learn
+./action_discriminator.py samples/puzzle_mnist_3_3_36_10000_conv/ learn
 
-parallel --eta --timeout 900 --joblog parallel.log "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" ::: puzzle_mnist_3_3_36_40000_conv ::: instances/latplan.puzzles.puzzle_mnist/*
+parallel --eta --timeout 900 --joblog parallel.log \
+         "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
+         ::: puzzle_mnist_3_3_36_10000_conv \
+         ::: instances/latplan.puzzles.puzzle_mnist/*
 
 
 
@@ -23,9 +26,17 @@ parallel -j 2 "./state_discriminator3.py samples/puzzle_mnist_3_3_36_{1}_{2}/ le
 parallel -j 2 "./action_discriminator.py samples/puzzle_mnist_3_3_36_{1}_{2}/ learn &> samples/puzzle_mnist_3_3_36_{1}_{2}/ad.log"  ::: 6500 13000 26000 ::: conv aconv
 parallel -j 2 "./action_autoencoder.py   samples/puzzle_mnist_3_3_36_{1}_{2}/ learn &> samples/puzzle_mnist_3_3_36_{1}_{2}/oae.log" ::: 6500 13000 26000 ::: conv aconv
 
+
+./strips.py conv puzzle learn_plot_dump mandrill 3 3 36 10000 && \
+    ./state_discriminator3.py samples/puzzle_mandrill_3_3_36_10000_conv/ learn && \
+    ./action_autoencoder.py   samples/puzzle_mandrill_3_3_36_10000_conv/ learn && \
+    ./action_discriminator.py samples/puzzle_mandrill_3_3_36_10000_conv/ learn
+
+
 ./strips.py fc puzzle_mandrill learn_plot_dump 3 3
 ./strips.py fc puzzle_lenna learn_plot_dump 3 3
 ./strips.py fc puzzle_spider learn_plot_dump 3 3
+
 
 ./strips.py fc hanoi learn_plot_dump 3
 ./strips.py fc hanoi learn_plot_dump 4
