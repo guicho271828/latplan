@@ -9,6 +9,11 @@ setting = {
     'loader' : None,
 }
 
+from keras.layers import Lambda
+def wrap(x,y,**kwargs):
+    "wrap arbitrary operation"
+    return Lambda(lambda x:y,**kwargs)(x)
+
 def load(width,height,force=False):
     if setting['panels'] is None or force is True:
         setting['panels'] = setting['loader'](width,height)
@@ -32,14 +37,10 @@ def generate_gpu(configs, width, height, **kwargs):
     assert width*height <= 9
     load(width, height)
 
-    from keras.layers import Input, Lambda, Reshape
+    from keras.layers import Input, Reshape
     from keras.models import Model
     from keras import backend as K
     import tensorflow as tf
-    
-    def wrap(x,y,**kwargs):
-        "wrap arbitrary operation"
-        return Lambda(lambda x:y,**kwargs)(x)
     
     def build():
         base = setting['base']
@@ -121,14 +122,10 @@ def validate_states_gpu(states, width, height, verbose=True, **kwargs):
     load(width, height)
     base = setting['base']
     
-    from keras.layers import Input, Lambda, Reshape
+    from keras.layers import Input, Reshape
     from keras.models import Model
     from keras import backend as K
     import tensorflow as tf
-
-    def wrap(x,y,**kwargs):
-        "wrap arbitrary operation"
-        return Lambda(lambda x:y,**kwargs)(x)
 
     def build():
         states = Input(shape=(height*base,width*base))
@@ -227,15 +224,11 @@ def to_configs_gpu(states, width, height, verbose=True, **kwargs):
     load(width, height)
     base = setting['base']
 
-    from keras.layers import Input, Lambda, Reshape
+    from keras.layers import Input, Reshape
     from keras.models import Model
     from keras import backend as K
     import tensorflow as tf
     
-    def wrap(x,y,**kwargs):
-        "wrap arbitrary operation"
-        return Lambda(lambda x:y,**kwargs)(x)
-
     def build():
         P = len(setting['panels'])
         states = Input(shape=(height*base,width*base))
