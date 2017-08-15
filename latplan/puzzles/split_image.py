@@ -7,7 +7,5 @@ def split_image(path,width,height):
     # convert the image to *greyscale*
     W, H = img.shape
     dW, dH = W//width, H//height
-    return np.array([
-        img[dH*i:dH*(i+1), dH*j:dH*(j+1)]
-        for i in range(width)
-        for j in range(height) ])
+    img = img[:height*dH,:width*dW]
+    return np.transpose(img.reshape((height,dH,width,dW)), (0,2,1,3)).reshape((height*width,dH,dW))
