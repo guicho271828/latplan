@@ -101,17 +101,9 @@ def hanoi(disks=5, towers=3):
     gcs = np.full((1,disks),towers-1,dtype=int)
     generate(p, ics, gcs, disks, towers)
 
-def lightsout_digital(size=4):
-    import latplan.puzzles.lightsout_digital as p
-    ics = [
-        random_walk(np.full(size*size,-1), steps, lambda config: p.successors(config))
-        for i in range(instances)
-    ]
-    gcs = np.full((1,size*size),-1)
-    generate(p, ics, gcs)
-
-def lightsout_twisted(size=4):
-    import latplan.puzzles.lightsout_twisted as p
+def lightsout(type='digital', size=4):
+    import importlib
+    p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     ics = [
         random_walk(np.full(size*size,-1), steps, lambda config: p.successors(config))
         for i in range(instances)
