@@ -43,8 +43,9 @@ def generate(p, ics, gcs, *args):
     subprocess.call(["rm","-rf",p.__name__])
     for i,init in enumerate(p.generate(np.array(ics),*args)):
         for j,goal in enumerate(p.generate(np.array(gcs),*args)):
-            d = "{}/{:03d}-{:03d}".format(p.__name__,i,j)
+            d = "{}/{:03d}-{:03d}-{:03d}".format(p.__name__,steps,i,j)
             os.makedirs(d)
+            print(d)
             misc.imsave(os.path.join(d,"init.png"),init)
             misc.imsave(os.path.join(d,"goal.png"),goal)
 
