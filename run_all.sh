@@ -2,47 +2,33 @@
 
 trap exit SIGINT
 
-./strips.py conv puzzle learn_plot_dump mnist 3 3 36 10000
-./state_discriminator3.py samples/puzzle_mnist_3_3_36_10000_conv/ learn
-./action_autoencoder.py   samples/puzzle_mnist_3_3_36_10000_conv/ learn
-./action_discriminator.py samples/puzzle_mnist_3_3_36_10000_conv/ learn
-
-parallel --eta --timeout 900 --joblog parallel.log \
+parallel --eta --timeout 90 --joblog latplan.puzzles.puzzle_mnist.log  \
          "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
-         ::: puzzle_mnist_3_3_36_10000_conv \
-         ::: instances/latplan.puzzles.puzzle_mnist/*
+         ::: puzzle_mnist_3_3_36_20000_conv \
+         ::: problem-instances/latplan.puzzles.puzzle_mnist/*
 
+parallel --eta --timeout 90 --joblog latplan.puzzles.puzzle_mandrill.log   \
+         "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
+         ::: puzzle_mandrill_3_3_36_20000_conv \
+         ::: problem-instances/latplan.puzzles.puzzle_mandrill/*
 
+parallel --eta --timeout 90 --joblog latplan.puzzles.puzzle_spider.log   \
+         "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
+         ::: puzzle_spider_3_3_36_20000_conv \
+         ::: problem-instances/latplan.puzzles.puzzle_spider/*
 
+parallel --eta --timeout 90 --joblog latplan.puzzles.hanoi.log   \
+         "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
+         ::: hanoi_7_4_36_20000_conv \
+         ::: problem-instances/latplan.puzzles.hanoi/*
 
-parallel -j 1 ./strips.py {1} puzzle learn_plot mnist 3 3 36 {2} ::: conv aconv ::: 6500 13000 26000
-parallel ./strips.py {1} puzzle dump mnist 3 3 36 {2} ::: conv aconv ::: 6500 13000 26000
+parallel --eta --timeout 90 --joblog latplan.puzzles.lightsout_digital.log   \
+         "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
+         ::: lightsout_digital_4_36_20000_conv \
+         ::: problem-instances/latplan.puzzles.lightsout_digital/*
 
-parallel --eta --timeout 120 --joblog parallel.log "./trivial-planner.py samples/{1} {2} GBFSRec > {2}/{1}.log" ::: $(basename -a samples/puzzle_mnist*) ::: instances/latplan.puzzles.puzzle_mnist/*
-
-parallel --eta --timeout 120 --joblog parallel.log "./trivial-planner.py samples/{1} {2} GBFSRec > {2}/{1}.log" ::: puzzle_mnist_3_3_36_6500_conv ::: instances/latplan.puzzles.puzzle_mnist/*
-
-parallel -j 2 "./state_discriminator3.py samples/puzzle_mnist_3_3_36_{1}_{2}/ learn &> samples/puzzle_mnist_3_3_36_{1}_{2}/sd3.log" ::: 6500 13000 26000 ::: conv aconv
-parallel -j 2 "./action_discriminator.py samples/puzzle_mnist_3_3_36_{1}_{2}/ learn &> samples/puzzle_mnist_3_3_36_{1}_{2}/ad.log"  ::: 6500 13000 26000 ::: conv aconv
-parallel -j 2 "./action_autoencoder.py   samples/puzzle_mnist_3_3_36_{1}_{2}/ learn &> samples/puzzle_mnist_3_3_36_{1}_{2}/oae.log" ::: 6500 13000 26000 ::: conv aconv
-
-
-./strips.py conv puzzle learn_plot_dump mandrill 3 3 36 10000 && \
-    ./state_discriminator3.py samples/puzzle_mandrill_3_3_36_10000_conv/ learn && \
-    ./action_autoencoder.py   samples/puzzle_mandrill_3_3_36_10000_conv/ learn && \
-    ./action_discriminator.py samples/puzzle_mandrill_3_3_36_10000_conv/ learn
-
-
-./strips.py fc puzzle_mandrill learn_plot_dump 3 3
-./strips.py fc puzzle_lenna learn_plot_dump 3 3
-./strips.py fc puzzle_spider learn_plot_dump 3 3
-
-
-./strips.py fc hanoi learn_plot_dump 3
-./strips.py fc hanoi learn_plot_dump 4
-./strips.py fc hanoi learn_plot_dump 7 4
-
-./strips.py fc lightsout_digital learn_plot_dump 4
-./strips.py fc lightsout_twisted learn_plot_dump 3
-
+parallel --eta --timeout 90 --joblog latplan.puzzles.lightsout_twisted.log   \
+         "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
+         ::: lightsout_twisted_4_36_20000_conv \
+         ::: problem-instances/latplan.puzzles.lightsout_twisted/*
 
