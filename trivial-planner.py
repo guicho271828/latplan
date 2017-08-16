@@ -26,6 +26,8 @@ combined_discriminator = None
 available_actions = None
 inflation = 5
 
+image_threshold = 0.05
+
 OPEN   = 0
 CLOSED = 1
 
@@ -66,7 +68,7 @@ def state_reconstruction_from_oae_filtering(y):
     y_reconstruction = oae.decode([y[:,:N], action_reconstruction])
     loss = mae(y, y_reconstruction, (1,))
     # print(loss)
-    return y[np.where(loss < 0.01)]
+    return y[np.where(loss < image_threshold)]
 
 def inflate_actions(y):
     from latplan.util import union
@@ -89,7 +91,7 @@ def state_reconstruction_filtering(y):
     images2 = sae.autoencode(images).round()
     loss = bce(images,images2,(1,2))
     # print(loss)
-    return y[np.where(loss < 0.1)].astype(int)
+    return y[np.where(loss < image_threshold)].astype(int)
     
 def state_discriminator_filtering(y):
     # filtering based on State Discriminator
@@ -153,7 +155,7 @@ class StateBasedGoalDetection:
 class ReconstructionGoalDetection:
     def goalp(self,state,goal):
         return bce(sae.decode_binary(np.expand_dims(state,0)),
-                   sae.decode_binary(np.expand_dims(goal, 0))) < 0.1
+                   sae.decode_binary(np.expand_dims(goal, 0))) < image_threshold
 
 class Astar(Searcher,StateBasedGoalDetection):
     def search(self,init,goal,distance):
@@ -299,11 +301,11 @@ def main(network_dir, problem_dir, searcher):
               path=problem(network("init_goal_reconstruction.png")),verbose=True)
 
     import sys
-    if bce(init_image,init_rec) > 0.1:
+    if bce(init_image,init_rec) > image_threshold:
         print("BCE:",bce(init_image,init_rec))
         print("Initial state reconstruction failed!")
         sys.exit(3)
-    if bce(goal_image,goal_rec) > 0.1:
+    if bce(goal_image,goal_rec) > image_threshold:
         print("BCE:",bce(goal_image,goal_rec))
         print("Goal state reconstruction failed!")
         sys.exit(4)
