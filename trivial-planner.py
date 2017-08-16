@@ -57,18 +57,13 @@ class State(object):
 def action_reconstruction_filtering(y):
     # filtering based on OAE action reconstruction
     action_reconstruction = oae.encode_action(y).round()
-    # loss = bce(available_actions, action_reconstruction, (1,2))
-    loss = mae(available_actions, action_reconstruction, (1,2))
-    # print(loss)
-    return y[np.where(loss < 0.01)]
+    return y[np.all(np.equal(available_actions, action_reconstruction),axis=(1,2))]
 
 def state_reconstruction_from_oae_filtering(y):
     action_reconstruction = oae.encode_action(y)
     N = y.shape[1]//2
-    y_reconstruction = oae.decode([y[:,:N], action_reconstruction])
-    loss = mae(y, y_reconstruction, (1,))
-    # print(loss)
-    return y[np.where(loss < image_threshold)]
+    y_reconstruction = oae.decode([y[:,:N], action_reconstruction]).round()
+    return y[np.all(np.equal(y, y_reconstruction),axis=(1,))]
 
 def inflate_actions(y):
     from latplan.util import union
