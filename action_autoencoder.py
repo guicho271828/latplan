@@ -85,10 +85,6 @@ if __name__ == '__main__':
         aae.plot(transitions, "aae_all_actions_for_a_state.png", ae=ae)
     
     if 'check' in mode:
-        import latplan.puzzles.puzzle_mnist as p
-        p.setup()
-        import latplan.puzzles.model.puzzle as m
-
         from latplan.util.timer import Timer
         with Timer("loading csv..."):
             all_actions = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)

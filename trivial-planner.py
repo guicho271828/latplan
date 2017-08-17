@@ -101,10 +101,9 @@ def cheating_validation_filtering(y):
     N = y.shape[1]//2
     import latplan.puzzles.puzzle_mnist as p
     p.setup()
-    import latplan.puzzles.model.puzzle as m
     pre_images = sae.decode_binary(y[:,:N],batch_size=1000)
     suc_images = sae.decode_binary(y[:,N:],batch_size=1000)
-    return y[m.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)]
+    return y[p.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)]
 
 pruning_methods = [
     action_reconstruction_filtering,           # if applied, this should be the first method
@@ -331,14 +330,14 @@ def main(network_dir, problem_dir, searcher):
 
         module_name = ensure_directory(problem_dir).split("/")[-3]
         from importlib import import_module
-        m = import_module(module_name)
-        m.setup()
+        p = import_module(module_name)
+        p.setup()
 
-        validation = m.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
+        validation = p.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
         print(validation)
         print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
 
-        print(m.validate_states(sae.decode_binary(plan),3,3))
+        print(p.validate_states(sae.decode_binary(plan),3,3))
         print(combined_discriminator(plan).flatten())
         import subprocess
         subprocess.call(["rm", "-f", problem(network(search("path_{}.valid".format(i))))])
