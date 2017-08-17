@@ -282,14 +282,17 @@ def main(network_dir, problem_dir, searcher):
     from latplan.puzzles.util import preprocess
     init_image = preprocess(misc.imread(problem("init.png")))
     goal_image = preprocess(misc.imread(problem("goal.png")))
-    
+    print("init:",init_image.min(),init_image.max(),)
+    print("goal:",goal_image.min(),goal_image.max(),)
     init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
     goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
     print(init)
     print(goal)
     rec = sae.decode_binary(np.array([init,goal]))
     init_rec, goal_rec = rec
-    plot_grid([init_image,init_rec,goal_image,goal_rec],
+    print("init (reconstruction):",init_rec.min(),init_rec.max(),)
+    print("goal (reconstruction):",goal_rec.min(),goal_rec.max(),)
+    plot_grid([init_image,init_rec,init_image-init_rec,goal_image,goal_rec,goal_image-goal_rec,],
               path=problem(network("init_goal_reconstruction.png")),verbose=True)
 
     import sys
