@@ -18,5 +18,11 @@ def equalize(image):
     from skimage import exposure
     return exposure.equalize_hist(image)
 
+def enhance(image):
+    return np.clip((image-0.5)*3,-0.5,0.5)+0.5
+
 def preprocess(image):
-    return normalize(equalize(image))
+    image = equalize(image)
+    image = normalize(image)
+    image = enhance(image)
+    return image
