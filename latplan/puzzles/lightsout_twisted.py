@@ -3,6 +3,7 @@
 import numpy as np
 from .model.lightsout import generate_configs, generate_random_configs, successors
 from .util import wrap
+from .util import preprocess
 
 buttons = [
     [[0, 0, 0, 0, 1, 0, 0, 0, 0, ],
@@ -60,7 +61,7 @@ def generate_cpu(configs):
                 
                 value = np.sum(w * figure2[py1+2*dim:py1+2+2*dim,px1+2*dim:px1+2+2*dim])
                 figure3[y+dim,x+dim] = value*2
-        return figure3
+        return preprocess(figure3)
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim*2,dim*2)).clip(0,1)
 
 
