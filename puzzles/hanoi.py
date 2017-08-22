@@ -2,6 +2,7 @@
 import numpy as np
 from .model.hanoi import generate_configs, successors, config_state
 import math
+from .util import wrap
 ## code ##############################################################
 
 def generate1(config,disks,towers):
@@ -67,7 +68,6 @@ def transitions(disks, towers, configs=None, one_per_state=False):
         transitions = np.array([ generate([c1,c2],disks,towers)
                                  for c1 in configs for c2 in successors(c1,disks,towers) ])
     return np.einsum('ab...->ba...',transitions)
-
 
 ## patterns ##############################################################
 
