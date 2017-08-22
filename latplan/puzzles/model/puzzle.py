@@ -2,17 +2,13 @@
 
 import numpy as np
 from latplan.util import bce
+from ..util import wrap
 
 setting = {
     'base' : None,
     'panels' : None,
     'loader' : None,
 }
-
-from keras.layers import Lambda
-def wrap(x,y,**kwargs):
-    "wrap arbitrary operation"
-    return Lambda(lambda x:y,**kwargs)(x)
 
 def load(width,height,force=False):
     if setting['panels'] is None or force is True:

@@ -2,6 +2,7 @@
 
 import numpy as np
 from .model.lightsout import generate_configs, generate_random_configs, successors
+from .util import wrap
 
 buttons = [
     [[0, 0, 0, 0, 1, 0, 0, 0, 0, ],
@@ -62,11 +63,6 @@ def generate_cpu(configs):
         return figure3
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim*2,dim*2)).clip(0,1)
 
-
-from keras.layers import Lambda
-def wrap(x,y,**kwargs):
-    "wrap arbitrary operation"
-    return Lambda(lambda x:y,**kwargs)(x)
 
 def generate_gpu(configs,**kwargs):
     import math
