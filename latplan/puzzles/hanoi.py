@@ -70,6 +70,10 @@ def transitions(disks, towers, configs=None, one_per_state=False):
                                  for c1 in configs for c2 in successors(c1,disks,towers) ])
     return np.einsum('ab...->ba...',transitions)
 
+
+def setup():
+    pass
+
 ## patterns ##############################################################
 
 patterns = [

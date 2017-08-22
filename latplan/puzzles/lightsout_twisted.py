@@ -26,6 +26,9 @@ buttons = [
      [0, 0, 0, 0, 0, 0, 0, 0, 0, ],]
 ]
 
+def setup():
+    pass
+
 def generate_cpu(configs):
     import math
     size = int(math.sqrt(len(configs[0])))
