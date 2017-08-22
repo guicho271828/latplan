@@ -2,6 +2,7 @@
 
 import numpy as np
 from .model.lightsout import generate_configs, generate_random_configs, successors
+from .util import preprocess
 
 on = [[0, 0, 0, 0, 0,],
       [0, 0, 1, 0, 0,],
@@ -33,7 +34,7 @@ def generate(configs):
             else:
                 figure[y*base:(y+1)*base,
                        x*base:(x+1)*base] = off
-        return figure
+        return preprocess(figure)
     return np.array([ generate(c) for c in configs ]).reshape((-1,dim,dim))
 
 def states(size, configs=None):

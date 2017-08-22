@@ -3,6 +3,7 @@ import numpy as np
 from .model.hanoi import generate_configs, successors, config_state
 import math
 from .util import wrap
+from .util import preprocess
 ## code ##############################################################
 
 def generate1(config,disks,towers):
@@ -43,7 +44,7 @@ def generate1(config,disks,towers):
                 #           (1,disk+base_disk_width_factor))
                 # = np.tile(np.tile(patterns[disk],(tile_factor,tile_factor)),
                 #           (1,2*disk+base_disk_width_factor))
-    return figure
+    return preprocess(figure)
 
 def generate(configs,disks,towers):
     return np.array([ generate1(c,disks,towers) for c in configs ])

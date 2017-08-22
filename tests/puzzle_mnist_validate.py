@@ -34,13 +34,13 @@ with Timer(style("************************* states on gpu, batch=1000 **********
 
 
 with Timer(style("************************* validate_states on cpu ***************************")):
-    assert np.all(m.validate_states_cpu(s,3,3))
+    print("results:", np.all(m.validate_states_cpu(s,3,3)), "(should be True)")
 
 with Timer(style("************************* validate_states on gpu, batch=100 ***************************")):
-    assert np.all(m.validate_states_gpu(s,3,3,batch_size=100))
+    print("results:", np.all(m.validate_states_gpu(s,3,3,batch_size=100)), "(should be True)")
 
 with Timer(style("************************* validate_states on gpu, batch=1000 ***************************")):
-    assert np.all(m.validate_states_gpu(s,3,3,batch_size=1000))
+    print("results:", np.all(m.validate_states_gpu(s,3,3,batch_size=1000)), "(should be True)")
 
 with Timer(style("************************* to_configs on cpu ***************************")):
     print(m.to_configs_cpu(s,3,3)[:3])
