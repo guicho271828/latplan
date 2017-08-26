@@ -67,3 +67,7 @@ def bce(true,pred,axis=None,epsilon=1e-7):
 def mae(x,y,axis=None):
     return np.mean(np.absolute(x - y),axis=axis)
 
+
+def mse(x,y,axis=None):
+    return np.sqrt(np.sum(np.square(x - y),axis=axis))
+
