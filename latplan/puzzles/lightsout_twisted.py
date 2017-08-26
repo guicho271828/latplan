@@ -11,16 +11,17 @@ from keras.models import Model
 from keras import backend as K
 import tensorflow as tf
 
-panels = np.zeros((2,16,16))
-panels[0, 7:9, :] = 1
-panels[0, :, 7:9] = 1
+panels = np.zeros((2,9,9))
+panels[0, 4:6, :] = 1
+panels[0, :, 4:6] = 1
 pad = 1
 relative_swirl_radius = 0.75
+viscosity_adjustment = 0.18
 
 swirl_args   = {'rotation':0, 'strength':3,  'preserve_range': True, 'order' : 1}
 unswirl_args = {'rotation':0, 'strength':-3, 'preserve_range': True, 'order' : 1}
 
-threshold = 0.05
+threshold = 0.04
 
 def setup():
     pass
@@ -121,7 +122,8 @@ def transitions(size, configs=None, one_per_state=False, **kwargs):
         return np.array([pre, suc])
 
 def build_errors(states,base,pad,dim,size):
-    s = K.round(states)
+    # address the numerical viscosity in swirling
+    s = K.round(states+viscosity_adjustment)
     s = Reshape((dim+2*pad,dim+2*pad,1))(s)
     s = Cropping2D(((pad,pad),(pad,pad)))(s)
     s = K.reshape(s,[-1,size,base,size,base])

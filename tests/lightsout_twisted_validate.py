@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-import importlib
 import numpy as np
 
 import latplan
 import latplan.puzzles.lightsout_twisted as p
-
-# importlib.reload(p)
 
 import itertools
 c = np.array([ c for c in itertools.islice(p.generate_configs(4), 1000) ])
@@ -30,7 +27,7 @@ with Timer(style("************************* states on gpu, batch=1000 **********
     s = p.generate_gpu(c, batch_size=1000)
 print(s[120])
 
-for i in range(3,5):
+for i in range(1,5):
     p.threshold = i*0.01
     with Timer(style("************************* validate_states with threshold = {} ***************************".format(p.threshold))):
         results = p.validate_states(s,batch_size=1000)
