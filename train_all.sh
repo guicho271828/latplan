@@ -17,10 +17,10 @@ trap exit SIGINT
 ./action_autoencoder.py   samples/puzzle_spider_3_3_36_20000_conv/ learn
 ./action_discriminator.py samples/puzzle_spider_3_3_36_20000_conv/ learn
 
-./strips.py conv hanoi learn_plot_dump 7 4 36 20000
-./state_discriminator3.py samples/hanoi_7_4_36_20000_conv/ learn
-./action_autoencoder.py   samples/hanoi_7_4_36_20000_conv/ learn
-./action_discriminator.py samples/hanoi_7_4_36_20000_conv/ learn
+./strips.py conv hanoi learn_plot_dump 7 4 36 10000
+./state_discriminator3.py samples/hanoi_7_4_36_10000_conv/ learn
+./action_autoencoder.py   samples/hanoi_7_4_36_10000_conv/ learn
+./action_discriminator.py samples/hanoi_7_4_36_10000_conv/ learn
 
 ./strips.py conv lightsout learn_plot_dump digital 4 36 20000
 ./state_discriminator3.py samples/lightsout_digital_4_36_20000_conv/ learn

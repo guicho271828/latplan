@@ -19,7 +19,7 @@ parallel --eta --timeout 90 --joblog latplan.puzzles.puzzle_spider.log   \
 
 parallel --eta --timeout 90 --joblog latplan.puzzles.hanoi.log   \
          "./trivial-planner.py samples/{1} {2} AstarRec > {2}/{1}_AstarRec.log" \
-         ::: hanoi_7_4_36_20000_conv \
+         ::: hanoi_7_4_36_10000_conv \
          ::: problem-instances/latplan.puzzles.hanoi/*
 
 parallel --eta --timeout 90 --joblog latplan.puzzles.lightsout_digital.log   \
