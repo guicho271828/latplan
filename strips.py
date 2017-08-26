@@ -210,7 +210,7 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
         'activation' : ['tanh'],
         'full_epoch' :[1000],
         'epoch'      :[500],
-        'batch_size' :[2000],
+        'batch_size' :[1000],
         'lr'         :[0.001],
     }
     import importlib
