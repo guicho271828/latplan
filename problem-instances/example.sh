@@ -8,4 +8,4 @@ trap exit SIGINT
 
 ./generate.py 7 5 hanoi 7 4
 ./generate.py 7 5 lightsout digital 4
-# ./generate.py 7 5 lightsout twisted 4
+./generate.py 7 5 lightsout twisted 4

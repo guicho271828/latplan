@@ -2,173 +2,94 @@
 
 import numpy as np
 from .model.lightsout import generate_configs, generate_random_configs, successors
-from .util import wrap
 from .util import preprocess
+from .util import wrap
+from skimage.transform import swirl
 
-buttons = [
-    [[0, 0, 0, 0, 1, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
-     [1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-     [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 1, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 1, 0, 0, 0, 0, ],],
-    [[0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, ],]
-]
+from keras.layers import Input, Reshape, Cropping2D, MaxPooling2D
+from keras.models import Model
+from keras import backend as K
+import tensorflow as tf
+
+panels = np.zeros((2,16,16))
+panels[0, 7:9, :] = 1
+panels[0, :, 7:9] = 1
+pad = 1
+relative_swirl_radius = 0.75
+
+swirl_args   = {'rotation':0, 'strength':3,  'preserve_range': True, 'order' : 1}
+unswirl_args = {'rotation':0, 'strength':-3, 'preserve_range': True, 'order' : 1}
+
+threshold = 0.05
 
 def setup():
     pass
 
+def batch_swirl(images):
+    images = np.array(images)
+    r = images.shape[1] * relative_swirl_radius
+    return np.array([ swirl(i, radius=r, **swirl_args) for i in images ])
+
+def batch_unswirl(images):
+    images = np.array(images)
+    r = images.shape[1] * relative_swirl_radius
+    return np.array([ swirl(i, radius=r, **unswirl_args) for i in images ])
+
 def generate_cpu(configs):
+    configs = np.array(configs)
     import math
     size = int(math.sqrt(len(configs[0])))
-    base = 9
+    base = panels.shape[1]
     dim = base*size
-    half = dim//2
     def generate(config):
-        figure = np.zeros((dim,dim))
+        figure_big = np.zeros((dim+2*pad,dim+2*pad))
+        figure = figure_big[pad:-pad,pad:-pad]
         for pos,value in enumerate(config):
             x = pos % size
             y = pos // size
             if value > 0:
                 figure[y*base:(y+1)*base,
-                       x*base:(x+1)*base] = buttons[0]
+                       x*base:(x+1)*base] = panels[0]
             else:
                 figure[y*base:(y+1)*base,
-                       x*base:(x+1)*base] = buttons[1]
-        # np.skew or np.XXX or any visual effect
-        figure2 = np.zeros((dim*4,dim*4))
-        figure2[dim+half:2*dim+half,
-                dim+half:2*dim+half] = figure
-        figure3 = np.zeros((dim*2,dim*2))
-        for x in range(-dim,dim):
-            for y in range(-dim,dim):
-                r = math.sqrt(x*x+y*y)
-                rad = math.atan2(y,x) + math.pi  * (1-r)/half/5
-                p = r * np.array([math.cos(rad), math.sin(rad)])
-                px1 = math.floor(p[0])
-                py1 = math.floor(p[1])
-                grid = np.array([[[px1,py1],[px1+1,py1],],
-                                 [[px1,py1+1],[px1+1,py1+1],],])
-                w = (1 - np.prod(np.fabs(grid - p),axis=-1))/3
-                
-                value = np.sum(w * figure2[py1+2*dim:py1+2+2*dim,px1+2*dim:px1+2+2*dim])
-                figure3[y+dim,x+dim] = value*2
-        return preprocess(figure3)
-    return np.array([ generate(c) for c in configs ]).reshape((-1,dim*2,dim*2)).clip(0,1)
-
+                       x*base:(x+1)*base] = panels[1]
+        
+        return figure_big
+    return preprocess(batch_swirl([ generate(c) for c in configs ]))
 
 def generate_gpu(configs,**kwargs):
-    import math
     configs = np.array(configs)
-    print(configs)
+    import math
     size = int(math.sqrt(len(configs[0])))
-    base = 9
+    base = panels.shape[1]
     dim = base*size
-    half = dim//2
-    
-    from keras.layers import Input, Reshape
-    from keras.models import Model
-    from keras import backend as K
-    import tensorflow as tf
 
     def build():
         P = 2
-        configs = Input(shape=(size*size,)) # configs are -1/1 array
-        c = configs
-        c = (c + 1)/2 + 1            # now this takes the value of 1 or 2
-        c_one_hot = K.one_hot(K.cast(c,'int32'), P)
-        c_one_hot = wrap(configs, c_one_hot)
-        matches = K.permute_dimensions(c_one_hot, [0,2,1])
-        matches = K.reshape(matches,[-1,P])
-        panels = K.variable(buttons)
-        panels = K.reshape(panels, [P, base*base])
-        states = tf.matmul(matches, panels)
+        configs = Input(shape=(size*size,))
+        _configs = 1 - K.round((configs/2)+0.5) # from -1/1 to 1/0
+        configs_one_hot = K.one_hot(K.cast(_configs,'int32'), P)
+        configs_one_hot = K.reshape(configs_one_hot, [-1,P])
+        _panels = K.variable(panels)
+        _panels = K.reshape(_panels, [P, base*base])
+        states = tf.matmul(configs_one_hot, _panels)
         states = K.reshape(states, [-1, size, size, base, base])
         states = K.permute_dimensions(states, [0, 1, 3, 2, 4])
-        states = K.reshape(states, [-1, size*base, size*base])
-        states = wrap(c_one_hot, states)
-        # whirl effect
+        states = K.reshape(states, [-1, size*base, size*base, 1])
+        states = K.spatial_2d_padding(states, padding=((pad,pad),(pad,pad)))
+        states = K.squeeze(states, -1)
+        return Model(configs, wrap(configs, states))
 
-        # cartesian to polar conversion matrix
-        from math import cos, sin, ceil, floor, pi, sqrt, atan2
-        m = np.zeros((360, half, dim, dim))
-        for deg in range(360):
-            th = deg * 2 * pi / 360
-            for r in range(half):
-                x, y = r*cos(th) + half, r*sin(th) + half
-                x0, x1 = floor(x), ceil(x)
-                y0, y1 = floor(y), ceil(y)
-                grid = np.array([[[x0,y0],[x1,y0]],
-                                 [[x0,y1],[x1,y1]]])
-                w = (1-np.prod(np.abs(grid - [x,y]), axis=-1)) / 3
-                m[deg,r,x0:x0+2,y0:y0+2] = w
-        M = K.variable(m)
-        polar = tf.tensordot(states, M, [[1,2],[2,3]])
-        polar = wrap(states, polar)
-        
-        m2 = np.zeros((360, half, 360, half))
-        # swirl degree at the edge of the image
-        swirl_deg = 60
-        for deg in range(360):
-            for r in range(half):
-                d = deg + r/half * swirl_deg
-                d0, d1 = floor(d), ceil(d)
-                m2[deg,r,d0%360,r] = d1-d
-                m2[deg,r,d1%360,r] = d-d0
-        M2 = K.variable(m2)
-        swirled_polar = tf.tensordot(polar, M2, [[1,2],[2,3]])
-        swirled_polar = wrap(polar, swirled_polar)
+    return preprocess(batch_swirl(build().predict(configs,**kwargs)))
 
-        # polar to cartesian
-        m3 = np.zeros((dim, dim, 360, half))
-        for y in range(dim):
-            if y == half:
-                continue
-            for x in range(dim):
-                if x == half:
-                    continue
-                r  = sqrt((x - half)**2+(y - half)**2)
-                th = atan2((y - half),(x - half))
-                if th < 0:
-                    th += 2 * pi
-                d = th * 360 / (2 * pi)
-                
-                d0, d1 = floor(d), ceil(d)
-                r0, r1 = floor(r), ceil(r)
-                grid = np.array([[[d0,r0],[d1,r0]],
-                                 [[d0,r1],[d1,r1]]])
-                w = (1-np.prod(np.abs(grid - [d,r]), axis=-1)) / 3
-                # print(w.shape,y,x,th,d,d0,r,r0,r1,half)
-                if d1 < 360 and r1 < half:
-                    m3[y,x,d0:d0+2,r0:r0+2] = w
-        M3 = K.variable(m3)
-        swirled = tf.tensordot(swirled_polar, M3, [[1,2],[2,3]])
-        swirled = wrap(swirled_polar, swirled)
-        
-        return Model(configs, swirled)
-    model = build()
-    # model.summary()
-    return model.predict(configs,**kwargs)
-
-generate = generate_cpu
+generate = generate_gpu
 
 def states(size, configs=None):
     if configs is None:
         configs = generate_configs(size)
     return generate(configs)
 
-def transitions(size, configs=None, one_per_state=False):
+def transitions_old(size, configs=None, one_per_state=False, **kwargs):
     if configs is None:
         configs = generate_configs(size)
     if one_per_state:
@@ -176,11 +97,130 @@ def transitions(size, configs=None, one_per_state=False):
             index = np.random.randint(0,len(thing))
             return thing[index]
         transitions = np.array([
-            generate([c1,pickone(successors(c1))])
+            generate([c1,pickone(successors(c1))], **kwargs)
             for c1 in configs ])
     else:
-        transitions = np.array([ generate([c1,c2])
+        transitions = np.array([ generate([c1,c2], **kwargs)
                                  for c1 in configs for c2 in successors(c1) ])
     return np.einsum('ab...->ba...',transitions)
 
+def transitions(size, configs=None, one_per_state=False, **kwargs):
+    if configs is None:
+        configs = generate_configs(size)
+    if one_per_state:
+        def pickone(thing):
+            index = np.random.randint(0,len(thing))
+            return thing[index]
+        pre = generate(configs, **kwargs)
+        suc = generate(np.array([pickone(successors(c1)) for c1 in configs ]), **kwargs)
+        return np.array([pre, suc])
+    else:
+        transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1) ])
+        pre = generate(transitions[:,0,:], **kwargs)
+        suc = generate(transitions[:,1,:], **kwargs)
+        return np.array([pre, suc])
 
+def build_errors(states,base,pad,dim,size):
+    s = K.round(states)
+    s = Reshape((dim+2*pad,dim+2*pad,1))(s)
+    s = Cropping2D(((pad,pad),(pad,pad)))(s)
+    s = K.reshape(s,[-1,size,base,size,base])
+    s = K.permute_dimensions(s, [0,1,3,2,4])
+    s = K.reshape(s,[-1,size,size,1,base,base])
+    s = K.tile   (s,[1, 1, 1, 2, 1, 1,]) # number of panels : 2
+
+    allpanels = K.variable(panels)
+    allpanels = K.reshape(allpanels, [1,1,1,2,base,base])
+    allpanels = K.tile(allpanels, [K.shape(s)[0], size,size, 1, 1, 1])
+    
+    # error = K.binary_crossentropy(s, allpanels)
+    error = K.square(s - allpanels)
+    error = K.mean(error, axis=(4,5))
+    return error
+
+def validate_states(states,verbose=True,**kwargs):
+    base = panels.shape[1]
+    dim  = states.shape[1] - pad*2
+    size = dim // base
+    
+    def build():
+        states = Input(shape=(dim+2*pad,dim+2*pad))
+        error = build_errors(states,base,pad,dim,size)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
+        num_matches = K.sum(matches, axis=3)
+        panels_ok = K.all(K.equal(num_matches, 1), (1,2))
+        panels_ng = K.any(K.not_equal(num_matches, 1), (1,2))
+        panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2))
+        panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2))
+
+        validity = panels_ok
+        
+        if verbose:
+            return Model(states,
+                         [ wrap(states, x) for x in [panels_ng,
+                                                     panels_nomatch,
+                                                     panels_ambiguous,
+                                                     validity]])
+        else:
+            return Model(states, wrap(states, validity))
+    
+    if verbose:
+        panels_ng, panels_nomatch, panels_ambiguous, validity \
+            = build().predict(batch_unswirl(states), **kwargs)
+        print(np.count_nonzero(panels_ng),       "images have some panels which match 0 or >2 panels, out of which")
+        print(np.count_nonzero(panels_nomatch),  "images have some panels which are unlike any panels")
+        print(np.count_nonzero(panels_ambiguous),"images have some panels which match >2 panels")
+        print(np.count_nonzero(validity),        "images have panels (all of them) which match exactly 1 panel each")
+        return validity
+    else:
+        validity \
+            = build().predict(batch_unswirl(states), **kwargs)
+        return validity
+
+
+def to_configs(states, verbose=True, **kwargs):
+    base = panels.shape[1]
+    dim  = states.shape[1] - pad*2
+    size = dim // base
+    
+    def build():
+        states = Input(shape=(dim+2*pad,dim+2*pad))
+        error = build_errors(states,base,pad,dim,size)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
+        # a, h, w, panel
+        matches = K.reshape(matches, [K.shape(states)[0], size * size, -1])
+        # a, pos, panel
+        config = matches * K.arange(2,dtype='float')
+        config = K.sum(config, axis=-1)
+        # this is 0,1 configs; for compatibility, we need -1 and 1
+        config = - (config - 0.5)*2
+        return Model(states, wrap(states, K.round(config)))
+    
+    return build().predict(batch_unswirl(states), **kwargs)
+
+
+def validate_transitions(transitions, check_states=True, **kwargs):
+    pre = np.array(transitions[0])
+    suc = np.array(transitions[1])
+
+    if check_states:
+        pre_validation = validate_states(pre, verbose=False, **kwargs)
+        suc_validation = validate_states(suc, verbose=False, **kwargs)
+
+    pre_configs = to_configs(pre, verbose=False, **kwargs)
+    suc_configs = to_configs(suc, verbose=False, **kwargs)
+    
+    results = []
+    if check_states:
+        for pre_c, suc_c, pre_validation, suc_validation in zip(pre_configs, suc_configs, pre_validation, suc_validation):
+
+            if pre_validation and suc_validation:
+                succs = successors(pre_c)
+                results.append(np.any(np.all(np.equal(succs, suc_c), axis=1)))
+            else:
+                results.append(False)
+    else:
+        for pre_c, suc_c in zip(pre_configs, suc_configs):
+            succs = successors(pre_c)
+            results.append(np.any(np.all(np.equal(succs, suc_c), axis=1)))
+    return results
