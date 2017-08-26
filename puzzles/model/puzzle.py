@@ -58,10 +58,12 @@ def generate_gpu(configs, width, height, **kwargs):
 
 generate = generate_gpu
 
-def validate_states_cpu(states, width, height, verbose=True, **kwargs):
-    load(width, height)
+def validate_states_cpu(states, verbose=True, **kwargs):
     base = setting['base']
-    
+    width  = states.shape[1] // base
+    height = states.shape[1] // base 
+    load(width,height)
+   
     states = np.einsum("ahywx->ahwyx",
                        np.reshape(states.round(),
                                   [-1,height,base,width,base]))
@@ -114,9 +116,11 @@ def validate_states_cpu(states, width, height, verbose=True, **kwargs):
 
     return np.logical_and(panels_ok, coverage_ok)
 
-def validate_states_gpu(states, width, height, verbose=True, **kwargs):
-    load(width, height)
+def validate_states_gpu(states, verbose=True, **kwargs):
     base = setting['base']
+    width  = states.shape[1] // base
+    height = states.shape[1] // base
+    load(width,height)
     
     from keras.layers import Input, Reshape
     from keras.models import Model
@@ -188,9 +192,11 @@ def validate_states_gpu(states, width, height, verbose=True, **kwargs):
 
 validate_states = validate_states_gpu
 
-def to_configs_cpu(states, width, height, verbose=True, **kwargs):
-    load(width, height)
+def to_configs_cpu(states, verbose=True, **kwargs):
     base = setting['base']
+    width  = states.shape[1] // base
+    height = states.shape[1] // base
+    load(width,height)
     
     states = np.einsum("ahywx->ahwyx",
                        np.reshape(states.round(),
@@ -216,9 +222,11 @@ def to_configs_cpu(states, width, height, verbose=True, **kwargs):
     configs[npos,ppos] = vpos * height + hpos
     return configs
 
-def to_configs_gpu(states, width, height, verbose=True, **kwargs):
-    load(width, height)
+def to_configs_gpu(states, verbose=True, **kwargs):
     base = setting['base']
+    width  = states.shape[1] // base
+    height = states.shape[1] // base
+    load(width,height)
 
     from keras.layers import Input, Reshape
     from keras.models import Model
@@ -353,18 +361,22 @@ def successors(config,width,height):
         print(dir)
         print((c,x,y,width,height))
 
-def validate_transitions_cpu_old(transitions, width, height, **kwargs):
+def validate_transitions_cpu_old(transitions, **kwargs):
     pre = np.array(transitions[0])
     suc = np.array(transitions[1])
+    base = setting['base']
+    width  = pre.shape[1] // base
+    height = pre.shape[1] // base
+    load(width,height)
 
-    pre_validation = validate_states(pre, width, height, verbose=False, **kwargs)
-    suc_validation = validate_states(suc, width, height, verbose=False, **kwargs)
+    pre_validation = validate_states(pre, **kwargs)
+    suc_validation = validate_states(suc, **kwargs)
 
     results = []
     for pre, suc, pre_validation, suc_validation in zip(pre, suc, pre_validation, suc_validation):
         
         if pre_validation and suc_validation:
-            c = to_configs(np.array([pre, suc]), width, height, verbose=False)
+            c = to_configs(np.array([pre, suc]), verbose=False)
             succs = successors(c[0], width, height)
             results.append(np.any(np.all(np.equal(succs, c[1]), axis=1)))
         else:
@@ -372,16 +384,20 @@ def validate_transitions_cpu_old(transitions, width, height, **kwargs):
     
     return results
 
-def validate_transitions_cpu(transitions, width, height, check_states=True, **kwargs):
+def validate_transitions_cpu(transitions, check_states=True, **kwargs):
     pre = np.array(transitions[0])
     suc = np.array(transitions[1])
+    base = setting['base']
+    width  = pre.shape[1] // base
+    height = pre.shape[1] // base
+    load(width,height)
 
     if check_states:
-        pre_validation = validate_states(pre, width, height, verbose=False, **kwargs)
-        suc_validation = validate_states(suc, width, height, verbose=False, **kwargs)
+        pre_validation = validate_states(pre, verbose=False, **kwargs)
+        suc_validation = validate_states(suc, verbose=False, **kwargs)
 
-    pre_configs = to_configs(pre, width, height, verbose=False, **kwargs)
-    suc_configs = to_configs(suc, width, height, verbose=False, **kwargs)
+    pre_configs = to_configs(pre, verbose=False, **kwargs)
+    suc_configs = to_configs(suc, verbose=False, **kwargs)
     
     results = []
     if check_states:

@@ -191,8 +191,8 @@ if __name__ == '__main__':
     if 'check' in mode:
         import latplan.puzzles.puzzle_mnist as p
         p.setup()
-        # p.validate_states(sae.decode_binary(states_valid),3,3)
-        is_invalid = p.validate_states(sae.decode_binary(states_invalid),3,3)
+        # p.validate_states(sae.decode_binary(states_valid))
+        is_invalid = p.validate_states(sae.decode_binary(states_invalid))
         states_invalid = states_invalid[np.logical_not(is_invalid)]
 
         plot_grid(sae.decode_binary(states_invalid)[:120],
