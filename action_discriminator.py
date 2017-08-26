@@ -111,7 +111,7 @@ def prepare_oae_validated(known_transisitons):
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
         suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
-        valid_suc[batch*i:batch*(i+1)] = p.validate_states(suc_images, 3,3,verbose=False,batch_size=1000)
+        valid_suc[batch*i:batch*(i+1)] = p.validate_states(suc_images,verbose=False,batch_size=1000)
         # This state validation is just for reducing the later effort for validating transitions
     
     before_len = len(y)
@@ -123,7 +123,7 @@ def prepare_oae_validated(known_transisitons):
         print(i,"/",len(y)//batch)
         pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
         suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
-        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images],batch_size=1000)).astype(int)
     
     l = len(y)
     positive = np.count_nonzero(answers)
@@ -154,7 +154,7 @@ def prepare_oae_PU2(known_transisitons):
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
         suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
-        valid_suc[batch*i:batch*(i+1)] = p.validate_states(suc_images, 3,3,verbose=False,batch_size=1000)
+        valid_suc[batch*i:batch*(i+1)] = p.validate_states(suc_images,verbose=False,batch_size=1000)
     
     before_len = len(y)
     y = y[valid_suc]
@@ -309,7 +309,7 @@ def test_oae_generated(directory,discriminator):
         print(i,"/",len(y)//batch)
         pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
         suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
-        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images],batch_size=1000)).astype(int)
 
     # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
     predictions = discriminator.discriminate(y,batch_size=1000)
@@ -328,7 +328,7 @@ def test_oae_generated(directory,discriminator):
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
-    ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
+    ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
     print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
@@ -347,7 +347,7 @@ def test_oae_pre_label(directory,discriminator):
         print(i,"/",len(y)//batch)
         pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
         suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
-        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], batch_size=1000)).astype(int)
 
     # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
     actions = oae.encode_action(y, batch_size=1000).round()
@@ -367,7 +367,7 @@ def test_oae_pre_label(directory,discriminator):
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
-    ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
+    ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
     print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
@@ -386,7 +386,7 @@ def test_oae_pre_suc_label(directory,discriminator):
         print(i,"/",len(y)//batch)
         pre_images = ae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
         suc_images = ae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
-        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)).astype(int)
+        answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], batch_size=1000)).astype(int)
 
     # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
     actions = oae.encode_action(y, batch_size=1000).round()
@@ -406,7 +406,7 @@ def test_oae_pre_suc_label(directory,discriminator):
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
-    ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),3,3,verbose=False,batch_size=1000)
+    ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
     print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
@@ -484,7 +484,7 @@ def main(directory, mode, input_type=prepare_oae_PU3):
             for i in range(len(actions_invalid)//batch):
                 pre_images = ae.decode_binary(actions_invalid[batch*i:batch*(i+1),:N],batch_size=1000)
                 suc_images = ae.decode_binary(actions_invalid[batch*i:batch*(i+1),N:],batch_size=1000)
-                validation = p.validate_transitions([pre_images, suc_images], 3,3)
+                validation = p.validate_transitions([pre_images, suc_images])
                 count += np.count_nonzero(validation)
             print(count,"valid actions in invalid", c)
 

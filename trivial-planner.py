@@ -103,7 +103,7 @@ def cheating_validation_filtering(y):
     p.setup()
     pre_images = sae.decode_binary(y[:,:N],batch_size=1000)
     suc_images = sae.decode_binary(y[:,N:],batch_size=1000)
-    return y[p.validate_transitions([pre_images, suc_images], 3,3,batch_size=1000)]
+    return y[p.validate_transitions([pre_images, suc_images],batch_size=1000)]
 
 pruning_methods = [
     action_reconstruction_filtering,           # if applied, this should be the first method
@@ -334,11 +334,11 @@ def main(network_dir, problem_dir, searcher):
         p = import_module(module_name)
         p.setup()
 
-        validation = p.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])],3,3)
+        validation = p.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])])
         print(validation)
         print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
 
-        print(p.validate_states(sae.decode_binary(plan),3,3))
+        print(p.validate_states(sae.decode_binary(plan)))
         print(combined_discriminator(plan).flatten())
         import subprocess
         subprocess.call(["rm", "-f", problem(network(search("path_{}.valid".format(i))))])

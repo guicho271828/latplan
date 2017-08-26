@@ -34,22 +34,22 @@ with Timer(style("************************* states on gpu, batch=1000 **********
 
 
 with Timer(style("************************* validate_states on cpu ***************************")):
-    print("results:", np.all(m.validate_states_cpu(s,3,3)), "(should be True)")
+    print("results:", np.all(m.validate_states_cpu(s)), "(should be True)")
 
 with Timer(style("************************* validate_states on gpu, batch=100 ***************************")):
-    print("results:", np.all(m.validate_states_gpu(s,3,3,batch_size=100)), "(should be True)")
+    print("results:", np.all(m.validate_states_gpu(s,batch_size=100)), "(should be True)")
 
 with Timer(style("************************* validate_states on gpu, batch=1000 ***************************")):
-    print("results:", np.all(m.validate_states_gpu(s,3,3,batch_size=1000)), "(should be True)")
+    print("results:", np.all(m.validate_states_gpu(s,batch_size=1000)), "(should be True)")
 
 with Timer(style("************************* to_configs on cpu ***************************")):
-    print(m.to_configs_cpu(s,3,3)[:3])
+    print(m.to_configs_cpu(s)[:3])
 
 with Timer(style("************************* to_configs on gpu, batch=100 ***************************")):
-    print(m.to_configs_gpu(s,3,3,batch_size=100)[:3])
+    print(m.to_configs_gpu(s,batch_size=100)[:3])
 
 with Timer(style("************************* to_configs on gpu, batch=1000 ***************************")):
-    print(m.to_configs_gpu(s,3,3,batch_size=1000)[:3])
+    print(m.to_configs_gpu(s,batch_size=1000)[:3])
 
 c = c[:10]
 
@@ -67,8 +67,8 @@ with Timer(style("************************* transitions one_per_state **********
 
 
 with Timer(style("************************* validate_transitions_cpu_old ***************************")):
-    print(m.validate_transitions_cpu_old(transitions,3,3,batch_size=1000)[:3])
+    print(m.validate_transitions_cpu_old(transitions,batch_size=1000)[:3])
 
 with Timer(style("************************* validate_transitions_cpu ***************************")):
-    print(m.validate_transitions_cpu(transitions,3,3,batch_size=1000)[:3])
+    print(m.validate_transitions_cpu(transitions,batch_size=1000)[:3])
 
