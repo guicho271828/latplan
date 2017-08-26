@@ -26,3 +26,8 @@ trap exit SIGINT
 ./state_discriminator3.py samples/lightsout_digital_4_36_20000_conv/ learn
 ./action_autoencoder.py   samples/lightsout_digital_4_36_20000_conv/ learn
 ./action_discriminator.py samples/lightsout_digital_4_36_20000_conv/ learn
+
+./strips.py conv lightsout learn_plot_dump twisted 4 36 20000
+./state_discriminator3.py samples/lightsout_twisted_4_36_20000_conv/ learn
+./action_autoencoder.py   samples/lightsout_twisted_4_36_20000_conv/ learn
+./action_discriminator.py samples/lightsout_twisted_4_36_20000_conv/ learn
