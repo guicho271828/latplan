@@ -202,15 +202,15 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
 
 def lightsout(type='digital',size=4,N=36,num_examples=6500):
     parameters = {
-        'layer'      :[2000],# [400,4000],
+        'layer'      :[1000],# [400,4000],
         'clayer'     :[16],# [400,4000],
         'dropout'    :[0.4], #[0.1,0.4],
         'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' : ['tanh'],
-        'full_epoch' :[1000],
-        'epoch'      :[500],
-        'batch_size' :[1000],
+        'full_epoch' :[100],
+        'epoch'      :[100],
+        'batch_size' :[2000],
         'lr'         :[0.001],
     }
     import importlib
