@@ -2,6 +2,7 @@
 import warnings
 import config
 import numpy as np
+import latplan
 from latplan.model import default_networks
 from latplan.util        import curry, set_difference, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
@@ -302,8 +303,7 @@ def test_oae_generated(directory,discriminator):
     N = known_transisitons.shape[1] // 2
     
     answers = np.zeros(len(y),dtype=int)
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
+    p = latplan.util.puzzle_module(directory)
     batch = 100000
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
@@ -340,8 +340,7 @@ def test_oae_pre_label(directory,discriminator):
     N = known_transisitons.shape[1] // 2
     
     answers = np.zeros(len(y),dtype=int)
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
+    p = latplan.util.puzzle_module(directory)
     batch = 100000
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
@@ -379,8 +378,7 @@ def test_oae_pre_suc_label(directory,discriminator):
     N = known_transisitons.shape[1] // 2
     
     answers = np.zeros(len(y),dtype=int)
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
+    p = latplan.util.puzzle_module(directory)
     batch = 100000
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
@@ -477,8 +475,7 @@ def main(directory, mode, input_type=prepare_oae_PU3):
         print("type2 error:",np.mean(np.round(discriminator.discriminate(actions_invalid,batch_size=1000))) * 100, "%")
 
         if 'check' in mode:
-            import latplan.puzzles.puzzle_mnist as p
-            p.setup()
+            p = latplan.util.puzzle_module(directory)
             count = 0
             batch = 10000
             for i in range(len(actions_invalid)//batch):

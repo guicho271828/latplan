@@ -2,6 +2,7 @@
 import warnings
 import config
 import numpy as np
+import latplan
 from latplan.model import PUDiscriminator, default_networks, combined_discriminate, combined_discriminate2
 from latplan.util        import curry, prepare_binary_classification_data, set_difference, bce
 from latplan.util.tuning import grid_search, nn_task
@@ -189,8 +190,7 @@ if __name__ == '__main__':
     _,_,_,_, _, states_invalid = prepare(states_valid,sae)
 
     if 'check' in mode:
-        import latplan.puzzles.puzzle_mnist as p
-        p.setup()
+        p = latplan.util.puzzle_module(directory)
         # p.validate_states(sae.decode_binary(states_valid))
         is_invalid = p.validate_states(sae.decode_binary(states_invalid))
         states_invalid = states_invalid[np.logical_not(is_invalid)]

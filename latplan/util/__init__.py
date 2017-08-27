@@ -71,3 +71,14 @@ def mae(x,y,axis=None):
 def mse(x,y,axis=None):
     return np.sqrt(np.sum(np.square(x - y),axis=axis))
 
+
+def puzzle_module(directory):
+    import importlib
+    from latplan.util import ensure_directory
+    args = ensure_directory(directory).split("/")[-2].split("_")
+    if args[0] == "hanoi":
+        p = importlib.import_module('latplan.puzzles.hanoi')
+    else:
+        p = importlib.import_module('latplan.puzzles.{}_{}'.format(*args[0:2]))
+    p.setup()
+    return p
