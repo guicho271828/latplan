@@ -243,7 +243,7 @@ class GBFS(Searcher,StateBasedGoalDetection):
             else:
                 for c in self.successors(state):
                     new_g = state.g + 1
-                    if c.g > new_g:
+                    if c.g > new_g and c.status == OPEN:
                         c.g      = new_g
                         c.parent = state
                         c.status = OPEN
