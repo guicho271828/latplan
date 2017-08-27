@@ -20,7 +20,7 @@ base_disk_width = disk_height * base_disk_width_factor
 border = 1
 tile_factor = 1
 
-def generate1(config,disks,towers):
+def generate1(config,disks,towers, **kwargs):
     l = len(config)
     tower_width  = disks * (2*disk_inc) + base_disk_width + border
     tower_height = disks*disk_height
@@ -56,7 +56,7 @@ def states(disks, towers, configs=None):
         configs = generate_configs(disks, towers)
     return generate(configs,disks,towers)
 
-def transitions(disks, towers, configs=None, one_per_state=False):
+def transitions_old(disks, towers, configs=None, one_per_state=False, **kwargs):
     if configs is None:
         configs = generate_configs(disks, towers)
     if one_per_state:
@@ -71,6 +71,21 @@ def transitions(disks, towers, configs=None, one_per_state=False):
                                  for c1 in configs for c2 in successors(c1,disks,towers) ])
     return np.einsum('ab...->ba...',transitions)
 
+def transitions(disks, towers, configs=None, one_per_state=False, **kwargs):
+    if configs is None:
+        configs = generate_configs(disks, towers)
+    if one_per_state:
+        def pickone(thing):
+            index = np.random.randint(0,len(thing))
+            return thing[index]
+        pre = generate(configs, disks, towers, **kwargs)
+        suc = generate(np.array([pickone(successors(c1, disks, towers)) for c1 in configs ]), disks, towers, **kwargs)
+        return np.array([pre, suc])
+    else:
+        transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1, disks, towers) ])
+        pre = generate(transitions[:,0,:], disks, towers, **kwargs)
+        suc = generate(transitions[:,1,:], disks, towers, **kwargs)
+        return np.array([pre, suc])
 
 def setup():
     pass
