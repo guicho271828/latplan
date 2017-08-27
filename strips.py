@@ -44,7 +44,7 @@ def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     if 'dump' not in mode:
         return
     l = len(configs)
-    batch = 10000
+    batch = 5000
     loop = (l // batch) + 1
     try:
         print(ae.local(name))
@@ -85,7 +85,7 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
     if 'dump' not in mode:
         return
     l = len(configs)
-    batch = 10000
+    batch = 5000
     loop = (l // batch) + 1
     try:
         print(ae.local(name))
