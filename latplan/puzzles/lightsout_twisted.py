@@ -29,11 +29,15 @@ def setup():
 def batch_swirl(images):
     images = np.array(images)
     r = images.shape[1] * relative_swirl_radius
+    # from joblib import Parallel, delayed
+    # return np.array(Parallel(n_jobs=4)(delayed(swirl)(i, radius=r, **swirl_args) for i in images))
     return np.array([ swirl(i, radius=r, **swirl_args) for i in images ])
 
 def batch_unswirl(images):
     images = np.array(images)
     r = images.shape[1] * relative_swirl_radius
+    # from joblib import Parallel, delayed
+    # return np.array(Parallel(n_jobs=4)(delayed(swirl)(i, radius=r, **unswirl_args) for i in images))
     return np.array([ swirl(i, radius=r, **unswirl_args) for i in images ])
 
 def generate_cpu(configs):
