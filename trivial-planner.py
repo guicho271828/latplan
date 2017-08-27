@@ -119,8 +119,15 @@ class Searcher:
         import queue
         self.open_list = queue.PriorityQueue()
         self.close_list = {}
+        self.stats = {
+            "generated_including_duplicate":1, # init
+            "generated":1,
+            "expanded":0,
+            "reopened":0,
+        }
 
     def successors(self,state):
+        self.stats["expanded"] += 1
         try:
             reductions = []
             s = state.state
@@ -137,15 +144,22 @@ class Searcher:
             # for now, assume they are all valid
             for i,succ in enumerate(y[:,self.N:]):
                 # print(succ)
+                self.stats["generated_including_duplicate"] += 1
                 hash_value = state_hash(succ)
                 if hash_value in self.close_list:
                     yield self.close_list[hash_value]
                 else:
+                    self.stats["generated"] += 1
                     _succ = State(succ)
                     self.close_list[hash_value] = _succ
                     yield _succ
         finally:
             print("->".join(map(str,reductions)))
+
+    def __del__(self):
+        print("**************** Search statistics ****************")
+        for k, v in self.stats.items():
+            print(k, v)
 
 class StateBasedGoalDetection:
     def goalp(self,state,goal):
@@ -191,6 +205,8 @@ class Astar(Searcher,StateBasedGoalDetection):
                 for c in self.successors(state):
                     new_g = state.g + 1
                     if c.g > new_g:
+                        if c.status == CLOSED:
+                            self.stats["reopened"] += 1
                         c.g      = new_g
                         c.parent = state
                         c.status = OPEN
