@@ -40,7 +40,7 @@ def batch_unswirl(images):
     # return np.array(Parallel(n_jobs=4)(delayed(swirl)(i, radius=r, **unswirl_args) for i in images))
     return np.array([ swirl(i, radius=r, **unswirl_args) for i in images ])
 
-def generate_cpu(configs):
+def generate_cpu(configs, **kwargs):
     configs = np.array(configs)
     import math
     size = int(math.sqrt(len(configs[0])))
@@ -89,10 +89,10 @@ def generate_gpu(configs,**kwargs):
 
 generate = generate_gpu
 
-def states(size, configs=None):
+def states(size, configs=None, **kwargs):
     if configs is None:
         configs = generate_configs(size)
-    return generate(configs)
+    return generate(configs, **kwargs)
 
 def transitions_old(size, configs=None, one_per_state=False, **kwargs):
     if configs is None:

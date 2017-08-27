@@ -24,7 +24,7 @@ panels = np.array(panels)
 def setup():
     pass
 
-def generate_cpu(configs):
+def generate_cpu(configs, **kwargs):
     import math
     size = int(math.sqrt(len(configs[0])))
     base = panels.shape[1]
@@ -72,10 +72,10 @@ def generate_gpu(configs, **kwargs):
 
 generate = generate_gpu
 
-def states(size, configs=None):
+def states(size, configs=None, **kwargs):
     if configs is None:
         configs = generate_configs(size)
-    return generate(configs)
+    return generate(configs, **kwargs)
 
 def transitions_old(size, configs=None, one_per_state=False, **kwargs):
     if configs is None:
@@ -88,7 +88,7 @@ def transitions_old(size, configs=None, one_per_state=False, **kwargs):
             generate([c1,pickone(successors(c1))], **kwargs)
             for c1 in configs ])
     else:
-        transitions = np.array([ generate([c1,c2])
+        transitions = np.array([ generate([c1,c2], **kwargs)
                                  for c1 in configs for c2 in successors(c1) ])
     return np.einsum('ab...->ba...',transitions)
 
