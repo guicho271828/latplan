@@ -2,6 +2,7 @@
 import warnings
 import config
 import numpy as np
+import latplan
 from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator
 from latplan.util import get_ae_type, bce, mae, ensure_directory
 from latplan.util.plot import plot_grid
@@ -99,8 +100,7 @@ def state_discriminator3_filtering(y):
 
 def cheating_validation_filtering(y):
     N = y.shape[1]//2
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
+    p = latplan.util.puzzle_module(directory)
     pre_images = sae.decode_binary(y[:,:N],batch_size=1000)
     suc_images = sae.decode_binary(y[:,N:],batch_size=1000)
     return y[p.validate_transitions([pre_images, suc_images],batch_size=1000)]
@@ -329,10 +329,7 @@ def main(network_dir, problem_dir, searcher):
         plot_grid(sae.decode_binary(plan),
                   path=problem(network(search("path_{}.png".format(i)))),verbose=True)
 
-        module_name = ensure_directory(problem_dir).split("/")[-3]
-        from importlib import import_module
-        p = import_module(module_name)
-        p.setup()
+        p = latplan.util.puzzle_module(network_dir)
 
         validation = p.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])])
         print(validation)
