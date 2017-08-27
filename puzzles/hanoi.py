@@ -47,14 +47,14 @@ def generate1(config,disks,towers, **kwargs):
                 #           (1,2*disk+base_disk_width_factor))
     return preprocess(figure)
 
-def generate(configs,disks,towers):
-    return np.array([ generate1(c,disks,towers) for c in configs ])
+def generate(configs,disks,towers, **kwargs):
+    return np.array([ generate1(c,disks,towers, **kwargs) for c in configs ])
                 
 
-def states(disks, towers, configs=None):
+def states(disks, towers, configs=None, **kwargs):
     if configs is None:
         configs = generate_configs(disks, towers)
-    return generate(configs,disks,towers)
+    return generate(configs,disks,towers, **kwargs)
 
 def transitions_old(disks, towers, configs=None, one_per_state=False, **kwargs):
     if configs is None:
@@ -64,10 +64,10 @@ def transitions_old(disks, towers, configs=None, one_per_state=False, **kwargs):
             index = np.random.randint(0,len(thing))
             return thing[index]
         transitions = np.array([
-            generate([c1,pickone(successors(c1,disks,towers))],disks,towers)
+            generate([c1,pickone(successors(c1,disks,towers))],disks,towers, **kwargs)
             for c1 in configs ])
     else:
-        transitions = np.array([ generate([c1,c2],disks,towers)
+        transitions = np.array([ generate([c1,c2],disks,towers, **kwargs)
                                  for c1 in configs for c2 in successors(c1,disks,towers) ])
     return np.einsum('ab...->ba...',transitions)
 
