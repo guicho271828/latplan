@@ -115,6 +115,11 @@ pruning_methods = [
 ]
 
 class Searcher:
+    def __init__(self):
+        import queue
+        self.open_list = queue.PriorityQueue()
+        self.close_list = {}
+
     def successors(self,state):
         try:
             reductions = []
@@ -158,19 +163,15 @@ class Astar(Searcher,StateBasedGoalDetection):
 
         _init = State(init, g=0, h=heuristic(init))
 
-        import queue
-        open_list = queue.PriorityQueue()
-        open_list.put((_init.g + _init.h, _init.h, _init.hash()))
-
-        self.close_list = {}
+        self.open_list.put((_init.g + _init.h, _init.h, _init.hash()))
         self.close_list[_init.hash()] = _init
 
         best_f = -1
         best_h = math.inf
         while True:
-            if open_list.empty():
+            if self.open_list.empty():
                 raise Exception("Open list is empty!")
-            f, h, shash = open_list.get()
+            f, h, shash = self.open_list.get()
             state = self.close_list[shash]
             if state.status == CLOSED:
                 continue
@@ -194,7 +195,7 @@ class Astar(Searcher,StateBasedGoalDetection):
                         c.parent = state
                         c.status = OPEN
                         c.h      = heuristic(c.state)
-                        open_list.put((c.g+c.h, c.h, c.hash()))
+                        self.open_list.put((c.g+c.h, c.h, c.hash()))
 
 class GBFS(Searcher,StateBasedGoalDetection):
     def search(self,init,goal,distance):
@@ -203,18 +204,14 @@ class GBFS(Searcher,StateBasedGoalDetection):
 
         _init = State(init, g=0, h=heuristic(init))
 
-        import queue
-        open_list = queue.PriorityQueue()
-        open_list.put((_init.h, _init.hash()))
-
-        self.close_list = {}
+        self.open_list.put((_init.h, _init.hash()))
         self.close_list[_init.hash()] = _init
 
         best_h = math.inf
         while True:
-            if open_list.empty():
+            if self.open_list.empty():
                 raise Exception("Open list is empty!")
-            h, shash = open_list.get()
+            h, shash = self.open_list.get()
             state = self.close_list[shash]
             if state.status == CLOSED:
                 continue
@@ -235,7 +232,7 @@ class GBFS(Searcher,StateBasedGoalDetection):
                         c.parent = state
                         c.status = OPEN
                         c.h      = heuristic(c.state)
-                        open_list.put((c.h, c.hash()))
+                        self.open_list.put((c.h, c.hash()))
 
 
 class AstarRec(ReconstructionGoalDetection,Astar):
