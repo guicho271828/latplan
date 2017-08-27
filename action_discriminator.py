@@ -328,9 +328,9 @@ def test_oae_generated(directory,discriminator):
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("accuracy (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
-    ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
-    print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
-    print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
+    # ind = p.validate_states(ae.decode_binary(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
+    # print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
+    # print("accuracy (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
 def test_oae_pre_label(directory,discriminator):
     print("--- additional testing on OAE-generated actions")
