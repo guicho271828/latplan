@@ -1,6 +1,10 @@
-#!/bin/bash
+#!/bin/bash -x
+
+set -e
 
 trap exit SIGINT
+
+ulimit -v 16000000000
 
 ./strips.py conv puzzle learn_plot_dump mandrill 3 3 36 20000
 ./state_discriminator3.py samples/puzzle_mandrill_3_3_36_20000_conv/ learn
