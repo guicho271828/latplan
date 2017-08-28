@@ -266,6 +266,8 @@ def blind(state,goal):
 def main(network_dir, problem_dir, searcher):
     global sae, oae, ad, ad2, sd, sd2, sd3, cae, combined_discriminator, available_actions
     
+    p = latplan.util.puzzle_module(network_dir)
+
     sae = default_networks[get_ae_type(network_dir)](network_dir).load(allow_failure=True)
     oae = ActionAE(sae.local("_aae/")).load(allow_failure=True)
     try:
@@ -347,8 +349,6 @@ def main(network_dir, problem_dir, searcher):
         print(plan)
         plot_grid(sae.decode_binary(plan),
                   path=problem(network(search("path_{}.png".format(i)))),verbose=True)
-
-        p = latplan.util.puzzle_module(network_dir)
 
         validation = p.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])])
         print(validation)
