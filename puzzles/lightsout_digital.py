@@ -109,6 +109,7 @@ def transitions(size, configs=None, one_per_state=False, **kwargs):
         return np.array([pre, suc])
 
 
+threshold = 0.01
 def build_errors(states,base,dim,size):
     s = K.reshape(states,[-1,size,base,size,base])
     s = K.permute_dimensions(s, [0,1,3,2,4])
@@ -130,7 +131,7 @@ def validate_states(states,verbose=True,**kwargs):
     def build():
         states = Input(shape=(dim,dim))
         error = build_errors(states,base,dim,size)
-        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
 
         num_matches = K.sum(matches, axis=3)
         panels_ok = K.all(K.equal(num_matches, 1), (1,2))
@@ -171,7 +172,7 @@ def to_configs(states, verbose=True, **kwargs):
     def build():
         states = Input(shape=(dim,dim))
         error = build_errors(states,base,dim,size)
-        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
         # a, h, w, panel
         matches = K.reshape(matches, [K.shape(states)[0], size * size, -1])
         # a, pos, panel
