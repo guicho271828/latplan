@@ -137,7 +137,7 @@ def run(path,train,test,parameters):
 
 def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     parameters = {
-        'layer'      :[2000],# [400,4000],
+        'layer'      :[1000],# [400,4000],
         'clayer'     :[16],# [400,4000],
         'dropout'    :[0.4], #[0.1,0.4],
         'N'          :[N],  #[25,49],
