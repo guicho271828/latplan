@@ -292,9 +292,10 @@ def main(network_dir, problem_dir, searcher):
 
 
     from scipy import misc
-    from latplan.puzzles.util import preprocess
-    init_image = preprocess(misc.imread(problem("init.png")))
-    goal_image = preprocess(misc.imread(problem("goal.png")))
+    from latplan.puzzles.util import preprocess, normalize
+    # is already enhanced, equalized
+    init_image = normalize(misc.imread(problem("init.png")))
+    goal_image = normalize(misc.imread(problem("goal.png")))
     print("init:",init_image.min(),init_image.max(),)
     print("goal:",goal_image.min(),goal_image.max(),)
     init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
