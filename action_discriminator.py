@@ -180,8 +180,7 @@ def prepare_oae_PU3(known_transisitons):
         ind = np.where(np.squeeze(combined_discriminate2(y[:,N:],ae,sd3,batch_size=1000)) > 0.5)[0]
     
     y = y[ind]
-    # y = y[:len(known_transisitons)]
-    # normalize
+    y = y[:len(known_transisitons)] # undersample
     return prepare_binary_classification_data(known_transisitons, y)
 
 def prepare_oae_PU4(known_transisitons):
