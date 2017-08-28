@@ -49,35 +49,37 @@ def generate(configs, width, height, **kwargs):
 
 threshold = 0.01
 def build_error(s, height, width, base):
+    P = len(setting['panels'])
     s = K.reshape(s,[-1,height,base,width,base])
     s = K.permute_dimensions(s, [0,1,3,2,4])
     s = K.reshape(s,[-1,height,width,1,base,base])
-    s = K.tile(s, [1,1,1,len(setting['panels']),1,1,])
+    s = K.tile(s, [1,1,1,P,1,1,])
     
     allpanels = K.variable(np.array(setting['panels']))
-    allpanels = K.reshape(allpanels, [1,1,1,-1,base,base])
+    allpanels = K.reshape(allpanels, [1,1,1,P,base,base])
     allpanels = K.tile(allpanels, [K.shape(s)[0], height, width, 1, 1, 1])
 
     def hash(x):
-        ## 2x2 average hashing (now it does not work since disks have 1 pixel height)
-        # x = K.reshape(x, [-1,disks,towers,disks+1, disk_height,tower_width//2,2])
-        # x = K.mean(x, axis=(4,))
-        # return K.round(x)
+        ## 2x2 average hashing
+        x = K.reshape(x, [-1,height,width,P, base//2, 2, base//2, 2])
+        x = K.mean(x, axis=(5,7))
+        return K.round(x)
         ## diff hashing (horizontal diff)
         # x1 = x[:,:,:,:,:,:-1]
         # x2 = x[:,:,:,:,:,1:]
         # d = x1 - x2
         # return K.round(d)
         ## just rounding
-        return K.round(x)
+        # return K.round(x)
         ## do nothing
         # return x
 
-    s         = hash(s)
-    allpanels = hash(allpanels)
+    # s         = hash(s)
+    # allpanels = hash(allpanels)
     
     # error = K.binary_crossentropy(s, allpanels)
     error = K.abs(s - allpanels)
+    error = hash(error)
     error = K.mean(error, axis=(4,5))
     return error
     
