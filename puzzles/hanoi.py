@@ -114,11 +114,29 @@ def build_error(s, disks, towers, tower_width, panels):
     allpanels = K.reshape(allpanels, [1,1,1,disks+1,disk_height,tower_width])
     allpanels = K.tile(allpanels, [K.shape(s)[0], disks, towers, 1, 1, 1])
 
-    error = K.binary_crossentropy(s, allpanels)
+    def hash(x):
+        ## 2x2 average hashing (now it does not work since disks have 1 pixel height)
+        # x = K.reshape(x, [-1,disks,towers,disks+1, disk_height,tower_width//2,2])
+        # x = K.mean(x, axis=(4,))
+        # return K.round(x)
+        ## diff hashing (horizontal diff)
+        # x1 = x[:,:,:,:,:,:-1]
+        # x2 = x[:,:,:,:,:,1:]
+        # d = x1 - x2
+        # return K.round(d)
+        ## just rounding
+        return K.round(x)
+        ## do nothing
+        # return x
+
+    s         = hash(s)
+    allpanels = hash(allpanels)
+    
+    # error = K.binary_crossentropy(s, allpanels)
+    error = K.abs(s - allpanels)
     error = K.mean(error, axis=(4,5))
     return error
     
-
 def validate_states(states,verbose=True, **kwargs):
     tower_height = states.shape[1]
     disks = tower_height // disk_height
