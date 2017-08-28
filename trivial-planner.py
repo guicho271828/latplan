@@ -4,7 +4,7 @@ import config
 import numpy as np
 import latplan
 from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator
-from latplan.util import get_ae_type, bce, mae, ensure_directory
+from latplan.util import get_ae_type, bce, mae, mse, ensure_directory
 from latplan.util.plot import plot_grid
 import os.path
 import keras.backend as K
@@ -27,7 +27,8 @@ combined_discriminator = None
 available_actions = None
 inflation = 5
 
-image_threshold = 0.05
+image_threshold = 0.1
+image_diff = mae
 
 OPEN   = 0
 CLOSED = 1
@@ -85,7 +86,7 @@ def state_reconstruction_filtering(y):
     # filtering based on SAE reconstruction
     images  = sae.decode_binary(y[:,N:]).round()
     images2 = sae.autoencode(images).round()
-    loss = bce(images,images2,(1,2))
+    loss = image_diff(images,images2,(1,2))
     # print(loss)
     return y[np.where(loss < image_threshold)].astype(int)
     
@@ -167,8 +168,8 @@ class StateBasedGoalDetection:
 
 class ReconstructionGoalDetection:
     def goalp(self,state,goal):
-        return bce(sae.decode_binary(np.expand_dims(state,0)),
-                   sae.decode_binary(np.expand_dims(goal, 0))) < image_threshold
+        return image_diff(sae.decode_binary(np.expand_dims(state,0)),
+                          sae.decode_binary(np.expand_dims(goal, 0))) < image_threshold
 
 class Astar(Searcher,StateBasedGoalDetection):
     def search(self,init,goal,distance):
@@ -310,12 +311,16 @@ def main(network_dir, problem_dir, searcher):
               path=problem(network("init_goal_reconstruction.png")),verbose=True)
 
     import sys
-    if bce(init_image,init_rec) > image_threshold:
-        print("BCE:",bce(init_image,init_rec))
+    print("init BCE:",bce(init_image,init_rec))
+    print("init MAE:",mae(init_image,init_rec))
+    print("init MSE:",mse(init_image,init_rec))
+    if image_diff(init_image,init_rec) > image_threshold:
         print("Initial state reconstruction failed!")
         sys.exit(3)
-    if bce(goal_image,goal_rec) > image_threshold:
-        print("BCE:",bce(goal_image,goal_rec))
+    print("goal BCE:",bce(goal_image,goal_rec))
+    print("goal MAE:",mae(goal_image,goal_rec))
+    print("goal MSE:",mse(goal_image,goal_rec))
+    if image_diff(goal_image,goal_rec) > image_threshold:
         print("Goal state reconstruction failed!")
         sys.exit(4)
     
