@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ulimit -v 16000000000
+
 trap exit SIGINT
 
 parallel --eta --timeout 90 --joblog latplan.puzzles.puzzle_mnist.log  \
