@@ -78,6 +78,8 @@ def puzzle_plot(p):
     puzzles = p.generate(configs, 3, 3)
     print(puzzles.shape, "mean", puzzles.mean(), "stdev", np.std(puzzles))
     plot_image(puzzles[-1], name("{}.png"))
+    plot_image(np.clip(puzzles[-1]+np.random.normal(0,0.1,puzzles[-1].shape),0,1),name("{}+noise.png"))
+    plot_image(np.round(np.clip(puzzles[-1]+np.random.normal(0,0.1,puzzles[-1].shape),0,1)),name("{}+noise+round.png"))
     plot_grid(puzzles, name("{}s.png"))
     _transitions = p.transitions(3,3,configs=configs)
     print(_transitions.shape)
