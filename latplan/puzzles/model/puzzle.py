@@ -14,22 +14,7 @@ def load(width,height,force=False):
     if setting['panels'] is None or force is True:
         setting['panels'] = setting['loader'](width,height)
 
-def generate_cpu(configs, width, height, **kwargs):
-    assert width*height <= 9
-    load(width, height)
-    dim_x = setting['base']*width
-    dim_y = setting['base']*height
-    def generate(config):
-        figure = np.zeros((dim_y,dim_x))
-        for digit,pos in enumerate(config):
-            x = pos % width
-            y = pos // width
-            figure[y*setting['base']:(y+1)*setting['base'],
-                   x*setting['base']:(x+1)*setting['base']] = setting['panels'][digit]
-        return figure
-    return np.array([ generate(c) for c in configs ]).reshape((-1,dim_y,dim_x))
-
-def generate_gpu(configs, width, height, **kwargs):
+def generate(configs, width, height, **kwargs):
     assert width*height <= 9
     load(width, height)
 
@@ -56,68 +41,9 @@ def generate_gpu(configs, width, height, **kwargs):
     model = build()
     return model.predict(configs,**kwargs)
 
-generate = generate_gpu
 
 threshold = 0.01
-def validate_states_cpu(states, verbose=True, **kwargs):
-    base = setting['base']
-    width  = states.shape[1] // base
-    height = states.shape[1] // base 
-    load(width,height)
-   
-    states = np.einsum("ahywx->ahwyx",
-                       np.reshape(states.round(),
-                                  [-1,height,base,width,base]))
-    if verbose:
-        print(states.shape)
-
-    panels = np.array(setting['panels'])
-    if verbose:
-        print(panels.shape)
-
-    matches = np.zeros((len(states), height, width, len(panels)),dtype=np.int8)
-    if verbose:
-        print(matches.shape)
-
-    # abs = states.copy()
-    error = np.zeros((len(states), height, width))
-    for i, panel in enumerate(panels):
-        if verbose:
-            print(".",end="",flush=True)
-        matches[(*np.where(bce(states,panel,(3,4)) < threshold),i)] = 1
-        # np.absolute(states - panel, out=abs)
-        # np.mean(abs, axis=(3,4), out=mae)
-        # matches[(*np.where(mae < 0.1),i)] = 1
-
-    num_matches = np.sum(matches, axis=3)
-    if verbose:
-        print(num_matches.shape)
-
-    panels_ok = np.all(num_matches == 1, (1,2))
-    panels_ng = np.any(num_matches != 1, (1,2))
-    panels_nomatch   = np.any(num_matches == 0, (1,2))
-    panels_ambiguous = np.any(num_matches >  1, (1,2))
-    
-    if verbose:
-        print(np.count_nonzero(panels_ng),       "images have some panels which match 0 or >2 panels, out of which")
-        print(np.count_nonzero(panels_nomatch),  "images have some panels which are unlike any panels")
-        print(np.count_nonzero(panels_ambiguous),"images have some panels which match >2 panels")
-        print(np.count_nonzero(panels_ok),       "images have panels (all of them) which match exactly 1 panel each")
-
-    panel_coverage = np.sum(matches,axis=(1,2))
-    if verbose:
-        print(panel_coverage.shape)
-    # ideally, this should be [[1,1,1,1,1,1,1,1,1], ...]
-    coverage_ok = np.all(panel_coverage <= 1, 1)
-    coverage_ng = np.any(panel_coverage >  1, 1)
-    
-    if verbose:
-        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
-        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
-
-    return np.logical_and(panels_ok, coverage_ok)
-
-def validate_states_gpu(states, verbose=True, **kwargs):
+def validate_states(states, verbose=True, **kwargs):
     base = setting['base']
     width  = states.shape[1] // base
     height = states.shape[1] // base
@@ -191,39 +117,7 @@ def validate_states_gpu(states, verbose=True, **kwargs):
         return validity
 
 
-validate_states = validate_states_gpu
-
-def to_configs_cpu(states, verbose=True, **kwargs):
-    base = setting['base']
-    width  = states.shape[1] // base
-    height = states.shape[1] // base
-    load(width,height)
-    
-    states = np.einsum("ahywx->ahwyx",
-                       np.reshape(states.round(),
-                                  [-1,height,base,width,base]))
-
-    panels = np.array(setting['panels'])
-
-    matches = np.zeros((len(states), height, width, len(panels)),dtype=np.int8)
-    if verbose:
-        print(matches.shape)
-
-    abs = states.copy()
-    mae = np.zeros((len(states), height, width))
-    for i, panel in enumerate(panels):
-        if verbose:
-            print(".",end="",flush=True)
-        np.absolute(states - panel, out=abs)
-        np.mean(abs, axis=(3,4), out=mae)
-        matches[(*np.where(mae < threshold),i)] = 1
-
-    configs = np.zeros((len(matches), height*width))
-    npos, vpos, hpos, ppos = np.where(matches == 1)
-    configs[npos,ppos] = vpos * height + hpos
-    return configs
-
-def to_configs_gpu(states, verbose=True, **kwargs):
+def to_configs(states, verbose=True, **kwargs):
     base = setting['base']
     width  = states.shape[1] // base
     height = states.shape[1] // base
@@ -267,8 +161,6 @@ def to_configs_gpu(states, verbose=True, **kwargs):
     model = build()
     return model.predict(states, **kwargs)
 
-
-to_configs = to_configs_gpu
 
 def states(width, height, configs=None, **kwargs):
     digit = width * height
