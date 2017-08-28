@@ -67,6 +67,13 @@ def state_reconstruction_from_oae_filtering(y):
     y_reconstruction = oae.decode([y[:,:N], action_reconstruction]).round()
     return y[np.all(np.equal(y, y_reconstruction),axis=(1,))]
 
+def state_reconstruction_filtering(y):
+    # filtering based on SAE state reconstruction
+    N = y.shape[1]//2
+    t = y[:,N:]
+    t_reconstruction = sae.autodecode_binary(t).round()
+    return y[np.all(np.equal(t, t_reconstruction),axis=(1,))]
+
 def inflate_actions(y):
     from latplan.util import union
     N = y.shape[1]//2
@@ -80,15 +87,6 @@ def inflate_actions(y):
 
 def action_discriminator_filtering(y):
     return y[np.where(np.squeeze(ad.discriminate(y)) > 0.5)[0]]
-
-def state_reconstruction_filtering(y):
-    N = y.shape[1]//2
-    # filtering based on SAE reconstruction
-    images  = sae.decode_binary(y[:,N:]).round()
-    images2 = sae.autoencode(images).round()
-    loss = image_diff(images,images2,(1,2))
-    # print(loss)
-    return y[np.where(loss < image_threshold)].astype(int)
     
 def state_discriminator_filtering(y):
     # filtering based on State Discriminator
@@ -105,6 +103,15 @@ def cheating_validation_filtering(y):
     pre_images = sae.decode_binary(y[:,:N],batch_size=1000)
     suc_images = sae.decode_binary(y[:,N:],batch_size=1000)
     return y[p.validate_transitions([pre_images, suc_images],batch_size=1000)]
+
+def cheating_image_reconstruction_filtering(y):
+    N = y.shape[1]//2
+    # filtering based on SAE reconstruction
+    images  = sae.decode_binary(y[:,N:]).round()
+    images2 = sae.autoencode(images).round()
+    loss = image_diff(images,images2,(1,2))
+    # print(loss)
+    return y[np.where(loss < image_threshold)].astype(int)
 
 pruning_methods = [
     action_reconstruction_filtering,           # if applied, this should be the first method
