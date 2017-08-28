@@ -58,6 +58,7 @@ def generate_gpu(configs, width, height, **kwargs):
 
 generate = generate_gpu
 
+threshold = 0.01
 def validate_states_cpu(states, verbose=True, **kwargs):
     base = setting['base']
     width  = states.shape[1] // base
@@ -83,7 +84,7 @@ def validate_states_cpu(states, verbose=True, **kwargs):
     for i, panel in enumerate(panels):
         if verbose:
             print(".",end="",flush=True)
-        matches[(*np.where(bce(states,panel,(3,4)) < 0.01),i)] = 1
+        matches[(*np.where(bce(states,panel,(3,4)) < threshold),i)] = 1
         # np.absolute(states - panel, out=abs)
         # np.mean(abs, axis=(3,4), out=mae)
         # matches[(*np.where(mae < 0.1),i)] = 1
@@ -146,7 +147,7 @@ def validate_states_gpu(states, verbose=True, **kwargs):
         error = K.binary_crossentropy(s, allpanels)
         error = K.mean(error, axis=(4,5))
 
-        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
         # a, h, w, panel
         
         num_matches = K.sum(matches, axis=3)
@@ -215,7 +216,7 @@ def to_configs_cpu(states, verbose=True, **kwargs):
             print(".",end="",flush=True)
         np.absolute(states - panel, out=abs)
         np.mean(abs, axis=(3,4), out=mae)
-        matches[(*np.where(mae < 0.01),i)] = 1
+        matches[(*np.where(mae < threshold),i)] = 1
 
     configs = np.zeros((len(matches), height*width))
     npos, vpos, hpos, ppos = np.where(matches == 1)
@@ -253,7 +254,7 @@ def to_configs_gpu(states, verbose=True, **kwargs):
         error = K.binary_crossentropy(s, allpanels)
         error = K.mean(error, axis=(4,5))
 
-        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
         # a, h, w, panel
         matches = K.reshape(matches, [K.shape(s)[0], height * width, -1])
         # a, pos, panel

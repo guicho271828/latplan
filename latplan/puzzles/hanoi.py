@@ -103,6 +103,7 @@ def get_panels(disks, tower_width):
     return panels
 
 
+threshold = 0.01
 def build_error(s, disks, towers, tower_width, panels):
     s = K.reshape(s,[-1,disks, disk_height, towers, tower_width])
     s = K.permute_dimensions(s, [0,1,3,2,4])
@@ -129,7 +130,7 @@ def validate_states(states,verbose=True, **kwargs):
     def build():
         states = Input(shape=(tower_height, tower_width*towers))
         error = build_error(states, disks, towers, tower_width, panels)
-        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
 
         num_matches = K.sum(matches, axis=3)
         panels_ok = K.all(K.equal(num_matches, 1), (1,2))
@@ -187,7 +188,7 @@ def to_configs(states,verbose=True, **kwargs):
     def build():
         states = Input(shape=(tower_height, tower_width*towers))
         error = build_error(states, disks, towers, tower_width, panels)
-        matches = 1 - K.clip(K.sign(error - 0.01),0,1)
+        matches = 1 - K.clip(K.sign(error - threshold),0,1)
         # matches: a h w p
         # when [[012][][]] this is:
         # [[[1000][0001][0001]]  --- w,h=0,0 is panel 0, others are panel 3 (empty panel)
