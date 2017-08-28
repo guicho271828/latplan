@@ -139,8 +139,27 @@ def build_errors(states,base,pad,dim,size):
     allpanels = K.reshape(allpanels, [1,1,1,2,base,base])
     allpanels = K.tile(allpanels, [K.shape(s)[0], size,size, 1, 1, 1])
     
+    def hash(x):
+        ## 2x2 average hashing
+        x = K.reshape(x, [-1,size,size,2, base//3, 3, base//3, 3])
+        x = K.mean(x, axis=(5,7))
+        return K.round(x)
+        ## diff hashing (horizontal diff)
+        # x1 = x[:,:,:,:,:,:-1]
+        # x2 = x[:,:,:,:,:,1:]
+        # d = x1 - x2
+        # return K.round(d)
+        ## just rounding
+        # return K.round(x)
+        ## do nothing
+        # return x
+
+    # s         = hash(s)
+    # allpanels = hash(allpanels)
+    
     # error = K.binary_crossentropy(s, allpanels)
-    error = K.square(s - allpanels)
+    error = K.abs(s - allpanels)
+    error = hash(error)
     error = K.mean(error, axis=(4,5))
     return error
 
