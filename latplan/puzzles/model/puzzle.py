@@ -4,6 +4,11 @@ import numpy as np
 from latplan.util import bce
 from ..util import wrap
 
+from keras.layers import Input, Reshape
+from keras.models import Model
+from keras import backend as K
+import tensorflow as tf
+
 setting = {
     'base' : None,
     'panels' : None,
@@ -43,36 +48,48 @@ def generate(configs, width, height, **kwargs):
 
 
 threshold = 0.01
+def build_error(s, height, width, base):
+    s = K.reshape(s,[-1,height,base,width,base])
+    s = K.permute_dimensions(s, [0,1,3,2,4])
+    s = K.reshape(s,[-1,height,width,1,base,base])
+    s = K.tile(s, [1,1,1,len(setting['panels']),1,1,])
+    
+    allpanels = K.variable(np.array(setting['panels']))
+    allpanels = K.reshape(allpanels, [1,1,1,-1,base,base])
+    allpanels = K.tile(allpanels, [K.shape(s)[0], height, width, 1, 1, 1])
+
+    def hash(x):
+        ## 2x2 average hashing (now it does not work since disks have 1 pixel height)
+        # x = K.reshape(x, [-1,disks,towers,disks+1, disk_height,tower_width//2,2])
+        # x = K.mean(x, axis=(4,))
+        # return K.round(x)
+        ## diff hashing (horizontal diff)
+        # x1 = x[:,:,:,:,:,:-1]
+        # x2 = x[:,:,:,:,:,1:]
+        # d = x1 - x2
+        # return K.round(d)
+        ## just rounding
+        return K.round(x)
+        ## do nothing
+        # return x
+
+    s         = hash(s)
+    allpanels = hash(allpanels)
+    
+    # error = K.binary_crossentropy(s, allpanels)
+    error = K.abs(s - allpanels)
+    error = K.mean(error, axis=(4,5))
+    return error
+    
 def validate_states(states, verbose=True, **kwargs):
     base = setting['base']
     width  = states.shape[1] // base
     height = states.shape[1] // base
     load(width,height)
     
-    from keras.layers import Input, Reshape
-    from keras.models import Model
-    from keras import backend as K
-    import tensorflow as tf
-
     def build():
         states = Input(shape=(height*base,width*base))
-        s = states
-        s = K.permute_dimensions(
-            K.reshape(K.round(s),
-                      [-1,height,base,width,base]),
-            [0,1,3,2,4])
-        # a h w y x
-        s = K.reshape(s,[-1,height,width,1,base,base])
-        s = K.tile(s, [1,1,1,len(setting['panels']),1,1,])
-        # a h w panel y x
-        
-        allpanels = K.variable(np.array(setting['panels']))
-        allpanels = K.reshape(allpanels, [1,1,1,-1,base,base])
-        allpanels = K.tile(allpanels, [K.shape(s)[0], height, width, 1, 1, 1])
- 
-        error = K.binary_crossentropy(s, allpanels)
-        error = K.mean(error, axis=(4,5))
-
+        error = build_error(states, height, width, base)
         matches = 1 - K.clip(K.sign(error - threshold),0,1)
         # a, h, w, panel
         
@@ -123,34 +140,14 @@ def to_configs(states, verbose=True, **kwargs):
     height = states.shape[1] // base
     load(width,height)
 
-    from keras.layers import Input, Reshape
-    from keras.models import Model
-    from keras import backend as K
-    import tensorflow as tf
-    
     def build():
         P = len(setting['panels'])
         states = Input(shape=(height*base,width*base))
-        s = states
-        s = K.permute_dimensions(
-            K.reshape(K.round(s),
-                      [-1,height,base,width,base]),
-            [0,1,3,2,4])
-        # a h w y x
-        s = K.reshape(s,[-1,height,width,1,base,base])
-        s = K.tile(s, [1,1,1,P,1,1,])
-        # a h w panel y x
-        
-        allpanels = K.variable(np.array(setting['panels']))
-        allpanels = K.reshape(allpanels, [1,1,1,-1,base,base])
-        allpanels = K.tile(allpanels, [K.shape(s)[0], height, width, 1, 1, 1])
-        
-        error = K.binary_crossentropy(s, allpanels)
-        error = K.mean(error, axis=(4,5))
+        error = build_error(states, height, width, base)
 
         matches = 1 - K.clip(K.sign(error - threshold),0,1)
         # a, h, w, panel
-        matches = K.reshape(matches, [K.shape(s)[0], height * width, -1])
+        matches = K.reshape(matches, [K.shape(states)[0], height * width, -1])
         # a, pos, panel
         matches = K.permute_dimensions(matches, [0,2,1])
         # a, panel, pos
