@@ -33,6 +33,8 @@ with Timer(style("************************* states on gpu, batch=1000 **********
 with Timer(style("************************* validate_states on cpu ***************************")):
     print("results:", np.all(p.validate_states(s)), "(should be True)")
 
+with Timer(style("************************* validate_states with noise ***************************")):
+    print("results:", np.all(p.validate_states(np.clip(s+np.random.normal(0,0.1,s.shape),0,1))), "(should be True)")
 
 
 with Timer(style("************************* to_configs on gpu, batch=100 ***************************")):
