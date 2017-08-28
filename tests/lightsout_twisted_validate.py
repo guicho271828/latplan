@@ -34,7 +34,9 @@ for i in range(1,5):
     print("results:", np.all(results), "(should be True)")
     print("how many invalid? : ", len(results)-np.count_nonzero(results), "/", len(results))
 
-
+with Timer(style("************************* validate_states with noise ***************************")):
+    p.threshold = 0.04
+    print("results:", np.all(p.validate_states(np.clip(s+np.random.normal(0,0.1,s.shape),0,1))), "(should be True)")
 
 with Timer(style("************************* to_configs on gpu, batch=100 ***************************")):
     p.to_configs(s,batch_size=100)

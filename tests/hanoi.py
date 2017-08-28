@@ -20,6 +20,8 @@ for line in puzzles[10]:
     print(line)
 
 plot_image(puzzles[0],"hanoi.png")
+plot_image(np.clip(puzzles[0]+np.random.normal(0,0.1,puzzles[0].shape),0,1),"hanoi+noise.png")
+plot_image(np.round(np.clip(puzzles[0]+np.random.normal(0,0.1,puzzles[0].shape),0,1)),"hanoi+noise+round.png")
 plot_grid(puzzles[:36],"hanois.png")
 _transitions = transitions(disks,towers)
 print(_transitions.shape)
