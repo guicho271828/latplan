@@ -316,7 +316,22 @@ def main(network_dir, problem_dir, searcher):
     init_rec, goal_rec = rec
     print("init (reconstruction):",init_rec.min(),init_rec.max(),)
     print("goal (reconstruction):",goal_rec.min(),goal_rec.max(),)
-    plot_grid([init_image,init_rec,init_image-init_rec,goal_image,goal_rec,goal_image-goal_rec,],
+
+    def r(i):
+        s = i.shape
+        return i.reshape((s[0]//2, 2, s[0]//2, 2)).mean(axis=(1,3))
+    
+    plot_grid([init_image,init_rec,init_image-init_rec,(init_image-init_rec).round(),
+               init_image.round(),init_rec.round(),init_image.round()-init_rec.round(),(init_image.round()-init_rec.round()).round(),
+               r(init_image),r(init_rec),r(init_image)-r(init_rec),(r(init_image)-r(init_rec)).round(),
+               # r(init_image).round(),r(init_rec).round(),r(init_image).round()-r(init_rec).round(),(r(init_image).round()-r(init_rec).round()).round(),
+               
+               goal_image,goal_rec,goal_image-goal_rec,(goal_image-goal_rec).round(),
+               goal_image.round(),goal_rec.round(),goal_image.round()-goal_rec.round(),(goal_image.round()-goal_rec.round()).round(),
+               r(goal_image),r(goal_rec),r(goal_image)-r(goal_rec),(r(goal_image)-r(goal_rec)).round(),
+               # r(goal_image).round(),r(goal_rec).round(),r(goal_image).round()-r(goal_rec).round(),(r(goal_image).round()-r(goal_rec).round()).round(),
+               ],
+              w=4,
               path=problem(network("init_goal_reconstruction.png")),verbose=True)
 
     import sys
