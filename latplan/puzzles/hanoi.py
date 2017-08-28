@@ -12,12 +12,12 @@ import tensorflow as tf
 
 ## code ##############################################################
 
-disk_height = 2
-disk_inc = disk_height // 2
-base_disk_width_factor = 2
+disk_height = 1
+disk_inc = 1
+base_disk_width_factor = 1
 base_disk_width = disk_height * base_disk_width_factor
 
-border = 1
+border = 0
 tile_factor = 1
 
 def generate1(config,disks,towers, **kwargs):
