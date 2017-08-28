@@ -5,6 +5,11 @@ from .model.lightsout import generate_configs, generate_random_configs, successo
 from .util import wrap
 from .util import preprocess
 
+from keras.layers import Input
+from keras.models import Model
+from keras import backend as K
+import tensorflow as tf
+
 panels = [
     [[0, 0, 0, 0, 0,],
      [0, 0, 1, 0, 0,],
@@ -48,11 +53,6 @@ def generate_gpu(configs, **kwargs):
     size = int(math.sqrt(len(configs[0])))
     base = panels.shape[1]
     dim = base*size
-
-    from keras.layers import Input, Reshape
-    from keras.models import Model
-    from keras import backend as K
-    import tensorflow as tf
     
     def build():
         P = 2
@@ -108,29 +108,28 @@ def transitions(size, configs=None, one_per_state=False, **kwargs):
         suc = generate(transitions[:,1,:], **kwargs)
         return np.array([pre, suc])
 
+
+def build_errors(states,base,dim,size):
+    s = K.reshape(states,[-1,size,base,size,base])
+    s = K.permute_dimensions(s, [0,1,3,2,4])
+    s = K.reshape(s,[-1,size,size,1,base,base])
+    s = K.tile   (s,[1, 1, 1, 2, 1, 1,]) # number of panels : 2
+
+    allpanels = K.variable(panels)
+    allpanels = K.reshape(allpanels, [1,1,1,2,base,base])
+    allpanels = K.tile(allpanels, [K.shape(s)[0], size,size, 1, 1, 1])
+
+    error = K.binary_crossentropy(s, allpanels)
+    error = K.mean(error, axis=(4,5))
+    return error
+
 def validate_states(states,verbose=True,**kwargs):
     base = panels.shape[1]
     size = states.shape[1]//base
     dim  = states.shape[1]
     def build():
-        from keras.layers import Input
-        from keras.models import Model
-        from keras import backend as K
-        import tensorflow as tf
         states = Input(shape=(dim,dim))
-        s = states
-        s = K.reshape(s,[-1,size,base,size,base])
-        s = K.permute_dimensions(s, [0,1,3,2,4])
-        s = K.reshape(s,[-1,size,size,1,base,base])
-        s = K.tile   (s,[1, 1, 1, 2, 1, 1,]) # number of panels : 2
-
-        allpanels = K.variable(panels)
-        allpanels = K.reshape(allpanels, [1,1,1,2,base,base])
-        allpanels = K.tile(allpanels, [K.shape(s)[0], size,size, 1, 1, 1])
-
-        error = K.binary_crossentropy(s, allpanels)
-        error = K.mean(error, axis=(4,5))
-        
+        error = build_errors(states,base,dim,size)
         matches = 1 - K.clip(K.sign(error - 0.01),0,1)
 
         num_matches = K.sum(matches, axis=3)
@@ -168,30 +167,13 @@ def to_configs(states, verbose=True, **kwargs):
     base = panels.shape[1]
     size = states.shape[1]//base
     dim  = states.shape[1]
-
-    from keras.layers import Input, Reshape
-    from keras.models import Model
-    from keras import backend as K
-    import tensorflow as tf
     
     def build():
         states = Input(shape=(dim,dim))
-        s = states
-        s = K.reshape(s,[-1,size,base,size,base])
-        s = K.permute_dimensions(s, [0,1,3,2,4])
-        s = K.reshape(s,[-1,size,size,1,base,base])
-        s = K.tile   (s,[1, 1, 1, 2, 1, 1,]) # number of panels : 2
-        
-        allpanels = K.variable(panels)
-        allpanels = K.reshape(allpanels, [1,1,1,2,base,base])
-        allpanels = K.tile(allpanels, [K.shape(s)[0], size,size, 1, 1, 1])
-        
-        error = K.binary_crossentropy(s, allpanels)
-        error = K.mean(error, axis=(4,5))
-
+        error = build_errors(states,base,dim,size)
         matches = 1 - K.clip(K.sign(error - 0.01),0,1)
         # a, h, w, panel
-        matches = K.reshape(matches, [K.shape(s)[0], size * size, -1])
+        matches = K.reshape(matches, [K.shape(states)[0], size * size, -1])
         # a, pos, panel
         config = matches * K.arange(2,dtype='float')
         config = K.sum(config, axis=-1)
