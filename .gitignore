@@ -1,6 +1,7 @@
 *~
 #*
 *.log
+*.valid
 *.pyc
 *.csv
 *.png
