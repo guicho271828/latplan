@@ -49,13 +49,10 @@ with Timer(style("************************* to_configs on gpu, batch=1000 ******
     p.to_configs(s,batch_size=1000)
 
 from latplan.util import bce, mae
-_c = p.to_configs(s,batch_size=1000)
+_c = p.to_configs(s,batch_size=1000).round().astype(int)
 print("sum(abs(config - to_configs(generate(config)))) =", np.sum(np.abs(c - _c)))
-print("sum(abs(config - round(to_configs(generate(config))))) =", np.sum(np.abs(c - _c.round())))
 print("MAE(config, to_configs(generate(config))) =", mae(c, _c))
-print("MAE(config, round(to_configs(generate(config)))) =", mae(c, _c.round()))
 print("BCE(config, to_configs(generate(config))) =", bce(c, _c))
-print("BCE(config, round(to_configs(generate(config)))) =", bce(c, _c.round()))
 for i in range(120,125):
     print("original     :",c[i])
     print("reconstructed:",_c[i])
