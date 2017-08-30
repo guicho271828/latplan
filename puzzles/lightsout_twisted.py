@@ -155,7 +155,33 @@ def generate_gpu(configs,**kwargs):
 
     return preprocess(batch_swirl(build().predict(configs,**kwargs)))
 
-generate = generate_gpu
+def generate_gpu2(configs,**kwargs):
+    configs = np.array(configs)
+    import math
+    size = int(math.sqrt(len(configs[0])))
+    base = panels.shape[1]
+    dim = base*size
+
+    def build():
+        P = 2
+        configs = Input(shape=(size*size,))
+        _configs = 1 - K.round((configs/2)+0.5) # from -1/1 to 1/0
+        configs_one_hot = K.one_hot(K.cast(_configs,'int32'), P)
+        configs_one_hot = K.reshape(configs_one_hot, [-1,P])
+        _panels = K.variable(panels)
+        _panels = K.reshape(_panels, [P, base*base])
+        states = tf.matmul(configs_one_hot, _panels)
+        states = K.reshape(states, [-1, size, size, base, base])
+        states = K.permute_dimensions(states, [0, 1, 3, 2, 4])
+        states = K.reshape(states, [-1, size*base, size*base, 1])
+        states = K.spatial_2d_padding(states, padding=((pad,pad),(pad,pad)))
+        states = K.squeeze(states, -1)
+        states = tensor_swirl(states, radius=dim+2*pad * relative_swirl_radius, **swirl_args)
+        return Model(configs, wrap(configs, states))
+
+    return preprocess(build().predict(configs,**kwargs))
+
+generate = generate_gpu2
 
 def states(size, configs=None, **kwargs):
     if configs is None:
@@ -238,7 +264,8 @@ def validate_states(states,verbose=True,**kwargs):
     
     def build():
         states = Input(shape=(dim+2*pad,dim+2*pad))
-        error = build_errors(states,base,pad,dim,size)
+        s = tensor_swirl(states, radius=dim+2*pad * relative_swirl_radius, **unswirl_args)
+        error = build_errors(s,base,pad,dim,size)
         matches = 1 - K.clip(K.sign(error - threshold),0,1)
         num_matches = K.sum(matches, axis=3)
         panels_ok = K.all(K.equal(num_matches, 1), (1,2))
@@ -259,7 +286,7 @@ def validate_states(states,verbose=True,**kwargs):
     
     if verbose:
         panels_ng, panels_nomatch, panels_ambiguous, validity \
-            = build().predict(batch_unswirl(states), **kwargs)
+            = build().predict(states, **kwargs)
         print(np.count_nonzero(panels_ng),       "images have some panels which match 0 or >2 panels, out of which")
         print(np.count_nonzero(panels_nomatch),  "images have some panels which are unlike any panels")
         print(np.count_nonzero(panels_ambiguous),"images have some panels which match >2 panels")
@@ -267,7 +294,7 @@ def validate_states(states,verbose=True,**kwargs):
         return validity
     else:
         validity \
-            = build().predict(batch_unswirl(states), **kwargs)
+            = build().predict(states, **kwargs)
         return validity
 
 
@@ -278,7 +305,8 @@ def to_configs(states, verbose=True, **kwargs):
     
     def build():
         states = Input(shape=(dim+2*pad,dim+2*pad))
-        error = build_errors(states,base,pad,dim,size)
+        s = tensor_swirl(states, radius=dim+2*pad * relative_swirl_radius, **unswirl_args)
+        error = build_errors(s,base,pad,dim,size)
         matches = 1 - K.clip(K.sign(error - threshold),0,1)
         # a, h, w, panel
         matches = K.reshape(matches, [K.shape(states)[0], size * size, -1])
@@ -289,7 +317,7 @@ def to_configs(states, verbose=True, **kwargs):
         config = - (config - 0.5)*2
         return Model(states, wrap(states, K.round(config)))
     
-    return build().predict(batch_unswirl(states), **kwargs)
+    return build().predict(states, **kwargs)
 
 
 def validate_transitions(transitions, check_states=True, **kwargs):

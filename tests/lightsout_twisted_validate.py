@@ -6,7 +6,7 @@ import latplan
 import latplan.puzzles.lightsout_twisted as p
 
 import itertools
-c = np.array([ c for c in itertools.islice(p.generate_configs(4), 1000) ])
+c = np.array([ c for c in itertools.islice(p.generate_configs(4), 10000) ])
 
 from colors import color
 from functools import partial
@@ -17,15 +17,18 @@ from latplan.util.timer import Timer
 
 with Timer(style("************************* states on cpu ***************************")):
     s = p.generate_cpu(c)
-print(s[120])
 
 with Timer(style("************************* states on gpu, batch=100  ***************************")):
     s = p.generate_gpu(c, batch_size=100)
-print(s[120])
 
 with Timer(style("************************* states on gpu, batch=1000 ***************************")):
     s = p.generate_gpu(c, batch_size=1000)
-print(s[120])
+
+with Timer(style("************************* states on gpu2, batch=100  ***************************")):
+    s = p.generate_gpu2(c, batch_size=100)
+
+with Timer(style("************************* states on gpu2, batch=1000 ***************************")):
+    s = p.generate_gpu2(c, batch_size=1000)
 
 for i in range(1,5):
     p.threshold = i*0.01
