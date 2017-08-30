@@ -4,7 +4,6 @@ import numpy as np
 from .model.lightsout import generate_configs, generate_random_configs, successors
 from .util import preprocess
 from .util import wrap
-from skimage.transform import swirl
 
 from keras.layers import Input, Reshape, Cropping2D, MaxPooling2D
 from keras.models import Model
@@ -26,7 +25,75 @@ threshold = 0.04
 def setup():
     pass
 
+# from skimage.transform import swirl
+# translate skimage.transform.swirl to tensorflow
+
+def swirl_mapping(x, y, center, rotation, strength, radius):
+    x0, y0 = center
+    rho = np.sqrt((x - x0) ** 2 + (y - y0) ** 2)
+    radius = radius / 5 * np.log(2)
+
+    theta = rotation + strength * \
+            np.exp(-rho / radius) + \
+            np.arctan2(y - y0, x - x0)
+
+    return \
+        x0 + rho * np.cos(theta), \
+        y0 + rho * np.sin(theta)
+
+# linear interpolation for batch tensor
+def tensor_linear_interpolation(image, x, y, cval): # image: batch tensor, x,y: number
+    import math
+    x0, x1 = math.floor(x), math.ceil(x)
+    y0, y1 = math.floor(y), math.ceil(y)
+    dx0, dx1 = x - x0, x1 - x
+    dy0, dy1 = y - y0, y1 - y
+
+    shape = K.int_shape(image)[1:]
+    if 0 <= y0 and y0 < shape[0] and 0 <= x0 and x0 < shape[1]:
+        i00 = image[:,y0,x0]
+    else:
+        i00 = cval
+    
+    if 0 <= y0 and y0 < shape[0] and 0 <= x1 and x1 < shape[1]:
+        i01 = image[:,y0,x1]
+    else:
+        i01 = cval
+    
+    if 0 <= y1 and y1 < shape[0] and 0 <= x0 and x0 < shape[1]:
+        i10 = image[:,y1,x0]
+    else:
+        i10 = cval
+    
+    if 0 <= y1 and y1 < shape[0] and 0 <= x1 and x1 < shape[1]:
+        i11 = image[:,y1,x1]
+    else:
+        i11 = cval
+    
+    return dy1*dx1*i00 + dy1*dx0*i01 + dy0*dx1*i10 + dy0*dx0*i11
+
+def tensor_swirl(image, center=None, strength=1, radius=100, rotation=0, cval=0.0, **kwargs):
+    # **kwargs is for unsupported options (ignored)
+    cval = tf.fill(K.shape(image)[0:1], cval)
+    shape = K.int_shape(image)[1:3]
+    if center is None:
+        center = np.array(shape) / 2
+    ys = np.expand_dims(np.repeat(np.arange(shape[0]), shape[1]),-1)
+    xs = np.expand_dims(np.tile  (np.arange(shape[1]), shape[0]),-1)
+    map_xs, map_ys = swirl_mapping(xs, ys, center, rotation, strength, radius)
+    
+    results = []
+    for x, y in zip(map_xs, map_ys):
+        i = tensor_linear_interpolation(image, x, y, cval)
+        results.append(i)
+        # print(K.int_shape(i))
+
+    results = K.stack(results, axis=1)
+    results = K.reshape(results, K.shape(image))
+    return results
+
 def batch_swirl(images):
+    from skimage.transform import swirl
     images = np.array(images)
     r = images.shape[1] * relative_swirl_radius
     # from joblib import Parallel, delayed
@@ -34,6 +101,7 @@ def batch_swirl(images):
     return np.array([ swirl(i, radius=r, **swirl_args) for i in images ])
 
 def batch_unswirl(images):
+    from skimage.transform import swirl
     images = np.array(images)
     r = images.shape[1] * relative_swirl_radius
     # from joblib import Parallel, delayed
