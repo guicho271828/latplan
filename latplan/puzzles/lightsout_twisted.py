@@ -50,27 +50,20 @@ def tensor_linear_interpolation(image, x, y, cval): # image: batch tensor, x,y: 
     dy0, dy1 = y - y0, y1 - y
 
     shape = K.int_shape(image)[1:]
+    results = []
     if 0 <= y0 and y0 < shape[0] and 0 <= x0 and x0 < shape[1]:
-        i00 = image[:,y0,x0]
-    else:
-        i00 = cval
+        results.append((y0,x0,dy1*dx1))
     
     if 0 <= y0 and y0 < shape[0] and 0 <= x1 and x1 < shape[1]:
-        i01 = image[:,y0,x1]
-    else:
-        i01 = cval
+        results.append((y0,x1,dy1*dx0))
     
     if 0 <= y1 and y1 < shape[0] and 0 <= x0 and x0 < shape[1]:
-        i10 = image[:,y1,x0]
-    else:
-        i10 = cval
+        results.append((y1,x0,dy0*dx1))
     
     if 0 <= y1 and y1 < shape[0] and 0 <= x1 and x1 < shape[1]:
-        i11 = image[:,y1,x1]
-    else:
-        i11 = cval
+        results.append((y1,x1,dy0*dx0))
     
-    return dy1*dx1*i00 + dy1*dx0*i01 + dy0*dx1*i10 + dy0*dx0*i11
+    return results
 
 def tensor_swirl(image, center=None, strength=1, radius=100, rotation=0, cval=0.0, **kwargs):
     # **kwargs is for unsupported options (ignored)
@@ -81,15 +74,17 @@ def tensor_swirl(image, center=None, strength=1, radius=100, rotation=0, cval=0.
     ys = np.expand_dims(np.repeat(np.arange(shape[0]), shape[1]),-1)
     xs = np.expand_dims(np.tile  (np.arange(shape[1]), shape[0]),-1)
     map_xs, map_ys = swirl_mapping(xs, ys, center, rotation, strength, radius)
-    
-    results = []
-    for x, y in zip(map_xs, map_ys):
-        i = tensor_linear_interpolation(image, x, y, cval)
-        results.append(i)
-        # print(K.int_shape(i))
 
-    results = K.stack(results, axis=1)
-    results = K.reshape(results, K.shape(image))
+    mapping = np.zeros((*shape, *shape))
+    for map_x, map_y, x, y in zip(map_xs, map_ys, xs, ys):
+        results = tensor_linear_interpolation(image, map_x, map_y, cval)
+        for _y, _x, w in results:
+            # mapping[int(y),int(x),int(_y),int(_x),] = w
+            mapping[int(_y),int(_x),int(y),int(x),] = w
+
+    
+    results = tf.tensordot(image, K.variable(mapping), [[1,2],[0,1]])
+    # results = K.reshape(results, K.shape(image))
     return results
 
 def batch_swirl(images):
