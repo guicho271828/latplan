@@ -8,6 +8,7 @@ sys.path.append('../../')
 
 steps     = 5
 instances = 100
+noise     = None
 
 def random_walk(init_c,length,successor_fn):
     print(".",end="")
@@ -41,8 +42,13 @@ def generate(p, ics, gcs, *args):
     from scipy import misc
     import subprocess
     subprocess.call(["rm","-rf",p.__name__])
-    for i,init in enumerate(p.generate(np.array(ics),*args)):
-        for j,goal in enumerate(p.generate(np.array(gcs),*args)):
+    inits = p.generate(np.array(ics),*args)
+    goals = p.generate(np.array(gcs),*args)
+    if noise:
+        inits = noise(inits)
+        goals = noise(goals)
+    for i,init in enumerate():
+        for j,goal in enumerate():
             d = "{}/{:03d}-{:03d}-{:03d}".format(p.__name__,steps,i,j)
             os.makedirs(d)
             print(d)
@@ -55,17 +61,6 @@ def puzzle(type='mnist', width=3, height=3):
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
-    def predefined_ics():
-        return [
-            # from Reinfield '93
-            [8,0,6,5,4,7,2,3,1], # the second instance with the longest optimal solution 31
-            [8,7,6,0,4,1,2,5,3], # the first instance with the longest optimal solution 31
-            [8,5,6,7,2,3,4,1,0], # the first instance with the most solutions
-            [8,5,4,7,6,3,2,1,0], # the second instance with the most solutions
-            [8,6,7,2,5,4,3,0,1], # the "wrong"? hardest eight-puzzle from
-            [6,4,7,8,5,0,3,2,1], # w01fe.com/blog/2009/01/the-hardest-eight-puzzle-instances-take-31-moves-to-solve/
-        ]
-
     ics = [
         random_walk(np.arange(width*height), steps, lambda config: p.successors(config,width,height))
         for i in range(instances)
@@ -110,6 +105,28 @@ def lightsout(type='digital', size=4):
     ]
     gcs = np.full((1,size*size),-1)
     generate(p, ics, gcs)
+
+################################################################
+
+# noise functions
+
+def gaussian(a):
+    return np.clip(np.random.normal(0,0.3,a.shape) + a, 0,1)
+
+def salt(a):
+    return np.clip(np.clip(np.sign(0.06 - np.random.uniform(0,1,a.shape)), 0, 1) + a, 0, 1)
+
+def pepper(a):
+    return np.clip(a - np.clip(np.sign(0.06 - np.random.uniform(0,1,a.shape)), 0, 1), 0, 1)
+
+################################################################
+
+def noise(type, domain, *args):
+    global noise
+    noise = type
+    domain(*args)
+
+################################################################
 
 def main():
     import sys
