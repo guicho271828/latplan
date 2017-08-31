@@ -29,7 +29,7 @@ load_session()
 
 steps     = 5
 instances = 100
-noise     = None
+noise_fn     = None
 
 def random_walk(init_c,length,successor_fn):
     print(".",end="")
@@ -62,14 +62,18 @@ def random_walk_rec(current, trace, length, successor_fn):
 def generate(p, ics, gcs, *args):
     from scipy import misc
     import subprocess
-    subprocess.call(["rm","-rf",p.__name__])
+    import datetime
+    try:
+        subprocess.call(["mv",p.__name__,"old_"+datetime.datetime.today().isoformat()+"_"+p.__name__])
+    except:
+        pass
     inits = p.generate(np.array(ics),*args)
     goals = p.generate(np.array(gcs),*args)
-    if noise:
-        inits = noise(inits)
-        goals = noise(goals)
-    for i,init in enumerate():
-        for j,goal in enumerate():
+    if noise_fn:
+        inits = noise_fn(inits)
+        goals = noise_fn(goals)
+    for i,init in enumerate(inits):
+        for j,goal in enumerate(goals):
             d = "{}/{:03d}-{:03d}-{:03d}".format(p.__name__,steps,i,j)
             os.makedirs(d)
             print(d)
@@ -142,9 +146,9 @@ def pepper(a):
 
 ################################################################
 
-def noise(type, domain, *args):
-    global noise
-    noise = type
+def noise(fn, domain, *args):
+    global noise_fn
+    noise_fn = fn
     domain(*args)
 
 ################################################################
@@ -152,8 +156,6 @@ def noise(type, domain, *args):
 def main():
     import sys
     try:
-        print(os.path.split(__file__)[0])
-        os.chdir(os.path.split(__file__)[0])
         print('args:',sys.argv)
 
         def myeval(str):
