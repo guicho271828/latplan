@@ -14,7 +14,7 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 hanoi 7 4
     $d/generate.py 7 100 lightsout digital 4
     $d/generate.py 7 100 lightsout twisted 4
-)
+) &
 
 
 (
@@ -25,7 +25,7 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 puzzle_longest mandrill 3 3
     $d/generate.py 7 100 puzzle_longest spider   3 3
     $d/generate.py 7 100 puzzle_longest mnist    3 3
-)
+) &
 
 (
     echo $d/../$(basename $d)-gaussian
@@ -39,7 +39,7 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 noise gaussian hanoi 7 4
     $d/generate.py 7 100 noise gaussian lightsout digital 4
     $d/generate.py 7 100 noise gaussian lightsout twisted 4
-)
+) &
 
 (
     echo $d/../$(basename $d)-salt
@@ -53,7 +53,7 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 noise salt hanoi 7 4
     $d/generate.py 7 100 noise salt lightsout digital 4
     $d/generate.py 7 100 noise salt lightsout twisted 4
-)
+) &
 
 (
     echo $d/../$(basename $d)-pepper
@@ -67,5 +67,7 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 noise pepper hanoi 7 4
     $d/generate.py 7 100 noise pepper lightsout digital 4
     $d/generate.py 7 100 noise pepper lightsout twisted 4
-)
+) &
 
+wait
+echo "done!"
