@@ -27,13 +27,6 @@ parallel -j $jobs --eta --timeout 180 --joblog problem-instances-pepper/latplan.
          ::: Astar
 
 
-parallel -j $jobs --eta --timeout 180 --joblog problem-instances-pepper/latplan.puzzles.hanoi.csv   \
-         "./trivial-planner.py samples/{1} {2} {3} > {2}/{1}_{3}.log" \
-         ::: hanoi_7_4_36_10000_conv \
-         ::: problem-instances-pepper/latplan.puzzles.hanoi/* \
-         ::: Astar
-
-
 parallel -j $jobs --eta --timeout 180 --joblog problem-instances-pepper/latplan.puzzles.lightsout_digital.csv   \
          "./trivial-planner.py samples/{1} {2} {3} > {2}/{1}_{3}.log" \
          ::: lightsout_digital_4_36_20000_conv \
@@ -45,6 +38,13 @@ parallel -j $jobs --eta --timeout 180 --joblog problem-instances-pepper/latplan.
          "./trivial-planner.py samples/{1} {2} {3} > {2}/{1}_{3}.log" \
          ::: lightsout_twisted_4_36_20000_conv \
          ::: problem-instances-pepper/latplan.puzzles.lightsout_twisted/* \
+         ::: Astar
+
+
+parallel -j $jobs --eta --timeout 180 --joblog problem-instances-pepper/latplan.puzzles.hanoi.csv   \
+         "./trivial-planner.py samples/{1} {2} {3} > {2}/{1}_{3}.log" \
+         ::: hanoi_4_3_36_60_conv \
+         ::: problem-instances-pepper/latplan.puzzles.hanoi/* \
          ::: Astar
 
 

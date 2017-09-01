@@ -11,9 +11,9 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 puzzle spider   3 3
     $d/generate.py 7 100 puzzle mnist    3 3
     
-    $d/generate.py 7 100 hanoi 7 4
     $d/generate.py 7 100 lightsout digital 4
     $d/generate.py 7 100 lightsout twisted 4
+    $d/generate.py 6 100 hanoi 4 3
 ) &
 
 
@@ -36,9 +36,9 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 noise gaussian puzzle spider   3 3
     $d/generate.py 7 100 noise gaussian puzzle mnist    3 3
     
-    $d/generate.py 7 100 noise gaussian hanoi 7 4
     $d/generate.py 7 100 noise gaussian lightsout digital 4
     $d/generate.py 7 100 noise gaussian lightsout twisted 4
+    $d/generate.py 6 100 noise gaussian hanoi 4 3
 ) &
 
 (
@@ -50,9 +50,9 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 noise salt puzzle spider   3 3
     $d/generate.py 7 100 noise salt puzzle mnist    3 3
 
-    $d/generate.py 7 100 noise salt hanoi 7 4
     $d/generate.py 7 100 noise salt lightsout digital 4
     $d/generate.py 7 100 noise salt lightsout twisted 4
+    $d/generate.py 6 100 noise salt hanoi 4 3
 ) &
 
 (
@@ -64,9 +64,9 @@ d=$(dirname $(readlink -ef $0))
     $d/generate.py 7 100 noise pepper puzzle spider   3 3
     $d/generate.py 7 100 noise pepper puzzle mnist    3 3
 
-    $d/generate.py 7 100 noise pepper hanoi 7 4
     $d/generate.py 7 100 noise pepper lightsout digital 4
     $d/generate.py 7 100 noise pepper lightsout twisted 4
+    $d/generate.py 6 100 noise pepper hanoi 4 3
 ) &
 
 wait
