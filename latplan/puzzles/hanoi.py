@@ -207,34 +207,38 @@ def to_configs(states,verbose=True, **kwargs):
         states = Input(shape=(tower_height, tower_width*towers))
         error = build_error(states, disks, towers, tower_width, panels)
         matches = 1 - K.clip(K.sign(error - threshold),0,1)
+        # assume disks=4, towers=3
         # matches: a h w p
-        # when [[012][][]] this is:
-        # [[[1000][0001][0001]]  --- w,h=0,0 is panel 0, others are panel 3 (empty panel)
-        #  [[0100][0001][0001]]  --- w,h=0,1 is panel 1, others are panel 3 (empty panel)
-        #  [[0010][0001][0001]]] --- w,h=0,2 is panel 2, others are panel 3 (empty panel)
-        # which corresponds to [0,0,0]
+        # [[[00001][00001][00001]]  --- all panel 4 (empty panel)
+        #  [[10000][00001][00001]]  --- h,w=1,0 is panel 0, others are panel 4 (empty panel)
+        #  [[01000][00001][00001]]  --- h,w=2,0 is panel 1, others are panel 4 (empty panel)
+        #  [[00010][00100][00001]]] --- h,w=3,0 is panel 3, h,w=3,1 is panel 2, h,w=3,2 is panel 4
+        # 
+        # target config is [0,0,1,0]
+
+        # you don't need the last panel (empty panel)
+        # a h w p
+        # [[[0000][0000][0000]]  --- all panel 4 (empty panel)
+        #  [[1000][0000][0000]]  --- h,w=1,0 is panel 0, others are panel 4 (empty panel)
+        #  [[0100][0000][0000]]  --- h,w=2,0 is panel 1, others are panel 4 (empty panel)
+        #  [[0001][0010][0000]]] --- h,w=3,0 is panel 3, h,w=3,1 is panel 2, h,w=3,2 is panel 4
+        config = matches[:, :, :, 0:-1]
         
-        # we need: a p w  --- height is irrelevant
-        config = K.permute_dimensions(matches, [0,3,2,1])
-        # now a p w h
-        # [ [[100] [000] [000]]      --- panel 0 exists in w,h=0,0
-        #   [[010] [000] [000]]      --- panel 1 exists in w,h=0,1
-        #   [[001] [000] [000]]      --- panel 2 exists in w,h=0,2
-        #   [[000] [111] [111]] ]   
-        # you don't need panel 3 (empty panel)
-        config = config[:, 0:3, :, :]
         # you don't need the height info
+        # a w p
+        # [[1101][0010][0000]]
+        config = K.sum(config, 1)
+
+        # reorder to a p w
+        # [[100][100][010][100]]
+        config = K.permute_dimensions(config, [0,2,1])
+        
+        # convert one-hot width into width position
+        config = config * K.arange(0,towers,dtype='float32') # 1-4
+        # [[000][000][010][000]]
         config = K.sum(config, -1)
-        # now a p w.
-        # [ [1 0 0]      --- panel 0 exists in w,h=0,0
-        #   [1 0 0]      --- panel 1 exists in w,h=0,1
-        #   [1 0 0]      --- panel 2 exists in w,h=0,2
-        # ]
-        # now you can get the position:
-        config = config * K.arange(0,disks,dtype='float32')
-        config = K.sum(config, -1)
+        # [0 0 1 0]
         config = K.cast(config, 'int32')
-        # you get [ 0, 0, 0 ]
         return Model(states, wrap(states, config))
 
     return build().predict(states, **kwargs)
