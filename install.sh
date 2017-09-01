@@ -32,7 +32,9 @@ set -e
 
 {
     sudo apt -y install python3-pip python3-pil
-    pip3 install --user tensorflow tensorflow-gpu keras h5py matplotlib progressbar2 json
+    pip3 install --user \
+         tensorflow tensorflow-gpu keras h5py matplotlib progressbar2 json \
+         timeout_decorator ansicolors hashlib fcntl queue scipy scikit-image
     mkdir -p ~/.keras
     cp keras-tf.json ~/.keras/keras.json
 }
