@@ -6,6 +6,7 @@ trap exit SIGINT
 
 ulimit -v 16000000000
 
+parallel --files <<EOF
 ./strips.py conv puzzle summary mandrill 3 3 36 20000
 ./state_discriminator3.py samples/puzzle_mandrill_3_3_36_20000_conv/ test
 ./action_autoencoder.py   samples/puzzle_mandrill_3_3_36_20000_conv/ test
@@ -35,3 +36,4 @@ ulimit -v 16000000000
 ./state_discriminator3.py samples/hanoi_4_3_36_60_conv/ test
 ./action_autoencoder.py   samples/hanoi_4_3_36_60_conv/ test
 ./action_discriminator.py samples/hanoi_4_3_36_60_conv/ test
+EOF
