@@ -40,7 +40,11 @@ def dump_autoencoding_image(ae,test,train):
     ae.plot_autodecode(rz,"autodecoding_random.png",verbose=True)
     ae.plot(select(test,6),"autoencoding_test.png",verbose=True)
     ae.plot(select(train,6),"autoencoding_train.png",verbose=True)
-    
+
+def dump_autoencoding_image_if_necessary(ae,test,train):
+    if 'learn' not in mode:
+        dump_autoencoding_image(ae,test,train)
+
 def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     if 'dump' not in mode:
         return
@@ -171,7 +175,7 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test, parameters)
     show_summary(ae, train, test)
-    dump_autoencoding_image(ae,test[:1000],train[:1000])
+    dump_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
@@ -205,7 +209,7 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/hanoi",disks,towers,N,num_examples,encoder))), train, test, parameters)
     show_summary(ae, train, test)
-    dump_autoencoding_image(ae,test[:1000],train[:1000])
+    dump_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),)
@@ -239,7 +243,7 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/lightsout",type,size,N,num_examples,encoder))), train, test, parameters)
     show_summary(ae, train, test)
-    dump_autoencoding_image(ae,test[:1000],train[:1000])
+    dump_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
