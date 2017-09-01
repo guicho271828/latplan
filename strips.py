@@ -6,6 +6,7 @@ import numpy.random as random
 from latplan.model import default_networks
 from latplan.util        import curry
 from latplan.util.tuning import grid_search, nn_task
+from latplan.util.noise  import gaussian
 
 import keras.backend as K
 import tensorflow as tf
@@ -124,7 +125,7 @@ def run(path,train,test,parameters):
     if 'learn' in mode:
         from latplan.util import curry
         ae, _, _ = grid_search(curry(nn_task, default_networks[encoder], path,
-                                     train, train, test, test),
+                                     train, train, gaussian(test), test),
                                default_parameters,
                                parameters,
                                report = lambda ae: dump_autoencoding_image(ae,test,train))
