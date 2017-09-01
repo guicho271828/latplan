@@ -8,7 +8,7 @@ def nn_task(network, path, train_in, train_out, test_in, test_out, parameters):
                   test_data=test_in,
                   train_data_to=train_out,
                   test_data_to=test_out,
-                  report=True,
+                  report=False,
                   **parameters,)
         error = net.net.evaluate(test_in,test_out,batch_size=100,verbose=0)
     finally:
@@ -29,7 +29,7 @@ def merge_hash(a, b):
     return c
 
 def grid_search(task, default_parameters, parameters,
-                report=None,
+                report=None, report_best=None,
                 limit=float('inf')):
     best_eval     = float('inf')
     best_params   = None
@@ -49,14 +49,16 @@ def grid_search(task, default_parameters, parameters,
             print("{}/{} {}".format(i, len(all_params), local_parameters))
             artifact, eval = task(merge_hash(default_parameters,local_parameters))
             results.append((eval, local_parameters))
+            if report:
+                report(artifact)
             print("Evaluation result for:\n{}\neval = {}".format(local_parameters,eval))
             print("Current results:")
             results.sort(key=lambda result: result[0])
             [ print(r) for r in results]
             if eval < best_eval:
                 print("Found a better parameter:\n{}\neval:{} old-best:{}".format(local_parameters,eval,best_eval))
-                if report:
-                    report(artifact)
+                if report_best:
+                    report_best(artifact)
                 del best_artifact
                 best_params = local_parameters
                 best_eval = eval

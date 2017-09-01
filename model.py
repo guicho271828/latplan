@@ -213,6 +213,9 @@ class Network:
                 callbacks=self.callbacks)
         except KeyboardInterrupt:
             print("learning stopped\n")
+        finally:
+            # force the metrics are not returned in the evaluation
+            self.net.compile(optimizer=o, loss=self.loss)
         self.loaded = True
         if report:
             self.report(train_data,
