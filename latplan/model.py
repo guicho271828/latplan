@@ -550,15 +550,23 @@ class GumbelAE(AE):
         by = self.decode_binary(b)
         M, N = self.parameters['M'], self.parameters['N']
 
+        xg = gaussian(x)
+        xs = salt(x)
+        xp = pepper(x)
+
+        yg = self.autoencode(xg)
+        ys = self.autoencode(xs)
+        yp = self.autoencode(xp)
+        
         from .util.plot import plot_grid, squarify
         _z = squarify(z)
         _b = squarify(b)
         
         images = []
         from .util.plot import plot_grid
-        for seq in zip(x, _z, y, _b, by):
+        for seq in zip(x, _z, y, _b, by, xg, yg, xs, ys, xp, yp):
             images.extend(seq)
-        plot_grid(images, w=10, path=self.local(path), verbose=verbose)
+        plot_grid(images, w=11, path=self.local(path), verbose=verbose)
         return x,z,y,b,by
 
     def plot_autodecode(self,data,path,verbose=False):
