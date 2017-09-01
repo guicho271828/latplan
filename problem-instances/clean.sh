@@ -1,5 +1,5 @@
 #!/bin/bash
 
-rm -v $(dirname $0)/*/*/*.log
-rm -v $(dirname $0)/*/*/*path*
-rm -v $(dirname $0)/*/*/*reconstruction*
+find -name "*.log" -delete
+find -name "*path*" -delete
+find -name "*reconstruction*" -delete
