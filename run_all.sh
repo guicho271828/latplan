@@ -43,7 +43,7 @@ parallel -j $jobs --eta --timeout 180 --joblog problem-instances/latplan.puzzles
 
 parallel -j $jobs --eta --timeout 180 --joblog problem-instances/latplan.puzzles.hanoi.csv   \
          "./trivial-planner.py samples/{1} {2} {3} > {2}/{1}_{3}.log" \
-         ::: hanoi_4_3_36_60_conv \
+         ::: hanoi_4_3_36_60_conv hanoi_4_3_36_81_conv \
          ::: problem-instances/latplan.puzzles.hanoi/* \
          ::: Astar
 
