@@ -319,7 +319,7 @@ def main(network_dir, problem_dir, searcher):
 
     def r(i):
         s = i.shape
-        return i.reshape((s[0]//2, 2, s[0]//2, 2)).mean(axis=(1,3))
+        return i.reshape((s[0]//2, 2, s[1]//2, 2)).mean(axis=(1,3))
     
     plot_grid([init_image,init_rec,init_image-init_rec,(init_image-init_rec).round(),
                init_image.round(),init_rec.round(),init_image.round()-init_rec.round(),(init_image.round()-init_rec.round()).round(),
