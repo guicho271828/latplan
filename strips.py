@@ -192,6 +192,7 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
         'activation' : ['relu'],
         'full_epoch' :[1000],
         'epoch'      :[1000],
+        'lr_epoch'   :[0.5],
         'batch_size' :[500],
         'optimizer'  :['adam'],
         'lr'         :[0.001],
