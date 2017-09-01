@@ -215,14 +215,16 @@ class Network:
         self.loaded = True
         if report:
             self.report(train_data,
-                        epoch,batch_size,o,
-                        test_data,train_data_to,test_data_to)
+                        batch_size=batch_size,
+                        test_data=test_data,
+                        train_data_to=train_data_to,
+                        test_data_to=test_data_to)
         if save:
             self.save()
         return self
     
     def report(self,train_data,
-               epoch=200,batch_size=1000,optimizer=Adam(0.001),
+               batch_size=1000,
                test_data=None,
                train_data_to=None,
                test_data_to=None):
@@ -354,6 +356,15 @@ class SimpleGumbelSoftmax(GumbelSoftmax):
         self.logits = prev
         return Lambda(self.call,name="simplegumbel_{}".format(c))(prev)
 
+def gaussian(a):
+    return np.clip(np.random.normal(0,0.3,a.shape) + a, 0,1)
+
+def salt(a):
+    return np.clip(np.clip(np.sign(0.06 - np.random.uniform(0,1,a.shape)), 0, 1) + a, 0, 1)
+
+def pepper(a):
+    return np.clip(a - np.clip(np.sign(0.06 - np.random.uniform(0,1,a.shape)), 0, 1), 0, 1)
+
 # Network mixins ################################################################
 class AE(Network):
     def _save(self):
@@ -367,10 +378,11 @@ class AE(Network):
         self.decoder.load_weights(self.local("decoder.h5"))
 
     def report(self,train_data,
-               epoch=200,batch_size=1000,optimizer=Adam(0.001),
                test_data=None,
                train_data_to=None,
-               test_data_to=None,):
+               test_data_to=None,
+               batch_size=1000,
+               **kwargs):
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
@@ -379,12 +391,24 @@ class AE(Network):
             print(msg.format(fn(train_data)))
             if test_data is not None:
                 print((msg+" (validation)").format(fn(test_data)))
-        self.autoencoder.compile(optimizer=optimizer, loss=mse)
+        self.autoencoder.compile(optimizer='adam', loss=mse)
         test_both("Reconstruction MSE: {}",
                   lambda data: self.autoencoder.evaluate(data,data,**opts))
-        self.autoencoder.compile(optimizer=optimizer, loss=bce)
-        test_both("Reconstruction BCE: {}",
-                  lambda data: self.autoencoder.evaluate(data,data,**opts))
+        test_both("Reconstruction MSE (gaussian 0.3): {}",
+                  lambda data: self.autoencoder.evaluate(gaussian(data),data,**opts))
+        test_both("Reconstruction MSE (salt 0.06): {}",
+                  lambda data: self.autoencoder.evaluate(salt(data),data,**opts))
+        test_both("Reconstruction MSE (pepper 0.06): {}",
+                  lambda data: self.autoencoder.evaluate(pepper(data),data,**opts))
+        # self.autoencoder.compile(optimizer=optimizer, loss=bce)
+        # test_both("Reconstruction BCE: {}",
+        #           lambda data: self.autoencoder.evaluate(data,data,**opts))
+        # test_both("Noise reconstruction BCE (gaussian 0.3): {}",
+        #           lambda data: self.autoencoder.evaluate(gaussian(data),data,**opts))
+        # test_both("Noise reconstruction BCE (salt 0.1): {}",
+        #           lambda data: self.autoencoder.evaluate(salt(data),data,**opts))
+        # test_both("Noise reconstruction BCE (pepper 0.1): {}",
+        #           lambda data: self.autoencoder.evaluate(pepper(data),data,**opts))
         test_both("Latent activation: {}",
                   lambda data: self.encode_binary(train_data,batch_size=batch_size,).mean())
         return self

@@ -131,9 +131,14 @@ def run(path,train,test,parameters):
         ae.save()
     else:
         ae = default_networks[encoder](path).load()
-        ae.summary()
     return ae
 
+def show_summary(ae,train,test):
+    if 'summary' in mode:
+        ae.summary()
+        ae.report(train, test, train, test)
+
+################################################################
 
 def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     parameters = {
@@ -162,6 +167,7 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test, parameters)
+    show_summary(ae, train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
@@ -194,6 +200,7 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/hanoi",disks,towers,N,num_examples,encoder))), train, test, parameters)
+    show_summary(ae, train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
@@ -226,6 +233,7 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/lightsout",type,size,N,num_examples,encoder))), train, test, parameters)
+    show_summary(ae, train, test)
     dump_autoencoding_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
