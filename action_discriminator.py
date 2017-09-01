@@ -119,8 +119,7 @@ def prepare_oae_validated(known_transisitons):
     N = known_transisitons.shape[1] // 2
     y = generate_oae_action(known_transisitons)
 
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
+    p = latplan.util.puzzle_module(sae.path)
     batch = 100000
     valid_suc = np.zeros(len(y),dtype=bool)
     for i in range(1+len(y)//batch):
@@ -165,8 +164,7 @@ def prepare_oae_PU2(known_transisitons):
     print("**** CHEATING ****")
     N = known_transisitons.shape[1] // 2
     y = generate_oae_action(known_transisitons)
-    import latplan.puzzles.puzzle_mnist as p
-    p.setup()
+    p = latplan.util.puzzle_module(sae.path)
     batch = 100000
     valid_suc = np.zeros(len(y),dtype=bool)
     for i in range(1+len(y)//batch):
