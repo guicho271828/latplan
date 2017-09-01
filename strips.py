@@ -165,7 +165,7 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     p.setup()
     configs = p.generate_configs(width*height)
     configs = np.array([ c for c in configs ])
-    assert len(configs) > num_examples
+    assert len(configs) >= num_examples
     print(len(configs))
     random.shuffle(configs)
     transitions = p.transitions(width,height,configs[:num_examples],one_per_state=True)
@@ -199,7 +199,7 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     import latplan.puzzles.hanoi as p
     configs = p.generate_configs(disks,towers)
     configs = np.array([ c for c in configs ])
-    assert len(configs) > num_examples
+    assert len(configs) >= num_examples
     print(len(configs))
     random.shuffle(configs)
     transitions = p.transitions(disks,towers,configs[:num_examples],one_per_state=True)
@@ -233,7 +233,7 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     configs = p.generate_configs(size)
     configs = np.array([ c for c in configs ])
-    assert len(configs) > num_examples
+    assert len(configs) >= num_examples
     print(len(configs))
     random.shuffle(configs)
     transitions = p.transitions(size,configs[:num_examples],one_per_state=True)
