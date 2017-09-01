@@ -31,7 +31,7 @@ def merge_hash(a, b):
 def grid_search(task, default_parameters, parameters,
                 report=None, report_best=None,
                 limit=float('inf')):
-    best_eval     = float('inf')
+    best_eval     = None
     best_params   = None
     best_artifact = None
     results       = []
@@ -55,7 +55,7 @@ def grid_search(task, default_parameters, parameters,
             print("Current results:")
             results.sort(key=lambda result: result[0])
             [ print(r) for r in results]
-            if eval < best_eval:
+            if best_eval is None or eval < best_eval:
                 print("Found a better parameter:\n{}\neval:{} old-best:{}".format(local_parameters,eval,best_eval))
                 if report_best:
                     report_best(artifact)
