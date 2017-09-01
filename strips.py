@@ -37,8 +37,8 @@ def dump_autoencoding_image(ae,test,train):
         return
     rz = np.random.randint(0,2,(6,ae.parameters['N']))
     ae.plot_autodecode(rz,"autodecoding_random.png",verbose=True)
-    ae.plot(select(test,12),"autoencoding_test.png",verbose=True)
-    ae.plot(select(train,12),"autoencoding_train.png",verbose=True)
+    ae.plot(select(test,6),"autoencoding_test.png",verbose=True)
+    ae.plot(select(train,6),"autoencoding_train.png",verbose=True)
     
 def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     if 'dump' not in mode:
