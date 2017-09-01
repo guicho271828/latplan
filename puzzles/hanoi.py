@@ -12,8 +12,8 @@ import tensorflow as tf
 
 ## code ##############################################################
 
-disk_height = 1
-disk_inc = 1
+disk_height = 4
+disk_inc = 2
 base_disk_width_factor = 1
 base_disk_width = disk_height * base_disk_width_factor
 
