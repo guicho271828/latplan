@@ -3,6 +3,7 @@ from . import plot
 from . import mnist
 from . import tuning
 from . import timer
+from . import noise
 
 def get_ae_type(directory):
     import os.path
