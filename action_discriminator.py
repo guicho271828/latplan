@@ -193,7 +193,8 @@ def prepare_oae_PU3(known_transisitons):
     ind = np.where(np.squeeze(combined(y[:,N:])) > 0.5)[0]
     
     y = y[ind]
-    y = y[:len(known_transisitons)] # undersample
+    if len(known_transisitons) > 100:
+        y = y[:len(known_transisitons)] # undersample
     return (default_networks['PUDiscriminator'], *prepare_binary_classification_data(known_transisitons, y))
 
 ################################################################
