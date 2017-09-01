@@ -36,3 +36,8 @@ ulimit -v 16000000000
 ./action_autoencoder.py   samples/hanoi_4_3_36_60_conv/ learn_test
 ./action_discriminator.py samples/hanoi_4_3_36_60_conv/ learn_test
 
+./strips.py conv hanoi learn_plot_dump 4 3 36 81
+./state_discriminator3.py samples/hanoi_4_3_36_81_conv/ learn_test
+./action_autoencoder.py   samples/hanoi_4_3_36_81_conv/ learn_test
+./action_discriminator.py samples/hanoi_4_3_36_81_conv/ learn_test
+
