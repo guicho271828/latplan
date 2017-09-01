@@ -125,10 +125,11 @@ def run(path,train,test,parameters):
     if 'learn' in mode:
         from latplan.util import curry
         ae, _, _ = grid_search(curry(nn_task, default_networks[encoder], path,
-                                     train, train, gaussian(test), test),
+                                     train, train, gaussian(test), test), # noise data is used for tuning metric
                                default_parameters,
                                parameters,
-                               report = lambda ae: dump_autoencoding_image(ae,test,train))
+                               report      = lambda ae: ae.report(train, train, test, test),
+                               report_best = lambda ae: dump_autoencoding_image(ae,test,train))
         ae.save()
     else:
         ae = default_networks[encoder](path).load()
