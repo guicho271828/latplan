@@ -5,6 +5,7 @@ import os
 import os.path
 import sys
 sys.path.append('../../')
+from latplan.util.noise import gaussian, salt, pepper
 
 import matplotlib
 matplotlib.use('Agg')
@@ -130,19 +131,6 @@ def lightsout(type='digital', size=4):
     ]
     gcs = np.full((1,size*size),-1)
     generate(p, ics, gcs)
-
-################################################################
-
-# noise functions
-
-def gaussian(a):
-    return np.clip(np.random.normal(0,0.3,a.shape) + a, 0,1)
-
-def salt(a):
-    return np.clip(np.clip(np.sign(0.06 - np.random.uniform(0,1,a.shape)), 0, 1) + a, 0, 1)
-
-def pepper(a):
-    return np.clip(a - np.clip(np.sign(0.06 - np.random.uniform(0,1,a.shape)), 0, 1), 0, 1)
 
 ################################################################
 
