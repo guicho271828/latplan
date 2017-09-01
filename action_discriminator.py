@@ -214,7 +214,7 @@ parameters = {
     'num_layers' :[1,2,3],
     'layer'      :[50,300,1000],# [400,4000],
     'dropout'    :[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],    #[0.1,0.4], #0.6,0.7,
-    'batch_size' :[4000],
+    'batch_size' :[1000],
     'full_epoch' :[1000],
     'activation' :['tanh','relu'],
     # quick eval
@@ -227,7 +227,7 @@ parameters = {
     'num_layers' :[1],
     'layer'      :[300],# [400,4000],
     'dropout'    :[0.8],    #[0.1,0.4], #0.6,0.7,
-    'batch_size' :[4000],
+    'batch_size' :[1000],
     'full_epoch' :[1000],
     'activation' :['relu'],
     # quick eval
