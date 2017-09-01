@@ -31,6 +31,7 @@ load_session()
 steps     = 5
 instances = 100
 noise_fn     = None
+output_dir = "vanilla"
 
 def random_walk(init_c,length,successor_fn):
     print(".",end="")
@@ -60,7 +61,15 @@ def random_walk_rec(current, trace, length, successor_fn):
             else:
                 continue
 
+def safe_chdir(path):
+    try:
+        os.mkdir(path)
+    except:
+        pass
+    os.chdir(path)
+
 def generate(p, ics, gcs, *args):
+    safe_chdir(output_dir)
     from scipy import misc
     import subprocess
     import datetime
@@ -95,6 +104,8 @@ def puzzle(type='mnist', width=3, height=3):
     generate(p, ics, gcs, width, height)
 
 def puzzle_longest(type='mnist', width=3, height=3):
+    global output_dir
+    output_dir = "longest"
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
@@ -137,6 +148,8 @@ def lightsout(type='digital', size=4):
 def noise(fn, domain, *args):
     global noise_fn
     noise_fn = fn
+    global output_dir
+    output_dir = fn.__name__
     domain(*args)
 
 ################################################################
@@ -145,7 +158,6 @@ def main():
     import sys
     try:
         print('args:',sys.argv)
-
         def myeval(str):
             try:
                 return eval(str)
