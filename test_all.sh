@@ -29,23 +29,32 @@ ulimit -v 16000000000
 # EOF
 
 
-parallel --files <<EOF
+parallel --eta --files <<EOF
 
-./state_discriminator3.py samples/puzzle_mandrill_3_3_36_20000_conv/ test
 ./action_discriminator.py samples/puzzle_mandrill_3_3_36_20000_conv/ test
 
-./state_discriminator3.py samples/puzzle_mnist_3_3_36_20000_conv/ test
 ./action_discriminator.py samples/puzzle_mnist_3_3_36_20000_conv/ test
 
-./state_discriminator3.py samples/puzzle_spider_3_3_36_20000_conv/ test
 ./action_discriminator.py samples/puzzle_spider_3_3_36_20000_conv/ test
 
-./state_discriminator3.py samples/lightsout_digital_4_36_20000_conv/ test
 ./action_discriminator.py samples/lightsout_digital_4_36_20000_conv/ test
 
-./state_discriminator3.py samples/lightsout_twisted_4_36_20000_conv/ test
 ./action_discriminator.py samples/lightsout_twisted_4_36_20000_conv/ test
 
-./state_discriminator3.py samples/hanoi_4_3_36_60_conv/ test
 ./action_discriminator.py samples/hanoi_4_3_36_60_conv/ test
+EOF
+
+parallel -j 2 --eta --files <<EOF
+
+./state_discriminator3.py samples/puzzle_mandrill_3_3_36_20000_conv/ test
+
+./state_discriminator3.py samples/puzzle_mnist_3_3_36_20000_conv/ test
+
+./state_discriminator3.py samples/puzzle_spider_3_3_36_20000_conv/ test
+
+./state_discriminator3.py samples/lightsout_digital_4_36_20000_conv/ test
+
+./state_discriminator3.py samples/lightsout_twisted_4_36_20000_conv/ test
+
+./state_discriminator3.py samples/hanoi_4_3_36_60_conv/ test
 EOF
