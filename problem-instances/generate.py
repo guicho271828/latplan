@@ -5,7 +5,7 @@ import os
 import os.path
 import sys
 sys.path.append('../../')
-from latplan.util.noise import gaussian, salt, pepper
+from latplan.util.noise import gaussian, salt, pepper, saltpepper
 
 import matplotlib
 matplotlib.use('Agg')
