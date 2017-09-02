@@ -2,6 +2,12 @@
 .PRECIOUS: %.sasp
 .SECONDARY: %.sas
 
+all: table
+
+table: table.ros
+	ros build table.ros
+
+
 domain.pddl:
 	touch domain.pddl
 
