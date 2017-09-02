@@ -239,11 +239,12 @@ def test(method):
     ################################################################
     # type 2 error
     inflation = 1
-    _,_,_,_, _, states_invalid = prepare(states_valid,sae)
+    _,_,_,_, _, states_invalid = prepare(states_valid[:30000],sae)
 
     p = latplan.util.puzzle_module(sae.path)
     is_valid = p.validate_states(sae.decode_binary(states_invalid))
     states_invalid = states_invalid[np.logical_not(is_valid)]
+    states_invalid = states_invalid[:10000]
 
     if len(states_invalid) == 0:
         print("We observed ZERO invalid states.")
