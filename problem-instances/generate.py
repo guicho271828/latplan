@@ -5,6 +5,7 @@ import os
 import os.path
 import sys
 sys.path.append('../../')
+from latplan.util import curry
 from latplan.util.noise import gaussian, salt, pepper, saltpepper
 
 import matplotlib
@@ -145,9 +146,9 @@ def lightsout(type='digital', size=4):
 
 ################################################################
 
-def noise(fn, domain, *args):
+def noise(fn, param, domain, *args):
     global noise_fn
-    noise_fn = fn
+    noise_fn = lambda a: fn(a,param)
     global output_dir
     output_dir = fn.__name__
     domain(*args)
