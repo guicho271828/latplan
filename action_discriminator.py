@@ -230,9 +230,9 @@ parameters = {
 
 # tuned results
 parameters = {
-    'num_layers' :[1],
+    'num_layers' :[1,2],
     'layer'      :[300],# [400,4000],
-    'dropout'    :[0.8],    #[0.1,0.4], #0.6,0.7,
+    'dropout'    :[0.5, 0.8],    #[0.1,0.4], #0.6,0.7,
     'batch_size' :[1000],
     'full_epoch' :[1000],
     'activation' :['relu'],
@@ -240,6 +240,13 @@ parameters = {
     'epoch'      :[3000],
     'lr'         :[0.001],
 }
+
+# good for puzzles
+# {"dropout": 0.8, "full_epoch": 1000, "layer": 300, "num_layers": 1,
+#  "batch_size": 1000, "activation": "relu", "epoch": 3000, "lr": 0.001}
+# good for lightsout
+# {'dropout': 0.5, 'full_epoch': 1000, 'layer': 300, 'num_layers': 2,
+#  'batch_size': 1000, 'activation': 'relu', 'epoch': 3000, 'lr': 0.001}
 
 def bce(x,y):
     from keras.layers import Input
