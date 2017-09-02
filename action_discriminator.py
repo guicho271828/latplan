@@ -73,6 +73,7 @@ def repeat_over(array, repeats, axis=0):
     return np.reshape(array,(*array.shape[:axis],-1,*array.shape[axis+2:]))
 
 def generate_oae_action(known_transisitons):
+    print("listing actions")
     actions = oae.encode_action(known_transisitons, batch_size=1000).round()
     histogram = np.squeeze(actions.sum(axis=0,dtype=int))
     available_actions = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
@@ -81,6 +82,7 @@ def generate_oae_action(known_transisitons):
 
     N = known_transisitons.shape[1] // 2
     states = known_transisitons.reshape(-1, N)
+    print("start generating transitions")
     y = oae.decode([
         # s1,s2,s3,s1,s2,s3,....
         repeat_over(states, len(available_actions), axis=0),
@@ -88,9 +90,10 @@ def generate_oae_action(known_transisitons):
         np.repeat(available_actions, len(states), axis=0),], batch_size=1000) \
            .round().astype(np.int8)
 
+    print("remove known transitions")
     y = set_difference(y, known_transisitons)
+    print("shuffling")
     random.shuffle(y)
-
     return y
 
 ################################################################
@@ -187,12 +190,15 @@ def prepare_oae_PU3(known_transisitons):
           sep="\n")
     N = known_transisitons.shape[1] // 2
     y = generate_oae_action(known_transisitons)
-    
+
+    print("removing invalid successors (sd3)")
     ind = np.where(np.squeeze(combined(y[:,N:])) > 0.5)[0]
     
     y = y[ind]
     if len(known_transisitons) > 100:
         y = y[:len(known_transisitons)] # undersample
+    
+    print("creating binary classification labels")
     return (default_networks['PUDiscriminator'], *prepare_binary_classification_data(known_transisitons, y))
 
 ################################################################
