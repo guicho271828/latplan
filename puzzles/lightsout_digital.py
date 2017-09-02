@@ -10,19 +10,9 @@ from keras.models import Model
 from keras import backend as K
 import tensorflow as tf
 
-panels = [
-    [[0, 0, 0, 0, 0,],
-     [0, 0, 1, 0, 0,],
-     [0, 1, 1, 1, 0,],
-     [0, 0, 1, 0, 0,],
-     [0, 0, 0, 0, 0,],],
-    [[0, 0, 0, 0, 0,],
-     [0, 0, 0, 0, 0,],
-     [0, 0, 0, 0, 0,],
-     [0, 0, 0, 0, 0,],
-     [0, 0, 0, 0, 0,],]]
-
-panels = np.array(panels)
+panels = np.zeros((2,9,9))
+panels[0, 4:6, :] = 1
+panels[0, :, 4:6] = 1
 
 # config representation: on = 1, off = -1 , not zero!!
 
