@@ -61,7 +61,7 @@ def prepare(data_valid, sae):
     batch = data_valid.shape[0]
     for i in range(inflation-1):
         data_invalid = np.concatenate((data_invalid,
-                                       set_difference(generate(),data_invalid))
+                                       set_difference(generate_random(),data_invalid))
                                       , axis=0)
         print(batch, "->", len(data_invalid), "invalid examples")
     if inflation != 1:
