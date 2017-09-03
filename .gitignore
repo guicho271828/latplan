@@ -12,3 +12,4 @@ learn/events*
 /mnist_model/
 *.bin
 *.lprof
+/samples/table
