@@ -13,7 +13,7 @@ set -e
 {
     sudo apt install -y mercurial g++ cmake make python flex bison g++-multilib
     git submodule update --init --recursive
-    cd downward ; ./build.py
+    cd downward ; ./build.py release64
 }
 
 
@@ -31,10 +31,10 @@ set -e
 }
 
 {
-    sudo apt -y install python3-pip python3-pil
+    sudo apt -y install python3-pip python3-pil parallel
     pip3 install --user \
-         tensorflow tensorflow-gpu keras h5py matplotlib progressbar2 json \
-         timeout_decorator ansicolors hashlib fcntl queue scipy scikit-image
+         tensorflow keras h5py matplotlib progressbar2 \
+         timeout_decorator ansicolors scipy scikit-image
     mkdir -p ~/.keras
     cp keras-tf.json ~/.keras/keras.json
 }
