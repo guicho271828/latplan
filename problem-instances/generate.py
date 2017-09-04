@@ -112,12 +112,18 @@ def puzzle_longest(type='mnist', width=3, height=3):
     p.setup()
     ics = [
         # from Reinfield '93
-        [8,0,6,5,4,7,2,3,1], # the second instance with the longest optimal solution 31
-        [8,7,6,0,4,1,2,5,3], # the first instance with the longest optimal solution 31
-        [8,5,6,7,2,3,4,1,0], # the first instance with the most solutions
-        [8,5,4,7,6,3,2,1,0], # the second instance with the most solutions
-        [8,6,7,2,5,4,3,0,1], # the "wrong"? hardest eight-puzzle from
-        [6,4,7,8,5,0,3,2,1], # w01fe.com/blog/2009/01/the-hardest-eight-puzzle-instances-take-31-moves-to-solve/
+        # [8,0,6,5,4,7,2,3,1], # the second instance with the longest optimal solution 31
+        [3,5,6,8,4,7,2,1,0],
+        # [8,7,6,0,4,1,2,5,3], # the first instance with the longest optimal solution 31
+        [1,8,6,7,4,3,2,5,0],
+        # [8,5,6,7,2,3,4,1,0], # the first instance with the most solutions
+        [8,7,4,5,6,1,2,3,0],
+        # [8,5,4,7,6,3,2,1,0], # the second instance with the most solutions
+        [8,7,6,5,2,1,4,3,0],
+        # [8,6,7,2,5,4,3,0,1], # the "wrong"? hardest eight-puzzle from
+        [7,8,3,6,5,4,1,2,0],
+        # [6,4,7,8,5,0,3,2,1], # w01fe.com/blog/2009/01/the-hardest-eight-puzzle-instances-take-31-moves-to-solve/
+        [5,8,7,6,1,4,0,2,3],
     ]
     gcs = np.arange(width*height).reshape((1,width*height))
     generate(p, ics, gcs, width, height)
