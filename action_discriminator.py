@@ -111,7 +111,7 @@ def prepare(data):
 
     data_valid   = np.repeat(data, len(data_invalid)//len(data), axis=0)
 
-    return prepare_binary_classification_data(data_valid, data_invalid)
+    return (default_networks['PUDiscriminator'], *prepare_binary_classification_data(data_valid, data_invalid))
 
 # This is a cheating, since we assume validation oracle
 def prepare_oae_validated(known_transisitons):
