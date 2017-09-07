@@ -68,7 +68,13 @@ if __name__ == '__main__':
         aae.save()
 
     N = data.shape[1]//2
-    all_labels = np.identity(128).reshape((128,1,128))
+    
+    actions = aae.encode_action(data, batch_size=1000).round()
+    histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+    all_labels = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+    for i, pos in enumerate(np.where(histogram > 0)[0]):
+        all_labels[i][0][pos] = 1
+
     
     from latplan.util import get_ae_type
     ae = default_networks[get_ae_type(directory)](directory).load()
@@ -76,13 +82,24 @@ if __name__ == '__main__':
     if 'plot' in mode:
         aae.plot(data[:8], "aae_train.png")
         aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test.png")
-
-
+        
+        
         aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
         aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test_decoded.png", ae=ae)
-
-        transitions = aae.decode([np.repeat(data[:1,:N], 128, axis=0), all_labels])
+        
+        transitions = aae.decode([np.repeat(data[:1,:N], len(all_labels), axis=0), all_labels])
         aae.plot(transitions, "aae_all_actions_for_a_state.png", ae=ae)
+        
+        from latplan.util.timer import Timer
+        # with Timer("loading csv..."):
+        #     all_actions = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
+        # transitions = aae.decode([np.repeat(all_actions[:1,:N], len(all_labels), axis=0), all_labels])
+        suc = transitions[:,N:]
+        from latplan.util.plot import plot_grid, squarify
+        plot_grid([x for x in ae.decode_binary(suc)], w=8, path=aae.local("aae_all_actions_for_a_state_8x16.png"), verbose=True)
+        plot_grid([x for x in ae.decode_binary(suc)], w=16, path=aae.local("aae_all_actions_for_a_state_16x8.png"), verbose=True)
+        plot_grid(ae.decode_binary(data[:1,:N]), w=1, path=aae.local("aae_all_actions_for_a_state_state.png"), verbose=True)
+        
     
     if 'check' in mode:
         from latplan.util.timer import Timer
