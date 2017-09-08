@@ -53,22 +53,22 @@ def network(path):
     return "{}_{}{}".format(ensure_directory(network_dir).split("/")[-2], root, ext)
 
 def preprocess(bits):
-    np.savetxt(problem("ama1_ig.csv"),[bits],"%d")
+    np.savetxt(problem(network("ama1_ig.csv")),[bits],"%d")
     echodo(["touch",problem("domain.pddl")]) # dummy file, just making planner-scripts work
     echodo(["helper/sas.sh",
             os.path.join(ensure_directory(network_dir),"{}.csv".format(action_type)),
-            problem("ama1_ig.csv".format(action_type)),
-            problem("{}.sas".format(action_type))])
+            problem(network("ama1_ig.csv")),
+            problem(network("{}.sas".format(action_type)))])
     echodo(["helper/sasp.sh",
-            problem("{}.sas".format(action_type)),
-            problem("{}.sasp".format(action_type))])
+            problem(network("{}.sas".format(action_type))),
+            problem(network("{}.sasp".format(action_type)))])
 
 def latent_plan(init,goal,mode):
     bits = np.concatenate((init,goal))
     ###### preprocessing ################################################################
 
     ## old code for caching...
-    lock = problem("lock")
+    lock = problem(network("lock"))
     import fcntl
     try:
         with open(lock) as f:
@@ -80,9 +80,9 @@ def latent_plan(init,goal,mode):
             preprocess(bits)
 
     ###### do planning #############################################
-    sasp     = problem("{}.sasp".format(action_type))
-    plan_raw = problem("{}.sasp.plan".format(action_type))
-    plan     = problem("{}.{}.plan".format(action_type,mode))
+    sasp     = problem(network("{}.sasp".format(action_type)))
+    plan_raw = problem(network("{}.sasp.plan".format(action_type)))
+    plan     = problem(network("{}.{}.plan".format(action_type,mode)))
     
     echodo(["planner-scripts/limit.sh","-v", "-o",options[mode], "--","fd-sas-clean", sasp])
     assert os.path.exists(plan_raw)
