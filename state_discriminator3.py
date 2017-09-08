@@ -13,8 +13,6 @@ import tensorflow as tf
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
-inflation = 1
-
 def generate_random(data,sae):
     threshold = 0.01
     rate_threshold = 0.99
@@ -54,7 +52,7 @@ def generate_random(data,sae):
     data_invalid = set_difference(data_invalid.round(), data.round())
     return data_invalid
 
-def prepare(data_valid, sae):
+def prepare(data_valid, sae, inflation=1):
     batch = data_valid.shape[0]
     data_invalid = generate_random(data_valid, sae)
     try:
@@ -237,7 +235,6 @@ def test(method):
 
     ################################################################
     # type 2 error
-    inflation = 1
     _,_,_,_, _, states_invalid = prepare(states_valid[:50000],sae)
     print(len(states_invalid),"reconstructable states generated.")
 
