@@ -4,7 +4,7 @@ import config
 import numpy as np
 import latplan
 from latplan.model import default_networks, combined_discriminate, combined_discriminate2
-from latplan.util        import curry, prepare_binary_classification_data, set_difference, bce
+from latplan.util        import curry, prepare_binary_classification_data, set_difference, union, bce
 from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
@@ -51,23 +51,22 @@ def generate_random(data,sae):
     data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
     data_invalid = regenerate_many(sae, data_invalid)
     data_invalid = prune_unreconstructable(sae, data_invalid)
-    from latplan.util import set_difference
     data_invalid = set_difference(data_invalid.round(), data.round())
     return data_invalid
 
 def prepare(data_valid, sae):
-    data_invalid = generate_random(data_valid, sae)
-
     batch = data_valid.shape[0]
-    for i in range(inflation-1):
-        data_invalid = np.concatenate((data_invalid,
-                                       set_difference(generate_random(),data_invalid))
-                                      , axis=0)
-        print(batch, "->", len(data_invalid), "invalid examples")
-    if inflation != 1:
-        real_inflation = len(data_invalid)//batch
-        data_invalid = data_invalid[:batch*real_inflation]
-        data_valid   = np.repeat(data_valid, real_inflation, axis=0)
+    data_invalid = generate_random(data_valid, sae)
+    try:
+        while len(data_invalid) < inflation * batch:
+            data_invalid = union(data_invalid, generate_random(data_valid, sae))
+            print(batch, "valid examples", len(data_invalid), "invalid examples", "target is", inflation * batch)
+    except KeyboardInterrupt:
+        print("generation stopped")
+
+    data_invalid = data_invalid[:int(batch*inflation)]
+    if inflation > 1:
+        data_valid   = np.repeat(data_valid, inflation, axis=0)
 
     train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
     return train_in, train_out, test_in, test_out, data_valid, data_invalid
