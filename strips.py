@@ -76,10 +76,11 @@ def dump_actions(ae,transitions,name="actions.csv",repeat=1):
         print(ae.local(name))
         with open(ae.local(name), 'wb') as f:
             orig, dest = transitions[0], transitions[1]
-            orig_b = ae.encode_binary(orig,batch_size=1000).round().astype(int)
-            dest_b = ae.encode_binary(dest,batch_size=1000).round().astype(int)
-            actions = np.concatenate((orig_b,dest_b), axis=1)
-            np.savetxt(f,actions,"%d")
+            for i in range(repeat):
+                orig_b = ae.encode_binary(orig,batch_size=1000).round().astype(int)
+                dest_b = ae.encode_binary(dest,batch_size=1000).round().astype(int)
+                actions = np.concatenate((orig_b,dest_b), axis=1)
+                np.savetxt(f,actions,"%d")
     except AttributeError:
         print("this AE does not support dumping")
     except KeyboardInterrupt:
@@ -113,7 +114,8 @@ def dump_states(ae,states,name="states.csv",repeat=1):
     try:
         print(ae.local(name))
         with open(ae.local(name), 'wb') as f:
-            np.savetxt(f,ae.encode_binary(states,batch_size=1000).round().astype(int),"%d")
+            for i in range(repeat):
+                np.savetxt(f,ae.encode_binary(states,batch_size=1000).round().astype(int),"%d")
     except AttributeError:
         print("this AE does not support dumping")
     except KeyboardInterrupt:
