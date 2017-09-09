@@ -1069,12 +1069,15 @@ class ActionAE(AE):
         suc_reconstruction2 = ConditionalSequential(_decoder, pre2, axis=1)(flatten(action2))
         y2 = Concatenate(axis=1)([pre2,suc_reconstruction2])
 
+        def rec(x, y):
+            return bce(K.reshape(x,(K.shape(x)[0],dim*2,)),
+                       K.reshape(y,(K.shape(x)[0],dim*2,)))
         def loss(x, y):
             kl_loss = gs.loss()
-            reconstruction_loss = bce(K.reshape(x,(K.shape(x)[0],dim*2,)),
-                                      K.reshape(y,(K.shape(x)[0],dim*2,)))
+            reconstruction_loss = rec(x, y)
             return reconstruction_loss + kl_loss
 
+        self.metrics.append(rec)
         self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
         self.loss = loss
