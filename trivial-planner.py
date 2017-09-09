@@ -99,7 +99,7 @@ def state_discriminator3_filtering(y):
 
 def cheating_validation_filtering(y):
     N = y.shape[1]//2
-    p = latplan.util.puzzle_module(directory)
+    p = latplan.util.puzzle_module(sae.local(""))
     pre_images = sae.decode_binary(y[:,:N],batch_size=1000)
     suc_images = sae.decode_binary(y[:,N:],batch_size=1000)
     return y[p.validate_transitions([pre_images, suc_images],batch_size=1000)]
