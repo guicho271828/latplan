@@ -29,10 +29,12 @@ def generate_random(data,sae):
             data_rec = regenerate(sae, data)
             prev_loss = loss
             loss    = bce(data,data_rec)
-            print(loss, loss / prev_loss)
+            if len(data) > 3000:
+                print(loss, loss / prev_loss)
             data = data_rec
             if loss / prev_loss > rate_threshold:
-                print("improvement saturated: loss / prev_loss = ", loss / prev_loss, ">", rate_threshold)
+                if len(data) > 3000:
+                    print("improvement saturated: loss / prev_loss = ", loss / prev_loss, ">", rate_threshold)
                 break
             # if loss < threshold:
             #     print("good amount of loss:", loss, "<", threshold)
