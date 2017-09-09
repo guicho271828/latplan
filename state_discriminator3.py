@@ -13,7 +13,7 @@ import tensorflow as tf
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
-def generate_random(data,sae):
+def generate_random(data,sae,batch=None):
     threshold = 0.01
     rate_threshold = 0.99
     max_repeat = 50
@@ -45,8 +45,9 @@ def generate_random(data,sae):
         rec = regenerate(sae,data)
         loss = bce(data,rec,(1,))
         return data[np.where(loss < threshold)[0]]
-    
-    batch = data.shape[0]
+
+    if batch is None:
+        batch = data.shape[0]
     N     = data.shape[1]
     data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
     data_invalid = regenerate_many(sae, data_invalid)
@@ -56,10 +57,11 @@ def generate_random(data,sae):
 
 def prepare(data_valid, sae, inflation=1):
     batch = data_valid.shape[0]
-    data_invalid = generate_random(data_valid, sae)
+    gen_batch = 10000 if batch < 2000 else None
+    data_invalid = generate_random(data_valid, sae, gen_batch)
     try:
         while len(data_invalid) < inflation * batch:
-            data_invalid = union(data_invalid, generate_random(data_valid, sae))
+            data_invalid = union(data_invalid, generate_random(data_valid, sae, gen_batch))
             print(batch, "valid examples", len(data_invalid), "invalid examples", "target is", inflation * batch)
     except KeyboardInterrupt:
         print("generation stopped")
