@@ -198,6 +198,7 @@ def prepare_oae_PU3(known_transisitons):
     if len(known_transisitons) > 100:
         y = y[:len(known_transisitons)] # undersample
     
+    print("valid:",len(known_transisitons),"mixed:",len(y),)
     print("creating binary classification labels")
     return (default_networks['PUDiscriminator'], *prepare_binary_classification_data(known_transisitons, y))
 
