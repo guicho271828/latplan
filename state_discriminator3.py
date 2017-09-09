@@ -112,7 +112,7 @@ def learn(method):
     train_in, train_out, test_in, test_out, data_valid, data_invalid = prepare(data_valid,sae)
     sae.plot_autodecode(data_invalid[:8], "_sd3/fake_samples.png")
 
-    if method is "feature":
+    if method == "feature":
         # decode into image, extract features and learn from it
         train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
         train_in2, test_in2 = sae.get_features(train_image), sae.get_features(test_image)
@@ -130,8 +130,7 @@ def learn(method):
                                             'epoch'      :[3000],
                                             'lr'         :[0.0001],
                                         })
-        discriminator.save()
-    if method is "cae":
+    if method == "cae":
         # decode into image, learn a separate cae and learn from it
         train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
         cae,_,_ = grid_search(curry(nn_task, default_networks['SimpleCAE'],
@@ -165,10 +164,9 @@ def learn(method):
                                             'epoch'      :[3000],
                                             'lr'         :[0.0001],
                                         })
-        discriminator.save()
-    if method is "direct":
+    if method == "direct":
         # learn directly from the latent encoding
-        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], directory_sd,
+        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], sae.local("_sd3/"),
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         {
@@ -182,11 +180,10 @@ def learn(method):
                                             'epoch'      :[200],
                                             'lr'         :[0.0001],
                                         })
-        discriminator.save()
-    if method is "image":
+    if method == "image":
         # learn directly from the image
         train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
-        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], directory_sd,
+        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], sae.local("_sd3/"),
                                               train_image, train_out, test_image, test_out,),
                                         default_parameters,
                                         {
@@ -200,35 +197,37 @@ def learn(method):
                                             'epoch'      :[200],
                                             'lr'         :[0.0001],
                                         })
-        discriminator.save()
+    discriminator.parameters["method"] = method
+    discriminator.save()
 
 def load(method):
     global cae, discriminator
-    if method is "feature":
+    if method == "feature":
         discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
-    if method is "cae":
+    if method == "cae":
         cae = default_networks['SimpleCAE'    ](sae.local("_cae")).load()
         discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
-    if method is "direct":
+    if method == "direct":
         discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
-    if method is "image":
+    if method == "image":
         discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
+    assert method == discriminator.parameters["method"]
 
 def load2(method):
     global combined
-    if method is "feature":
+    if method == "feature":
         def d (states):
             return combined_discriminate2(states,sae,discriminator,batch_size=1000).round()
         combined = d
-    if method is "cae":
+    if method == "cae":
         def d (states):
             return combined_discriminate(states,sae,cae,discriminator,batch_size=1000).round()
         combined = d
-    if method is "direct":
+    if method == "direct":
         def d (states):
             return discriminator.discriminate(states,batch_size=1000).round()
         combined = d
-    if method is "image":
+    if method == "image":
         def d (states):
             images = sae.decode_binary(data,batch_size=1000)
             return discriminator.discriminate(images,batch_size=1000).round()
