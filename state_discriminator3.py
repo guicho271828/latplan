@@ -73,6 +73,12 @@ def prepare(data_valid, sae, inflation=1):
     train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
     return train_in, train_out, test_in, test_out, data_valid, data_invalid
 
+def prepare_random(data_valid, sae, inflation=1):
+    batch = data_valid.shape[0]
+    data_invalid = np.random.randint(0,2,data_valid.shape,dtype=np.int8)
+    train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
+    return train_in, train_out, test_in, test_out, data_valid, data_invalid
+
 sae = None
 cae = None
 discriminator = None
