@@ -68,7 +68,8 @@ def prepare(data_valid, sae):
             ppp = len(data_invalid)
             data_invalid = union(data_invalid, generate_random(data_valid, sae, gen_batch))
             print("valid:",len(data_valid),
-                  "invalid:", len(data_invalid))
+                  "mixed:", len(data_invalid),
+                  "## generation stops when it failed to generate new examples three times in a row")
     except KeyboardInterrupt:
         pass
     finally:
