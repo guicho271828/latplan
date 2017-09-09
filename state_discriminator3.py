@@ -55,20 +55,32 @@ def generate_random(data,sae,batch=None):
     data_invalid = set_difference(data_invalid.round(), data.round())
     return data_invalid
 
-def prepare(data_valid, sae, inflation=1):
-    batch = data_valid.shape[0]
-    gen_batch = 10000 if batch < 2000 else None
+def prepare(data_valid, sae):
+    gen_batch = 10000 if len(data_valid) < 2000 else None
     data_invalid = generate_random(data_valid, sae, gen_batch)
     try:
-        while len(data_invalid) < inflation * batch:
+        p = 0
+        pp = 0
+        ppp = 0
+        while len(data_invalid) < len(data_valid) and p < len(data_invalid):
+            p = pp
+            pp = ppp
+            ppp = len(data_invalid)
             data_invalid = union(data_invalid, generate_random(data_valid, sae, gen_batch))
-            print(batch, "valid examples", len(data_invalid), "invalid examples", "target is", inflation * batch)
+            print("valid:",len(data_valid),
+                  "invalid:", len(data_invalid))
     except KeyboardInterrupt:
+        pass
+    finally:
         print("generation stopped")
 
-    data_invalid = data_invalid[:int(batch*inflation)]
-    if inflation > 1:
-        data_valid   = np.repeat(data_valid, inflation, axis=0)
+    if len(data_valid) < len(data_invalid):
+        # downsample
+        data_invalid = data_invalid[:len(data_valid)]
+    else:
+        # oversample
+        data_invalid = np.repeat(data_invalid, 1+(len(data_valid)//len(data_invalid)), axis=0)
+        data_invalid = data_invalid[:len(data_valid)]
 
     train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_invalid)
     return train_in, train_out, test_in, test_out, data_valid, data_invalid
