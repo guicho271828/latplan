@@ -215,10 +215,10 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     print("*** NOTE *** if l_rec is above 0.01, it is most likely not learning the correct model")
     show_summary(ae, train, test)
     dump_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
-    dump_actions(ae,transitions)
-    dump_states (ae,states)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),)
-    dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),)
+    dump_actions(ae,transitions,repeat=100)
+    dump_states (ae,states,repeat=100)
+    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),repeat=100)
+    dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),repeat=100)
 
 def lightsout(type='digital',size=4,N=36,num_examples=6500):
     parameters = {
