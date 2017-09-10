@@ -74,10 +74,6 @@ def generate(p, ics, gcs, *args):
     from scipy import misc
     import subprocess
     import datetime
-    try:
-        subprocess.call(["mv",p.__name__,"old_"+datetime.datetime.today().isoformat()+"_"+p.__name__])
-    except:
-        pass
     inits = p.generate(np.array(ics),*args)
     goals = p.generate(np.array(gcs),*args)
     if noise_fn:
@@ -86,6 +82,10 @@ def generate(p, ics, gcs, *args):
     for i,init in enumerate(inits):
         for j,goal in enumerate(goals):
             d = "{}/{:03d}-{:03d}-{:03d}".format(p.__name__,steps,i,j)
+            try:
+                subprocess.call(["mv",d,d+"_old_"+datetime.datetime.today().isoformat()])
+            except:
+                pass
             os.makedirs(d)
             print(d)
             misc.imsave(os.path.join(d,"init.png"),init)
