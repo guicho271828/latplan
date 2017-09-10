@@ -29,19 +29,21 @@ ulimit -v 16000000000
 # EOF
 
 
-parallel "./action_discriminator.py samples/{1} test > samples/{1}.ad.log" ::: \
+parallel "./action_discriminator.py samples/{1} test > samples/logs/{1}.ad.log" ::: \
          puzzle_mandrill_3_3_36_20000_conv \
          puzzle_mnist_3_3_36_20000_conv    \
          puzzle_spider_3_3_36_20000_conv   \
          lightsout_digital_4_36_20000_conv \
          lightsout_twisted_4_36_20000_conv \
-         hanoi_4_3_36_60_conv 
+         hanoi_4_3_36_81_conv 
 
-parallel -j 2 "./state_discriminator3.py samples/{1} test > samples/{1}.sd.log" ::: \
+parallel -j 2 "./state_discriminator3.py samples/{1} test > samples/logs/{1}.sd.log" ::: \
          puzzle_mandrill_3_3_36_20000_conv \
          puzzle_mnist_3_3_36_20000_conv    \
          puzzle_spider_3_3_36_20000_conv   \
          lightsout_digital_4_36_20000_conv \
          lightsout_twisted_4_36_20000_conv \
-         hanoi_4_3_36_60_conv 
+         hanoi_4_3_36_81_conv 
 
+# ros build samples/table.ros
+samples/table.ros samples/logs/*.log

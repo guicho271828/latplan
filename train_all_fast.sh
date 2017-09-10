@@ -36,12 +36,6 @@ wait
 wait
 ./action_discriminator.py samples/lightsout_twisted_4_36_20000_conv/ learn &
 
-./strips.py conv hanoi learn_plot_dump 4 3 36 60
-./state_discriminator3.py samples/hanoi_4_3_36_60_conv/ learn &
-./action_autoencoder.py   samples/hanoi_4_3_36_60_conv/ learn &
-wait
-./action_discriminator.py samples/hanoi_4_3_36_60_conv/ learn &
-
 ./strips.py conv hanoi learn_plot_dump 4 3 36 81
 ./state_discriminator3.py samples/hanoi_4_3_36_81_conv/ learn &
 ./action_autoencoder.py   samples/hanoi_4_3_36_81_conv/ learn &
