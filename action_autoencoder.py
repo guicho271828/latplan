@@ -36,7 +36,13 @@ if __name__ == '__main__':
     directory_aae = "{}/_aae/".format(directory)
     mode = sys.argv[2]
     
-    data = np.loadtxt("{}/actions.csv".format(directory),dtype=np.int8)
+    from latplan.util import get_ae_type
+    ae = default_networks[get_ae_type(directory)](directory).load()
+
+    if "hanoi" in ae.path:
+        data = np.loadtxt(ae.local("all_actions.csv"),dtype=np.int8)
+    else:
+        data = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
     
     parameters = {
         'N'          :[1],
@@ -74,10 +80,6 @@ if __name__ == '__main__':
     all_labels = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
     for i, pos in enumerate(np.where(histogram > 0)[0]):
         all_labels[i][0][pos] = 1
-
-    
-    from latplan.util import get_ae_type
-    ae = default_networks[get_ae_type(directory)](directory).load()
     
     if 'plot' in mode:
         aae.plot(data[:8], "aae_train.png")

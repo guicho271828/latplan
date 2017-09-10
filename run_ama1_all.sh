@@ -26,41 +26,41 @@ trap exit SIGINT
 
 parallel --dry-run --no-notice --joblog problem-instances/latplan.puzzles.puzzle_mnist.ama1.csv  \
          "./fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log" \
-         ::: samples/puzzle_mnist*/ \
-         ::: problem-instances/*/latplan.puzzles.puzzle_mnist/*/ \
+         ::: samples/puzzle_mnist* \
+         ::: problem-instances/*/latplan.puzzles.puzzle_mnist/* \
          ::: blind pdb
 
 parallel --dry-run --no-notice --joblog problem-instances/latplan.puzzles.puzzle_mandrill.ama1.csv   \
          "./fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log" \
-         ::: samples/puzzle_mandrill*/ \
-         ::: problem-instances/*/latplan.puzzles.puzzle_mandrill/*/ \
+         ::: samples/puzzle_mandrill* \
+         ::: problem-instances/*/latplan.puzzles.puzzle_mandrill/* \
          ::: blind pdb
 
 
 parallel --dry-run --no-notice --joblog problem-instances/latplan.puzzles.puzzle_spider.ama1.csv   \
          "./fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log" \
-         ::: samples/puzzle_spider*/ \
-         ::: problem-instances/*/latplan.puzzles.puzzle_spider/*/ \
+         ::: samples/puzzle_spider* \
+         ::: problem-instances/*/latplan.puzzles.puzzle_spider/* \
          ::: blind pdb
 
 
 parallel --dry-run --no-notice --joblog problem-instances/latplan.puzzles.lightsout_digital.ama1.csv   \
          "./fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log" \
-         ::: samples/lightsout_digital*/ \
-         ::: problem-instances/*/latplan.puzzles.lightsout_digital/*/ \
+         ::: samples/lightsout_digital* \
+         ::: problem-instances/*/latplan.puzzles.lightsout_digital/* \
          ::: blind pdb
 
 
 parallel --dry-run --no-notice --joblog problem-instances/latplan.puzzles.lightsout_twisted.ama1.csv   \
          "./fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log" \
-         ::: samples/lightsout_twisted*/ \
-         ::: problem-instances/*/latplan.puzzles.lightsout_twisted/*/ \
+         ::: samples/lightsout_twisted* \
+         ::: problem-instances/*/latplan.puzzles.lightsout_twisted/* \
          ::: blind pdb
 
 
 parallel --dry-run --no-notice --joblog problem-instances-hanoi/latplan.puzzles.hanoi.ama1.csv   \
          "./fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log" \
-         ::: samples/hanoi*/ \
-         ::: problem-instances-hanoi/*/latplan.puzzles.hanoi/*/ \
+         ::: samples/hanoi* \
+         ::: problem-instances-hanoi/*/latplan.puzzles.hanoi/* \
          ::: blind pdb
 
