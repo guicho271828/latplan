@@ -267,7 +267,10 @@ def mae(x,y):
 
 def learn(input_type):
     global discriminator
-    data = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
+    if "hanoi" in sae.path:
+        data = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
+    else:
+        data = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     network, train_in, train_out, test_in, test_out = input_type(data)
     discriminator,_,_ = grid_search(curry(nn_task, network, sae.local("_ad/"),
                                           train_in, train_out, test_in, test_out,),
