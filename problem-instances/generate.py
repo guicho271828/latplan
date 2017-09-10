@@ -36,7 +36,13 @@ output_dir = "vanilla"
 
 def random_walk(init_c,length,successor_fn):
     print(".",end="")
-    return random_walk_rec(init_c, [init_c], length, successor_fn)
+    while True:
+        result = random_walk_rec(init_c, [init_c], length, successor_fn)
+        print()
+        if result is None:
+            continue
+        else:
+            return result
 
 def random_walk_rec(current, trace, length, successor_fn): 
     import numpy.random as random
@@ -49,18 +55,18 @@ def random_walk_rec(current, trace, length, successor_fn):
 
         while True:
             suc = sucs[now]
-            if np.any([np.all(np.equal(suc, t)) for t in trace]):
+            try:
+                assert not np.any([np.all(np.equal(suc, t)) for t in trace])
+                result = random_walk_rec(suc, [*trace, suc], length-1, successor_fn)
+                assert result is not None
+                return result
+            except AssertionError:
                 now = (now+1)%len(sucs)
                 if now == first:
                     print("B",end="")
                     return None
                 else:
                     continue
-            result = random_walk_rec(suc, [*trace, suc], length-1, successor_fn)
-            if result is not None:
-                return result
-            else:
-                continue
 
 def safe_chdir(path):
     try:
