@@ -173,6 +173,9 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     transitions = p.transitions(width,height,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     print(states.shape)
+    from latplan.util.noise import gaussian, salt, pepper, saltpepper
+    states = saltpepper(states, p=0.01)
+
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test, parameters)
@@ -209,6 +212,9 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     transitions = p.transitions(disks,towers,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     print(states.shape)
+    from latplan.util.noise import gaussian, salt, pepper, saltpepper
+    states = saltpepper(states, p=0.01)
+
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/hanoi",disks,towers,N,num_examples,encoder))), train, test, parameters)
@@ -244,6 +250,9 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
     transitions = p.transitions(size,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     print(states.shape)
+    from latplan.util.noise import gaussian, salt, pepper, saltpepper
+    states = saltpepper(states, p=0.01)
+
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
     ae = run("_".join(map(str,("samples/lightsout",type,size,N,num_examples,encoder))), train, test, parameters)
