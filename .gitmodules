@@ -1,6 +1,6 @@
 [submodule "planner-scripts"]
 	path = planner-scripts
-	url = git@github.com:guicho271828/planner-scripts
+	url = https://github.com/guicho271828/planner-scripts
 [submodule "downward"]
 	path = downward
-	url = git@github.com:guicho271828/FastDownward.git
+	url = https://github.com/guicho271828/FastDownward.git
