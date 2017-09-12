@@ -213,7 +213,9 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     print(states.shape)
     from latplan.util.noise import gaussian, salt, pepper, saltpepper
+    states = np.repeat(states,10,0)
     states = saltpepper(states, p=0.01)
+    random.shuffle(states)
 
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
