@@ -11,6 +11,9 @@ def load_session():
         tf.Session(
             config=tf.ConfigProto(
                 allow_soft_placement=True,
+                intra_op_parallelism_threads=1,
+                inter_op_parallelism_threads=1,
+                device_count = {'CPU': 1},
                 gpu_options =
                 tf.GPUOptions(
                     per_process_gpu_memory_fraction=1.0,
