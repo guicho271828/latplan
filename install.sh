@@ -40,4 +40,12 @@ set -e
     cp keras-tf.json ~/.keras/keras.json
 }
 
-    
+cat > ~/.profile <<EOF
+
+# This is added by latplan install.sh script.
+export PYTHONPATH="$PWD:\$PYTHONPATH"
+
+EOF
+
+
+
