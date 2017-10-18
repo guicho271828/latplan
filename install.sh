@@ -31,7 +31,8 @@ set -e
 }
 
 {
-    sudo apt -y install python3-pip python3-pil parallel
+    sudo apt -y install python3-pip python3-pil parallel \
+         bash-completion byobu htop parallel mosh git
     pip3 install --user \
          tensorflow keras h5py matplotlib progressbar2 \
          timeout_decorator ansicolors scipy scikit-image
