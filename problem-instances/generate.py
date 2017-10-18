@@ -28,11 +28,13 @@ def load_session():
 
 load_session()
 
+def identity(x):
+    return x
 
 steps     = 5
 instances = 100
-noise_fn     = None
-output_dir = "vanilla"
+noise_fns     = [identity]
+output_dirs = ["vanilla"]
 
 def random_walk(init_c,length,successor_fn):
     print(".",end="")
@@ -76,26 +78,25 @@ def safe_chdir(path):
     os.chdir(path)
 
 def generate(p, ics, gcs, *args):
-    safe_chdir(output_dir)
     from scipy import misc
     import subprocess
     import datetime
     inits = p.generate(np.array(ics),*args)
     goals = p.generate(np.array(gcs),*args)
-    if noise_fn:
+    for noise_fn,output_dir in zip(noise_fns,output_dirs):
         inits = noise_fn(inits)
         goals = noise_fn(goals)
-    for i,init in enumerate(inits):
-        for j,goal in enumerate(goals):
-            d = "{}/{:03d}-{:03d}-{:03d}".format(p.__name__,steps,i,j)
-            try:
-                subprocess.call(["mv",d,d+"_old_"+datetime.datetime.today().isoformat()])
-            except:
-                pass
-            os.makedirs(d)
-            print(d)
-            misc.imsave(os.path.join(d,"init.png"),init)
-            misc.imsave(os.path.join(d,"goal.png"),goal)
+        for i,init in enumerate(inits):
+            for j,goal in enumerate(goals):
+                d = "{}/{}/{:03d}-{:03d}-{:03d}".format(output_dir,p.__name__,steps,i,j)
+                try:
+                    subprocess.call(["mv",d,d+"_old_"+datetime.datetime.today().isoformat()])
+                except:
+                    pass
+                os.makedirs(d)
+                print(d)
+                misc.imsave(os.path.join(d,"init.png"),init)
+                misc.imsave(os.path.join(d,"goal.png"),goal)
 
 ################################################################
 
@@ -111,8 +112,8 @@ def puzzle(type='mnist', width=3, height=3):
     generate(p, ics, gcs, width, height)
 
 def puzzle_longest(type='mnist', width=3, height=3):
-    global output_dir
-    output_dir = "longest"
+    global output_dirs
+    output_dirs = ["longest"]
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
@@ -159,10 +160,8 @@ def lightsout(type='digital', size=4):
 ################################################################
 
 def noise(fn, param, domain, *args):
-    global noise_fn
-    noise_fn = lambda a: fn(a,param)
-    global output_dir
-    output_dir = fn.__name__
+    noise_fns.append(lambda a: fn(a,param))
+    output_dirs.append(fn.__name__)
     domain(*args)
 
 ################################################################
