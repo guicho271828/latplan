@@ -3,6 +3,18 @@
 #| <Put a one-line description here>
 exec ros dynamic-space-size=16000 -Q -L sbcl -- $0 "$@"
 |#
+
+#|
+
+This is a failed attempt to learn the action model from the symbolic transitions,
+using a data mining technique called MSDD.
+
+Oates, Tim, and Paul R. Cohen. "Searching for structure in multiple streams of data." ICML. Vol. 96. 1996.
+
+|#
+
+
+
 ;;; setup
 (progn ;;init forms
   #+quicklisp (ql:quickload '(iterate alexandria trivia.ppcre immutable-struct swank
