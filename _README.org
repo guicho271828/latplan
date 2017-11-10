@@ -25,3 +25,30 @@ It requires =sudo= several times. However Python packages are installed in the u
 Run =do-everything.sh= to generate the problem instances,
 train the network and solve the problems.
 
+** file structure
+
++ model.py :: network definitions.
++ strips.py :: (Bad name!) the program for training an SAE,
+               and writes the input images/transitions to a CSV file.
++ state_discriminator3.py :: The program for training an SD.
++ action_autoencoder.py :: The program for training an AAE.
++ action_discriminator.py :: The program for training an AD.
++ fd-planner.py :: Latplan using AMA1.
++ trivial-planner.py :: Latplan using AMA2.
++ run_ama1_all.sh, run_ama2_all.sh :: Run all experiments. Beware! You need a good computer!
++ config.py :: keras/tensorflow config related
++ various junk sh files :: support scripts.
++ util/ :: utility files
++ tests/ :: test files, mostly the unit tests for domain generator/validator
++ samples/ :: where the learned results should go. Each SAE training results in a properly named directory.
++ puzzles/ :: code for domain generators/validators.
+  + puzzles/*.py :: each file represents a domain. 
+  + puzzles/model/*.py :: the core model (successor rules etc.) of the domain. this is disentangled from the images.
++ problem-instances/ :: where the input problem isntances / experimental results should go.
++ helper/ :: helper scripts for AMA1.
++ (git submodule) planner-scripts/ :: My personal scripts for invoking domain-independent planners.
+     Not just Fast Downward.
++ (git submodule) downward/ :: My personally maintained version of Fast Downward, forked around 2015.
+
+
+
