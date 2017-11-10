@@ -13,7 +13,7 @@ set -e
 {
     sudo apt install -y mercurial g++ cmake make python flex bison g++-multilib
     git submodule update --init --recursive
-    cd downward ; ./build.py release64
+    cd downward ; ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release64
 }
 
 
