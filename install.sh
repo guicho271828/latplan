@@ -21,12 +21,14 @@ set -e
     # https://github.com/roswell/roswell/wiki/1.-Installation
     sudo apt -y install git build-essential automake libcurl4-openssl-dev
     git clone -b release https://github.com/roswell/roswell.git
-    cd roswell
-    sh bootstrap
-    ./configure
-    make
-    sudo make install
-    ros setup
+    (
+        cd roswell
+        sh bootstrap
+        ./configure
+        make
+        sudo make install
+        ros setup
+    )
     make -j 1 -C lisp
 }
 
