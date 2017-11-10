@@ -1,6 +1,8 @@
 
 * LatPlan : A domain-independent, image-based classical planner
 
+[[https://travis-ci.org/guicho271828/travis][https://travis-ci.org/guicho271828/travis.svg?branch=master]]
+
 This repository contains the source code of LatPlan.
 
 + Asai, M.; Fukunaga, A: 2018. Classical Planning in Deep Latent Space: Breaking the Subsymbolic-Symbolic Boundary.
