@@ -1,7 +1,17 @@
 #!/bin/sh
 #|-*- mode:lisp -*-|#
-#| <Put a one-line description here>
+#|
 exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
+|#
+
+#|
+
+This is a formatter for the input of Fast Downward classical planning solver (http://www.fast-downward.org).
+
+This program skips the translate.py in FD, and generates the multi-valued
+encoding (SAS file, http://www.fast-downward.org/TranslatorOutputFormat)
+directly from the CSV file containing the propositional vector.
+
 |#
 
 ;;; setup

@@ -1,11 +1,24 @@
 
+* LatPlan : A domain-independent, image-based classical planner
+
 This repository contains the source code of LatPlan.
 
-+ Asai, M.; Fukunaga, A: 2017. Classical Planning in Deep Latent Space: From Unlabeled Images to PDDL (and back). In /Knowledge Engineering for Planning and Scheduling (KEPS) Workshop (ICAPS2017)/.
++ Asai, M.; Fukunaga, A: 2018. Classical Planning in Deep Latent Space: Breaking the Subsymbolic-Symbolic Boundary.
+  + *Accepted* in AAAI-2018.
++ Asai, M.; Fukunaga, A: 2017. Classical Planning in Deep Latent Space: From Unlabeled Images to PDDL (and back).
+  + In /Knowledge Engineering for Planning and Scheduling (KEPS) Workshop (ICAPS2017)/.
+  + In Cognitum Workshop at ICJAI-2017.
+  + In Neural-Symbolic Workshop 2017.
 + Arxiv https://arxiv.org/abs/1705.00154
 
+
+
+
+
+
+
 [[./install.sh][install.sh]] should install the required libraries on a standard Ubuntu rig.
-It requires =sudo= several times. Python packages are installed in the user directory.
+It requires =sudo= several times. However Python packages are installed in the user directory.
 
 Run =do-everything.sh= to generate the problem instances,
 train the network and solve the problems.

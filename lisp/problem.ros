@@ -3,6 +3,27 @@
 #| <Put a one-line description here>
 exec ros dynamic-space-size=8000 -Q -L sbcl -- $0 "$@"
 |#
+
+#|
+
+This is a converter from the a CSV file containing the propositional vector to a PDDL problem file.
+PDDL files are compatible to any classical planning solvers.
+See the past competition solvers for example.
+
+http://www.plg.inf.uc3m.es/ipc2011-deterministic/
+https://helios.hud.ac.uk/scommv/IPC-14/planners.html
+
+Problem files are small, just containing the initial and the goal states,
+but the PDDL domain file is huge, due to the large number of actions.
+Thus, while in princeple any PDDL-based solver should be able to parse it and solve it,
+some solvers may fail to even read/parse it (e.g. buffer overflow),
+or take incredibly larger amount of runtime.
+
+Thus we developped sas.ros, which skips part of the computation and
+replace the original python script (very slow) in Fast Downward to a compiled program (sas.ros).
+
+|#
+
 (progn ;;init forms
   (ros:ensure-asdf)
   #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre function-cache) :silent t)
