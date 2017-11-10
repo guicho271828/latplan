@@ -1,7 +1,7 @@
 
 * LatPlan : A domain-independent, image-based classical planner
 
-[[https://travis-ci.org/guicho271828/travis][https://travis-ci.org/guicho271828/travis.svg?branch=master]]
+[[https://travis-ci.org/guicho271828/latplan][https://travis-ci.org/guicho271828/latplan.svg?branch=master]]
 
 This repository contains the source code of LatPlan.
 
