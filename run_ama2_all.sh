@@ -38,10 +38,10 @@ parallel --eta --timeout 90 --joblog problem-instances/latplan.puzzles.lightsout
          ::: Astar
 
 
-parallel --eta --timeout 90 --joblog problem-instances/latplan.puzzles.hanoi.csv   \
-         "./trivial-planner.py {1} {2} {3} > {2}/{1/}_{3}.log" \
-         ::: samples/hanoi* \
-         ::: problem-instances/*/latplan.puzzles.hanoi/* \
-         ::: Astar
+# parallel --eta --timeout 90 --joblog problem-instances/latplan.puzzles.hanoi.csv   \
+#          "./trivial-planner.py {1} {2} {3} > {2}/{1/}_{3}.log" \
+#          ::: samples/hanoi* \
+#          ::: problem-instances/*/latplan.puzzles.hanoi/* \
+#          ::: Astar
 
 

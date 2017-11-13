@@ -58,9 +58,9 @@ parallel --dry-run --no-notice --joblog problem-instances/latplan.puzzles.lights
          ::: blind pdb
 
 
-parallel --dry-run --no-notice --joblog problem-instances-hanoi/latplan.puzzles.hanoi.ama1.csv   \
+parallel --dry-run --no-notice --joblog problem-instances/latplan.puzzles.hanoi.ama1.csv   \
          "./fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log" \
          ::: samples/hanoi* \
-         ::: problem-instances-hanoi/*/latplan.puzzles.hanoi/* \
+         ::: problem-instances/*/latplan.puzzles.hanoi/* \
          ::: blind pdb
 
