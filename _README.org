@@ -50,7 +50,7 @@ This part may not work right.
 + action_discriminator.py :: The program for training an AD.
 + fd-planner.py :: Latplan using AMA1.
 + trivial-planner.py :: Latplan using AMA2.
-+ run_ama1_all.sh, run_ama2_all.sh :: Run all experiments. Beware! You need a good computer!
++ run_ama1_all.sh, run_ama2_all.sh :: Run all experiments. Beware! You need a good compute resource!
 + config.py :: keras/tensorflow config related
 + various junk sh files :: support scripts.
 + util/ :: utility files
