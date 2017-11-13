@@ -1,4 +1,6 @@
 
+[[./img/latplanlogo-simple.svg]]
+
 * LatPlan : A domain-independent, image-based classical planner
 
 # [[https://travis-ci.org/guicho271828/latplan][https://travis-ci.org/guicho271828/latplan.svg?branch=master]]
