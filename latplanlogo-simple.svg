@@ -12,8 +12,11 @@
    version="1.1"
    viewBox="0 0 688.47049 296.59886"
    id="svg4"
-   sodipodi:docname="latplanlogo5.svg"
-   inkscape:version="0.92.1 r15371">
+   sodipodi:docname="latplanlogo-simple.svg"
+   inkscape:version="0.92.1 r15371"
+   inkscape:export-filename="/home/guicho/repos/neural/latplan/latplanlogo-simple.svg.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
   <metadata
      id="metadata10">
     <rdf:RDF>
@@ -22,7 +25,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -43,7 +46,7 @@
      showgrid="false"
      inkscape:snap-text-baseline="true"
      inkscape:zoom="1.4481859"
-     inkscape:cx="133.12723"
+     inkscape:cx="11.595871"
      inkscape:cy="155.92381"
      inkscape:window-x="768"
      inkscape:window-y="26"
