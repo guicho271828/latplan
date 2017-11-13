@@ -20,7 +20,7 @@ It requires =sudo= several times. However Python packages are installed in the u
 
 Run =do-everything.sh= to generate the problem instances, train the network etc.
 
-** Require software (install.sh)
+** Required software (install.sh)
 
 install.sh only works on ubuntu.
 
