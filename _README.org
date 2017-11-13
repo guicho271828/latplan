@@ -13,17 +13,32 @@ This repository contains the source code of LatPlan.
   + In Neural-Symbolic Workshop 2017.
 + Arxiv https://arxiv.org/abs/1705.00154
 
-
-
-
-
-
-
 [[./install.sh][install.sh]] should install the required libraries on a standard Ubuntu rig.
 It requires =sudo= several times. However Python packages are installed in the user directory.
 
-Run =do-everything.sh= to generate the problem instances,
-train the network and solve the problems.
+Run =do-everything.sh= to generate the problem instances, train the network etc.
+
+** Require software (install.sh)
+
+install.sh only works on ubuntu.
+
+: mercurial g++ cmake make python flex bison g++-multilib
+
+For compiling Fast Downward. FD is just compiled, not installed.
+
+: git build-essential automake libcurl4-openssl-dev
+
+For compiling [Roswell](http://roswell.github.io/).
+OSX users should use =brew install roswell=.
+
+: python3-pip python3-pil parallel bash-completion byobu htop parallel mosh git
+
+Some are not necessary :)
+
+: tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image
+
+I didn't follow the latest keras, though. (It works in 2.0.5)
+This part may not work right.
 
 ** file structure
 
