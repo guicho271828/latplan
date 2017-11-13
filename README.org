@@ -1,5 +1,5 @@
 
-[[./img/latplanlogo-simple.svg]]
+[[./img/latplanlogo-simple.svg.png]]
 
 * LatPlan : A domain-independent, image-based classical planner
 
