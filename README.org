@@ -69,3 +69,11 @@ This part may not work right.
 
 
 
+** Gallery
+
+[[./img/hanoi_4_3_36_81_conv_blind_path_0.png]]
+[[./img/lightsout_digital_4_36_20000_conv_Astar_path_0.png]]
+[[./img/lightsout_twisted_4_36_20000_conv_Astar_path_0.png]]
+[[./img/puzzle_mandrill_3_3_36_20000_conv_blind_path_0.png]]
+[[./img/puzzle_mnist_3_3_36_20000_conv_blind_path_0.png]]
+[[./img/puzzle_spider_3_3_36_20000_conv_blind_path_0.png]]
