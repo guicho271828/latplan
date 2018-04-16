@@ -92,6 +92,18 @@ class UnitNormL1(Constraint):
                 'axis': self.axis}
 
 class Network:
+    """Base class for various neural networks including GANs, AEs and Classifiers.
+Provides an interface for saving / loading the trained weights as well as hyperparameters.
+
+Each instance corresponds to a directory (specified in the `path` variable in the initialization),
+which contains the learned weights as well as several json files for the metadata.
+If a network depends on another network (i.e. AAE depends on SAE), it is customary to
+save the network inside the dependent network. (e.g. Saving an AAE to mnist_SAE/_AAE)
+
+PARAMETERS dict in the initialization argument is stored in the instance as well as 
+serialized into a JSON string and is subsequently reloaded along with the weights.
+This dict can be used while building the network, making it easier to perform a hyperparameter tuning.
+"""
     def __init__(self,path,parameters={}):
         import subprocess
         subprocess.call(["mkdir","-p",path])
@@ -107,6 +119,10 @@ class Network:
                           keras.callbacks.TensorBoard(log_dir=self.local('logs/{}'.format(datetime.datetime.now().isoformat())), write_graph=False)]
         
     def build(self,input_shape):
+        """An interface for building a network. Input-shape: list of dimensions.
+Users should not overload this method; Define _build() for each subclass instead.
+This function calls _build bottom-up from the least specialized class.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         if self.built:
             if self.verbose:
                 print("Avoided building {} twice.".format(self))
@@ -116,24 +132,45 @@ class Network:
         return self
     
     def _build(self):
+        """An interface for building a network.
+This function is called by build() only when the network is not build yet.
+Users may define a method for each subclass for adding a new build-time feature.
+Each method should call the _build() method of the superclass in turn.
+Users are not expected to call this method directly. Call build() instead.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         pass
     
     def local(self,path):
+        """A convenient method for converting a relative path to the learned result directory
+into a full path."""
         import os.path as p
         return p.join(self.path,path)
     
     def save(self):
+        """An interface for saving a network.
+Users should not overload this method; Define _save() for each subclass instead.
+This function calls _save bottom-up from the least specialized class.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         print("Saving to {}".format(self.local('')))
         self._save()
         return self
     
     def _save(self):
+        """An interface for saving a network.
+Users may define a method for each subclass for adding a new save-time feature.
+Each method should call the _save() method of the superclass in turn.
+Users are not expected to call this method directly. Call save() instead.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         import json
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
                        "input_shape":self.net.input_shape[1:]}, f)
             
     def load(self,allow_failure=False):
+        """An interface for loading a network.
+Users should not overload this method; Define _load() for each subclass instead.
+This function calls _load bottom-up from the least specialized class.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         if allow_failure:
             try:
                 if not self.loaded:
@@ -148,6 +185,11 @@ class Network:
         return self
     
     def _load(self):
+        """An interface for loading a network.
+Users may define a method for each subclass for adding a new load-time feature.
+Each method should call the _load() method of the superclass in turn.
+Users are not expected to call this method directly. Call load() instead.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         import json
         with open(self.local('aux.json'), 'r') as f:
             data = json.load(f)
@@ -156,6 +198,7 @@ class Network:
         self.net.compile(Adam(0.0001),bce)
         
     def bar_update(self, epoch, logs):
+        "Used for updating the progress bar."
         ologs = {}
         for k in self.custom_log_functions:
             ologs[k] = self.custom_log_functions[k]()
@@ -188,6 +231,8 @@ class Network:
               train_data_to=None,
               test_data_to=None,
               **kwargs):
+        """Main method for training.
+ This method may be overloaded by the subclass into a specific training method, e.g. GAN training."""
         o = getattr(keras.optimizers,optimizer)(lr)
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
@@ -362,6 +407,10 @@ class SimpleGumbelSoftmax(GumbelSoftmax):
 
 # Network mixins ################################################################
 class AE(Network):
+    """Autoencoder class. Supports SAVE and LOAD, as well as REPORT methods.
+Additionally, provides ENCODE / DECODE / AUTOENCODE / AUTODECODE methods.
+The latter two are used for verifying the performance of the AE.
+"""
     def _save(self):
         super()._save()
         self.encoder.save_weights(self.local("encoder.h5"))
@@ -446,6 +495,9 @@ class AE(Network):
         return fn(**kwargs)
 
 class GumbelAE(AE):
+    """An AE whose latent layer is GumbelSofmax.
+Fully connected layers only, no convolutions.
+Note: references to self.parameters[key] are all hyperparameters."""
     def build_encoder(self,input_shape):
         return [GaussianNoise(self.parameters['noise']),
                 BN(),
@@ -478,6 +530,7 @@ class GumbelAE(AE):
         _decoder = self.build_decoder(input_shape)
         self.gs = self.build_gs()
         self.gs2 = self.build_gs()
+        
 
         x = Input(shape=input_shape)
         z = Sequential([flatten, *_encoder, self.gs])(x)
@@ -613,6 +666,7 @@ class GumbelAE(AE):
         return _z, x, _z2, _z2r
 
 class GumbelAE2(GumbelAE):
+    """This network uses GS also for the output, assuming that the input pictures are black/white."""
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
@@ -670,6 +724,7 @@ class GumbelAE2(GumbelAE):
         self.autoencoder = self.net
 
 class ConvolutionalGumbelAE(GumbelAE):
+    """A mixin that uses convolutions in the encoder."""
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
                 GaussianNoise(self.parameters['noise']),
@@ -693,6 +748,7 @@ class ConvolutionalGumbelAE(GumbelAE):
                 ])]
     
 class Convolutional2GumbelAE(ConvolutionalGumbelAE):
+    """A mixin that uses convolutions also in the decoder. Somehow it does not converge."""
     def build_decoder(self,input_shape):
         "this function did not converge well. sigh"
         data_dim = np.prod(input_shape)
@@ -771,6 +827,7 @@ class ConvolutionalGumbelAE2(ConvolutionalGumbelAE,GumbelAE2):
 
 # state/action discriminator ####################################################
 class Discriminator(Network):
+    """Base class for generic binary classifiers."""
     def _build(self,input_shape):
         x = Input(shape=input_shape)
         N = input_shape[0] // 2
@@ -851,6 +908,7 @@ class ConvolutionalDiscriminator(Discriminator):
         self.net = Model(x, y)
 
 class PUDiscriminator(Discriminator):
+    """Subclass for PU-learning."""
     def _load(self):
         super()._load()
         K.set_value(self.c, self.parameters['c'])
@@ -897,6 +955,7 @@ class PUDiscriminator(Discriminator):
             raise Exception("there are no positive data in the validation set; Training failed.")
     
 class SimpleCAE(AE):
+    """A Hack"""
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
@@ -996,23 +1055,21 @@ class CombinedDiscriminator2(CombinedDiscriminator):
 # action autoencoder ################################################################
 
 class ActionAE(AE):
-    # A network which autoencodes the difference information.
-    # 
-    # State transitions are not a 1-to-1 mapping in a sense that
-    # there are multiple applicable actions. So you cannot train a newtork that directly learns
-    # a transition S -> T .
-    # 
-    # We also do not have action labels, so we need to cluster the actions in an unsupervised manner.
-    # 
-    # This network trains a bidirectional mapping of (S,T) -> (S,A) -> (S,T), given that 
-    # a state transition is a function conditioned by the before-state s.
-    # 
-    # It is not useful to learn a normal autoencoder (S,T) -> Z -> (S,T) because we cannot separate the
-    # condition and the action label.
-    # 
-    # We again use gumbel-softmax for representing A.
-    # (*undetermined*) To learn the lifted representation,
-    # A is a single variable with M categories. We do not specify N.
+    """A network which autoencodes the difference information.
+
+State transitions are not a 1-to-1 mapping in a sense that
+there are multiple applicable actions. So you cannot train a newtork that directly learns
+a transition S -> T .
+
+We also do not have action labels, so we need to cluster the actions in an unsupervised manner.
+
+This network trains a bidirectional mapping of (S,T) -> (S,A) -> (S,T), given that 
+a state transition is a function conditioned by the before-state s.
+
+It is not useful to learn a normal autoencoder (S,T) -> Z -> (S,T) because we cannot separate the
+condition and the action label.
+
+We again use gumbel-softmax for representing A."""
     def build_encoder(self,input_shape):
         return [
             *[
@@ -1172,9 +1229,16 @@ class ActionDiscriminator(Discriminator):
 class ActionPUDiscriminator(PUDiscriminator,ActionDiscriminator):
     pass
 
-# imbalanced data ################################################################
+# imbalanced data WIP ###############################################################
 
-# Undersampling + bagging
+# In general, there are more invalid data than valid data. These kinds of
+# imbalanced datasets always make it difficult to train a classifier.
+# Theoretically, the most promising way for this problem is Undersampling + bagging.
+# Yeah I know, I am not a statistician. But I have a true statistician friend !
+# TBD : add reference to that paper (I forgot).
+
+# Ultimately this implementation was not used during AAAI submission.
+
 class UBDiscriminator(Discriminator):
     def _build(self,input_shape):
         x = Input(shape=input_shape)
