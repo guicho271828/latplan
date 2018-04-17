@@ -22,6 +22,8 @@ Run =do-everything.sh= to generate the problem instances, train the network etc.
 
 ** Required software (install.sh)
 
+Python 3.5 or later is required.
+
 install.sh only works on ubuntu.
 
 : mercurial g++ cmake make python flex bison g++-multilib
