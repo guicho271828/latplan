@@ -473,7 +473,29 @@ The latter two are used for verifying the performance of the AE.
         # test_both("Noise reconstruction BCE (pepper 0.1): {}",
         #           lambda data: self.autoencoder.evaluate(pepper(data),data,**opts))
         test_both("Latent activation: {}",
-                  lambda data: self.encode_binary(train_data,batch_size=batch_size,).mean())
+                  lambda data: self.encode_binary(data,batch_size=batch_size,).mean())
+        test_both("Inactive bits (always false): {}",
+                  lambda data: self.parameters['N']-np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0)))
+        test_both("Inactive bits (always true): {}",
+                  lambda data: self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0)))
+        test_both("Inactive bits (always true or false): {}",
+                  lambda data: 2*self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0)) -np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0)))
+
+        def latent_variance(data):
+            encoded = [self.encode_binary(data,batch_size=batch_size,).round() for i in range(10)]
+            var = np.var(encoded,axis=0)
+            return [np.amax(var), np.amin(var), np.mean(var), np.median(var)]
+        
+        def latent_variance_noise(data,noise):
+            encoded = [self.encode_binary(noise(data),batch_size=batch_size,).round() for i in range(10)]
+            var = np.var(encoded,axis=0)
+            return [np.amax(var), np.amin(var), np.mean(var), np.median(var)]
+            
+        test_both("Latent variance (max,min,mean,median): {}", latent_variance)
+        test_both("Latent variance (max,min,mean,median),gaussian: {}", lambda data: latent_variance_noise(data,gaussian))
+        test_both("Latent variance (max,min,mean,median),salt: {}"    , lambda data: latent_variance_noise(data,salt))
+        test_both("Latent variance (max,min,mean,median),pepper: {}"  , lambda data: latent_variance_noise(data,pepper))
+        
         return self
     
     def encode(self,data,**kwargs):
