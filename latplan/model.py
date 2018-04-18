@@ -76,7 +76,19 @@ def ResUnit (*layers):
     return Residual(
         Sequential(layers))
 
-   
+
+# modified version
+import progressbar
+class DynamicMessage(progressbar.DynamicMessage):
+    def __call__(self, progress, data):
+        val = data['dynamic_messages'][self.name]
+        if val:
+            return self.name + ': ' + '{}'.format(val)
+        else:
+            return self.name + ': ' + 6 * '-'
+
+
+
 from keras.constraints import Constraint, maxnorm,nonneg,unitnorm
 class UnitNormL1(Constraint):
     def __init__(self, axis=0):
@@ -115,7 +127,13 @@ This dict can be used while building the network, making it easier to perform a 
         self.custom_log_functions = {}
         self.metrics = []
         import datetime
-        self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update),
+        self.bar_status_message = ""
+        self.bar_shift = 0
+        self.bar_epoch = 0
+        self.callbacks = [LambdaCallback(on_batch_end=self.bar_update_batch,
+                                         on_epoch_end=self.bar_update,
+                                         # on_epoch_begin=self.bar_update
+                                         ),
                           keras.callbacks.TensorBoard(log_dir=self.local('logs/{}'.format(datetime.datetime.now().isoformat())), write_graph=False)]
         
     def build(self,input_shape):
@@ -197,34 +215,48 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             self.build(tuple(data["input_shape"]))
         self.net.compile(Adam(0.0001),bce)
         
+
+    def initialize_bar(self):
+        import progressbar
+        widgets = [
+            progressbar.Timer(format='%(elapsed)s'),
+            ' ', progressbar.Counter(), 
+            progressbar.Bar(),
+            progressbar.AbsoluteETA(format='%(eta)s'), ' ',
+            DynamicMessage("status")
+        ]
+        self.bar = progressbar.ProgressBar(max_value=self.max_epoch, widgets=widgets)
+        
+
+    msgwidth = 60
+    def bar_update_batch(self, batch, logs):
+        if not hasattr(self,'bar'):
+            self.initialize_bar()
+
+        msg = self.bar_status_message
+        
+        self.bar_shift = self.bar_shift+1
+        if len(msg) > Network.msgwidth:
+            b = self.bar_shift % len(msg)
+        else:
+            b = 0
+
+        self.bar.update(self.bar_epoch,
+                        status = "   ".join([msg,msg])[b:b+Network.msgwidth])
+
     def bar_update(self, epoch, logs):
         "Used for updating the progress bar."
+        self.bar_epoch = epoch+1
+        
+        if not hasattr(self,'bar'):
+            self.initialize_bar()
+        
         ologs = {}
         for k in self.custom_log_functions:
             ologs[k] = self.custom_log_functions[k]()
         for k in logs:
-            if len(k) > 5:
-                ologs[k[-5:]] = logs[k]
-            else:
-                ologs[k] = logs[k]
-
-        if not hasattr(self,'bar'):
-            import progressbar
-            widgets = [
-                progressbar.Timer(format='%(elapsed)s'),
-                ' ', progressbar.Counter(), 
-                progressbar.Bar(),
-                progressbar.AbsoluteETA(format='%(eta)s'), ' ',
-            ]
-            keys = []
-            for k in ologs:
-                keys.append(k)
-            keys.sort()
-            for k in keys:
-                widgets.append(progressbar.DynamicMessage(k))
-                widgets.append(' ')
-            self.bar = progressbar.ProgressBar(max_value=self.max_epoch, widgets=widgets)
-        self.bar.update(epoch+1, **ologs)
+            ologs[k] = logs[k]
+        self.bar_status_message = "  ".join(["{}: {:6.3g}".format(key,value) for key, value in sorted(ologs.items())])
         
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,test_data=None,save=True,report=True,
@@ -746,7 +778,7 @@ class ConvolutionalGumbelAE(GumbelAE):
                     Dropout(self.parameters['dropout']),
                     Dense(self.parameters['N']*self.parameters['M']),
                 ])]
-    
+
 class Convolutional2GumbelAE(ConvolutionalGumbelAE):
     """A mixin that uses convolutions also in the decoder. Somehow it does not converge."""
     def build_decoder(self,input_shape):
