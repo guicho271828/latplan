@@ -6,7 +6,6 @@ assuming the input/output image is binarized
 """
 
 import numpy as np
-from functools import reduce
 from keras.layers import *
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
@@ -23,117 +22,11 @@ from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 from .util.noise import gaussian, salt, pepper
 from .util.distances import *
+from .util.layers    import *
 
 
-debug = False
-# debug = True
 # utilities ###############################################################
-def wrap(x,y,**kwargs):
-    "wrap arbitrary operation"
-    return Lambda(lambda x:y,**kwargs)(x)
 
-def flatten(x):
-    if K.ndim(x) >= 3:
-        return Flatten()(x)
-    else:
-        return x
-
-def set_trainable (model, flag):
-    if hasattr(model, "layers"):
-        for l in model.layers:
-            set_trainable(l, flag)
-    else:
-        model.trainable = flag
-
-def sort_binary(x):
-    x = x.round().astype(np.uint64)
-    steps = np.arange(start=x.shape[-1]-1, stop=-1, step=-1, dtype=np.uint64)
-    two_exp = (2 << steps)//2
-    x_int = np.sort(np.dot(x, two_exp))
-    # print(x_int)
-    xs=[]
-    for i in range(((x.shape[-1]-1)//8)+1):
-        xs.append(x_int % (2**8))
-        x_int = x_int // (2**8)
-    xs.reverse()
-    # print(xs)
-    tmp = np.stack(xs,axis=-1)
-    # print(tmp)
-    tmp = np.unpackbits(tmp.astype(np.uint8),-1)
-    # print(tmp)
-    return tmp[...,-x.shape[-1]:]
-
-# tests
-# sort_binary(np.array([[[1,0,0,0],[0,1,0,0],],[[0,1,0,0],[1,0,0,0]]]))
-# sort_binary(np.array([[[1,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],],
-#                       [[0,1,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0]]]))
-
-def count_params(model):
-    from keras.utils.layer_utils import count_params
-    model._check_trainable_weights_consistency()
-    if hasattr(model, '_collected_trainable_weights'):
-        trainable_count = count_params(model._collected_trainable_weights)
-    else:
-        trainable_count = count_params(model.trainable_weights)
-    return trainable_count
-
-def Print():
-    def printer(x):
-        print(x)
-        return x
-    return Lambda(printer)
-
-def Sequential (array):
-    def apply1(arg,f):
-        if debug:
-            print("applying {}({})".format(f,arg))
-        result = f(arg)
-        if debug:
-            print(K.int_shape(result))
-        return result
-    return lambda x: reduce(apply1, array, x)
-
-def ConditionalSequential (array, condition, **kwargs):
-    def apply1(arg,f):
-        # print("applying {}({})".format(f,arg))
-        concat = Concatenate(**kwargs)([condition, arg])
-        return f(concat)
-    return lambda x: reduce(apply1, array, x)
-
-def Residual (layer):
-    def res(x):
-        return x+layer(x)
-    return Lambda(res)
-
-def ResUnit (*layers):
-    return Residual(
-        Sequential(layers))
-
-# modified version
-import progressbar
-class DynamicMessage(progressbar.DynamicMessage):
-    def __call__(self, progress, data):
-        val = data['dynamic_messages'][self.name]
-        if val:
-            return self.name + ': ' + '{}'.format(val)
-        else:
-            return self.name + ': ' + 6 * '-'
-
-
-
-from keras.constraints import Constraint, maxnorm,nonneg,unitnorm
-class UnitNormL1(Constraint):
-    def __init__(self, axis=0):
-        self.axis = axis
-
-    def __call__(self, p):
-        return p / (K.epsilon() + K.sum(p,
-                                        axis=self.axis,
-                                        keepdims=True))
-
-    def get_config(self):
-        return {'name': self.__class__.__name__,
-                'axis': self.axis}
 
 class Network:
     """Base class for various neural networks including GANs, AEs and Classifiers.
@@ -349,123 +242,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                test_data_to=None):
         pass
 
-class GradientEarlyStopping(Callback):
-    def __init__(self, monitor='val_loss',
-                 min_grad=-0.0001, epoch=1, verbose=0, smooth=3):
-        super(GradientEarlyStopping, self).__init__()
-        self.monitor = monitor
-        self.verbose = verbose
-        self.min_grad = min_grad
-        self.history = []
-        self.epoch = epoch
-        self.stopped_epoch = 0
-        assert epoch >= 2
-        if epoch > smooth*2:
-            self.smooth = smooth
-        else:
-            print("epoch is too small for smoothing!")
-            self.smooth = epoch//2
-
-    def on_train_begin(self, logs=None):
-        # Allow instances to be re-used
-        self.wait = 0
-        self.stopped_epoch = 0
-
-    def gradient(self):
-        h = np.array(self.history)
-        
-        # e.g. when smooth = 3, take the first/last 3 elements, average them over 3,
-        # take the difference, then divide them by the epoch(== length of the history)
-        return (h[-self.smooth:] - h[:self.smooth]).mean()/self.epoch
-        
-    def on_epoch_end(self, epoch, logs=None):
-        import warnings
-        current = logs.get(self.monitor)
-        if current is None:
-            warnings.warn('Early stopping requires %s available!' %
-                          (self.monitor), RuntimeWarning)
-
-        self.history.append(current) # to the last
-        if len(self.history) > self.epoch:
-            self.history.pop(0) # from the front
-            if self.gradient() >= self.min_grad:
-                self.model.stop_training = True
-                self.stopped_epoch = epoch
-                
-    def on_train_end(self, logs=None):
-        if self.stopped_epoch > 0 and self.verbose > 0:
-            print('\nEpoch %05d: early stopping' % (self.stopped_epoch))
-            print('history:',self.history)
-            print('min_grad:',self.min_grad,"gradient:",self.gradient())
-    
-def anneal_rate(epoch,min=0.1,max=5.0):
-    import math
-    return math.log(max/min) / epoch
-
-def take_true(y_cat):
-    return tf.slice(y_cat,[0,0,0],[-1,-1,1])
-
-class GumbelSoftmax:
-    count = 0
-    
-    def __init__(self,N,M,min,max,anneal_rate):
-        self.N = N
-        self.M = M
-        self.layers = Sequential([
-            # Dense(N * M),
-            Reshape((N,M))])
-        self.min = min
-        self.max = max
-        self.anneal_rate = anneal_rate
-        self.tau = K.variable(max, name="temperature")
-        
-    def call(self,logits):
-        u = K.random_uniform(K.shape(logits), 0, 1)
-        gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
-        return K.in_train_phase(
-            K.softmax( ( logits + gumbel ) / self.tau ),
-            K.softmax( ( logits + gumbel ) / self.min ))
-    
-    def __call__(self,prev):
-        if hasattr(self,'logits'):
-            raise ValueError('do not reuse the same GumbelSoftmax; reuse GumbelSoftmax.layers')
-        GumbelSoftmax.count += 1
-        c = GumbelSoftmax.count-1
-        prev = flatten(prev)
-        logits = self.layers(prev)
-        self.logits = logits
-        return Lambda(self.call,name="gumbel_{}".format(c))(logits)
-    
-    def loss(self):
-        logits = self.logits
-        q = K.softmax(logits)
-        log_q = K.log(q + 1e-20)
-        # note : log_q - log(1/M) = log q / (1/M) = log Mq
-        return - K.mean(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
-                        axis=tuple(range(1,len(K.int_shape(logits)))))
-    
-    def cool(self, epoch, logs):
-        K.set_value(
-            self.tau,
-            np.max([self.min,
-                    self.max * np.exp(- self.anneal_rate * epoch)]))
-
-class SimpleGumbelSoftmax(GumbelSoftmax):
-    "unlinke GumbelSoftmax, it does not have layers."
-    count = 0
-    def __init__(self,min,max,anneal_rate):
-        self.min = min
-        self.anneal_rate = anneal_rate
-        self.tau = K.variable(max, name="temperature")
-    
-    def __call__(self,prev):
-        if hasattr(self,'logits'):
-            raise ValueError('do not reuse the same GumbelSoftmax; reuse GumbelSoftmax.layers')
-        SimpleGumbelSoftmax.count += 1
-        c = SimpleGumbelSoftmax.count-1
-        self.logits = prev
-        return Lambda(self.call,name="simplegumbel_{}".format(c))(prev)
-
 # Network mixins ################################################################
 
 def reg(query, data, d={}):
@@ -652,9 +428,9 @@ Note: references to self.parameters[key] are all hyperparameters."""
         def loss(x, y):
             return BCE(x,y) + self.gs.loss()
 
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.cool))
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.update))
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.update))
+        self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.variable)
         self.loss = loss
         self.eval = MSE
         self.metrics.append(BCE)
@@ -824,10 +600,10 @@ class GumbelAE2(GumbelAE):
         def loss(x, y):
             return rec(x,y) + self.gs.loss() + self.gs2.loss()
 
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.cool))
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.cool))
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs3.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.update))
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.update))
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs3.update))
+        self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.variable)
         self.loss = loss
         self.metrics.append(rec)
         self.encoder     = Model(x, z)
@@ -1246,8 +1022,8 @@ We again use gumbel-softmax for representing A."""
             return reconstruction_loss + kl_loss
 
         self.metrics.append(rec)
-        self.callbacks.append(LambdaCallback(on_epoch_end=gs.cool))
-        self.custom_log_functions['tau'] = lambda: K.get_value(gs.tau)
+        self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
+        self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
         self.loss = loss
         self.encoder     = Model(x, [pre,action])
         self.decoder     = Model([pre2,action2], y2)
