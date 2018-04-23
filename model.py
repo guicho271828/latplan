@@ -310,19 +310,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                train_data_to=None,
                test_data_to=None):
         pass
-    
-    def linear_schedule(self, schedules, rate):
-        schedules = np.array([-1]+schedules) * self.parameters['full_epoch']
-        ratios = np.ones_like(schedules)
-        print(schedules,ratios)
-        for i in range(len(ratios)):
-            ratios[i] = self.parameters['lr'] * (rate**i)
-        def fn(epoch):
-            for i,s in enumerate(schedules):
-                if epoch < s:
-                    return float(ratios[i-1])
-            return float(ratios[-1])
-        return LearningRateScheduler(fn)
 
 class GradientEarlyStopping(Callback):
     def __init__(self, monitor='val_loss',
@@ -875,7 +862,6 @@ class Discriminator(Network):
 
         self.loss = bce
         self.net = Model(x, y)
-        # self.callbacks.append(self.linear_schedule([0.2,0.5], 0.1))
         self.callbacks.append(GradientEarlyStopping(verbose=1,epoch=50,min_grad=self.parameters['min_grad']))
         # self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
