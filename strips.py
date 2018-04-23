@@ -24,7 +24,7 @@ default_parameters = {
     'batch_size'      : 2000,
     'full_epoch'      : 1000,   # full epoch used for calcurating the GS annearling rate
     'epoch'           : 1000,   # training epoch. If epoch < full_epoch, it just stops there.
-    # 'lr_epoch'   : 0.5,       # the learning rate reduces x1/10 at epoch*lr_epoch
+    'lr_epoch'        : 0.5,    # the learning rate reduces x1/10 at epoch*lr_epoch. 0.5 by default
     'max_temperature' : 5.0,
     'min_temperature' : 0.7,
     'M'               : 2,
@@ -195,7 +195,6 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
         'activation' : ['tanh'],
         'full_epoch' :[1000],
         'epoch'      :[1000],
-        'lr_epoch'   :[0.5],
         'batch_size' :[500],
         'optimizer'  :['adam'],
         'lr'         :[0.001],
