@@ -20,10 +20,11 @@ mode = 'learn_dump'
 
 # default values
 default_parameters = {
-    'lr'              : 0.0001,
+    'lr'              : 0.0001, # learning rate
     'batch_size'      : 2000,
-    'full_epoch'      : 1000,
-    'epoch'           : 1000,
+    'full_epoch'      : 1000,   # full epoch used for calcurating the GS annearling rate
+    'epoch'           : 1000,   # training epoch. If epoch < full_epoch, it just stops there.
+    # 'lr_epoch'   : 0.5,       # the learning rate reduces x1/10 at epoch*lr_epoch
     'max_temperature' : 5.0,
     'min_temperature' : 0.7,
     'M'               : 2,
