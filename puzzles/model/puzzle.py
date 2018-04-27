@@ -44,7 +44,7 @@ def generate(configs, width, height, **kwargs):
         return Model(configs, wrap(configs, states))
 
     model = build()
-    return model.predict(configs,**kwargs)
+    return model.predict(np.array(configs),**kwargs)
 
 
 threshold = 0.01
