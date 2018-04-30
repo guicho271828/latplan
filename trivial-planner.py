@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import warnings
-import config
+import config_cpu
 import numpy as np
 import latplan
 from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator
