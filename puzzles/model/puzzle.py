@@ -9,6 +9,13 @@ from keras.models import Model
 from keras import backend as K
 import tensorflow as tf
 
+# domain specific state representation:
+#
+# In a config array C, C_ij is the location of j-th panel in the i-th configuration.
+# 
+# [[0,1,2,3,4,5,6,7,8]] represents a single configuration, where 0 is at 0 (top left)),
+# 1 is at 1 (top middle) and so on.
+
 setting = {
     'base' : None,
     'panels' : None,
@@ -308,3 +315,26 @@ def validate_transitions_cpu(transitions, check_states=True, **kwargs):
 
 
 validate_transitions = validate_transitions_cpu
+
+# def to_objects(configs,width,height):
+#     configs = np.array(configs)
+#     xy = np.concatenate((np.expand_dims( np.array( configs  % 3, np.uint8),-1),
+#                          np.expand_dims( np.array( configs // 3, np.uint8),-1)),
+#                         axis=-1)
+# 
+#     return np.unpackbits(xy, 2)
+
+# experimental
+def to_objects(configs,width,height):
+    configs = np.array(configs)
+    ix = np.eye(width)
+    iy = np.eye(height)
+    x = ix[np.array( configs  % 3, np.uint8)]
+    y = iy[np.array( configs // 3, np.uint8)]
+
+    # panels
+    p = np.tile(np.eye(width*height), (len(configs),1,1))
+
+    objects = np.concatenate((p,x,y), axis=-1)
+
+    return objects

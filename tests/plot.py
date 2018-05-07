@@ -75,6 +75,7 @@ def puzzle_plot(p):
     import numpy.random as random
     random.shuffle(configs)
     configs = configs[:10]
+    print(list(p.to_objects(configs,3,3)))
     puzzles = p.generate(configs, 3, 3)
     print(puzzles.shape, "mean", puzzles.mean(), "stdev", np.std(puzzles))
     plot_image(puzzles[-1], name("{}.png"))

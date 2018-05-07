@@ -1,6 +1,6 @@
 import numpy as np
 from .model.puzzle import setting, generate, states, transitions, generate_configs, successors
-from .model.puzzle import validate_states, validate_transitions, to_configs
+from .model.puzzle import validate_states, validate_transitions, to_configs, to_objects
 from .split_image import split_image
 from .util import preprocess
 import os
