@@ -887,7 +887,7 @@ class Discriminator(Network):
 
         self.loss = bce
         self.net = Model(x, y)
-        self.callbacks.append(GradientEarlyStopping(verbose=1,epoch=50,min_grad=self.parameters['min_grad']))
+        self.callbacks.append(GradientEarlyStopping(verbose=1,epoch=200,min_grad=self.parameters['min_grad']))
         # self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
         
