@@ -335,6 +335,9 @@ class GradientEarlyStopping(Callback):
 
     def gradient(self):
         h = np.array(self.history)
+        
+        # e.g. when smooth = 3, take the first/last 3 elements, average them over 3,
+        # take the difference, then divide them by the epoch(== length of the history)
         return (h[-self.smooth:] - h[:self.smooth]).mean()/self.epoch
         
     def on_epoch_end(self, epoch, logs=None):
@@ -344,9 +347,9 @@ class GradientEarlyStopping(Callback):
             warnings.warn('Early stopping requires %s available!' %
                           (self.monitor), RuntimeWarning)
 
-        self.history.append(current)
+        self.history.append(current) # to the last
         if len(self.history) > self.epoch:
-            self.history.pop(0)
+            self.history.pop(0) # from the front
             if self.gradient() >= self.min_grad:
                 self.model.stop_training = True
                 self.stopped_epoch = epoch
