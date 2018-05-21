@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import config
+import config_cpu
 import numpy as np
 import subprocess
 import os
@@ -58,33 +58,35 @@ def preprocess(bits):
     echodo(["helper/sas.sh",
             os.path.join(ensure_directory(network_dir),"{}.csv".format(action_type)),
             problem(network("ama1_ig.csv")),
-            problem(network("{}.sas".format(action_type)))])
+            problem(network("{}.sas.gz".format(action_type)))])
     echodo(["helper/sasp.sh",
-            problem(network("{}.sas".format(action_type))),
-            problem(network("{}.sasp".format(action_type)))])
+            problem(network("{}.sas.gz".format(action_type))),
+            problem(network("{}.sasp.gz".format(action_type)))])
 
 def latent_plan(init,goal,mode):
     bits = np.concatenate((init,goal))
     ###### preprocessing ################################################################
 
     ## old code for caching...
-    lock = problem(network("lock"))
-    import fcntl
-    try:
-        with open(lock) as f:
-            print("lockfile found!")
-            fcntl.flock(f, fcntl.LOCK_SH)
-    except FileNotFoundError:
-        with open(lock,'wb') as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            preprocess(bits)
-
+    # lock = problem(network("lock"))
+    # import fcntl
+    # try:
+    #     with open(lock) as f:
+    #         print("lockfile found!")
+    #         fcntl.flock(f, fcntl.LOCK_SH)
+    # except FileNotFoundError:
+    #     with open(lock,'wb') as f:
+    #         fcntl.flock(f, fcntl.LOCK_EX)
+    #         preprocess(bits)
+            
+    preprocess(bits)
+    
     ###### do planning #############################################
-    sasp     = problem(network("{}.sasp".format(action_type)))
-    plan_raw = problem(network("{}.sasp.plan".format(action_type)))
+    sasp     = problem(network("{}.sasp.gz".format(action_type)))
+    plan_raw = problem(network("{}.sasp.gz.plan".format(action_type)))
     plan     = problem(network("{}.{}.plan".format(action_type,mode)))
     
-    echodo(["planner-scripts/limit.sh","-v", "-o",options[mode], "--","fd-sas-clean", sasp])
+    echodo(["helper/fd.sh",options[mode], sasp])
     assert os.path.exists(plan_raw)
     echodo(["mv",plan_raw,plan])
     

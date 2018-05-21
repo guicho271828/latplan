@@ -1,10 +1,12 @@
 #!/bin/bash
 
-find -name "*.log" -delete
-find -name "*path*" -delete
-find -name "*reconstruction*" -delete
-# find -name "*sas*" -delete
-find -name "*.csv" -delete
-find -name "lock" -delete
-find -name "*.pddl" -delete
-find -name "*.plan" -delete
+find $1 -name "*path*" -delete
+find $1 -name "*reconstruction*" -delete
+find $1 -name "*.negative" -delete
+# find $1 -name "*sas*" -delete
+find $1 -name "*.log" -delete
+find $1 -name "*.err" -delete
+find $1 -name "*.csv" -delete
+find $1 -name "*lock" -delete
+find $1 -name "*.pddl" -delete
+find $1 -name "*.plan" -delete
