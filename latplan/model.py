@@ -636,11 +636,11 @@ Note: references to self.parameters[key] are all hyperparameters."""
         ys = self.autoencode(xs)
         yp = self.autoencode(xp)
 
-        dy  =  y-x
-        dby = by-x
-        dyg = yg-x
-        dys = ys-x
-        dyp = yp-x
+        dy  = ( y-x+1)/2
+        dby = (by-x+1)/2
+        dyg = (yg-x+1)/2
+        dys = (ys-x+1)/2
+        dyp = (yp-x+1)/2
         
         from .util.plot import plot_grid, squarify
         _z = squarify(z)
