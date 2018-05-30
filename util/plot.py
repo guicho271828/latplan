@@ -35,7 +35,7 @@ def plot_grid(images,w=10,path="plan.png",verbose=False):
     for i,image in enumerate(images):
         ax = plt.subplot(h,w,i+1)
         try:
-            plt.imshow(image,interpolation='nearest',cmap='gray',)
+            plt.imshow(image,interpolation='nearest',cmap='gray', vmin = 0, vmax = 1)
         except TypeError:
             TypeError("Invalid dimensions for image data: image={}".format(np.array(image).shape))
         ax.get_xaxis().set_visible(False)
