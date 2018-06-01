@@ -13,3 +13,5 @@ learn/events*
 *.bin
 *.lprof
 /samples/table
+samples/*/
+problem-instances/*/
