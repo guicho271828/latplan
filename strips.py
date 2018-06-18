@@ -42,6 +42,12 @@ def plot_autoencoding_image(ae,test,train):
     ae.plot(select(test,6),"autoencoding_test.png",verbose=True)
     ae.plot(select(train,6),"autoencoding_train.png",verbose=True)
 
+def plot_variance_image(ae,test,train):
+    if 'plot' not in mode:
+        return
+    ae.plot_variance(select(test,6), "variance_test.png",  verbose=True)
+    ae.plot_variance(select(train,6),"variance_train.png", verbose=True)
+    
 def plot_autoencoding_image_if_necessary(ae,test,train):
     if 'learn' not in mode:
         plot_autoencoding_image(ae,test,train)
@@ -179,6 +185,7 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
+    plot_variance_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
@@ -215,6 +222,7 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     print("*** NOTE *** if l_rec is above 0.01, it is most likely not learning the correct model")
     show_summary(ae, train, test)
     plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
+    plot_variance_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions,repeat=100)
     dump_states (ae,states,repeat=100)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),repeat=100)
@@ -249,6 +257,7 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
     ae = run("_".join(map(str,("samples/lightsout",type,size,N,num_examples,encoder))), train, test, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
+    plot_variance_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
     dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
