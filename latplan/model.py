@@ -709,6 +709,15 @@ Note: references to self.parameters[key] are all hyperparameters."""
         plot_grid(images, w=10, path=self.local(path), verbose=verbose)
         return _z, x, _z2, _z2r
 
+    def plot_variance(self,data,path,verbose=False):
+        self.load()
+        x = data
+        samples = 100
+        z = np.array([ np.round(self.encode_binary(x)) for i in range(samples)])
+        z = np.einsum("sbz->bsz",z)
+        from .util.plot import plot_grid
+        plot_grid(z, w=6, path=self.local(path), verbose=verbose)
+
 class GumbelAE2(GumbelAE):
     """This network uses GS also for the output, assuming that the input pictures are black/white."""
     def build_decoder(self,input_shape):
