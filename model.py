@@ -402,6 +402,7 @@ class GumbelSoftmax:
         logits = self.logits
         q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
+        # note : log_q - log(1/M) = log q / (1/M) = log Mq
         return - K.mean(q * (log_q - K.log(1.0/K.int_shape(logits)[-1])),
                         axis=tuple(range(1,len(K.int_shape(logits)))))
     
