@@ -53,6 +53,7 @@ def _update_best(artifact, eval, local_parameters, results, best, report, report
 
 def grid_search(task, default_parameters, parameters,
                 report=None, report_best=None,
+                shuffle=True,
                 limit=float('inf')):
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
     results       = []
@@ -60,7 +61,8 @@ def grid_search(task, default_parameters, parameters,
     names  = [ k for k, _ in parameters.items()]
     values = [ v for _, v in parameters.items()]
     all_params = list(itertools.product(*values))
-    random.shuffle(all_params)
+    if shuffle:
+        random.shuffle(all_params)
     [ print(r) for r in all_params]
     try:
         for i,params in enumerate(all_params):
