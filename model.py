@@ -124,6 +124,11 @@ This dict can be used while building the network, making it easier to perform a 
         self.loaded = False
         self.verbose = True
         self.parameters = parameters
+        if "full_epoch" not in parameters:
+            if "epoch" in self.parameters:
+                # in test time, epoch may not be set
+                self.parameters["full_epoch"] = self.parameters["epoch"]
+        
         self.custom_log_functions = {}
         self.metrics = []
         import datetime
