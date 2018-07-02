@@ -595,7 +595,22 @@ Note: references to self.parameters[key] are all hyperparameters."""
             #return K.mean(K.binary_crossentropy(x,y))
             return bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
                        K.reshape(y,(K.shape(x)[0],data_dim,)))
-
+        def acc(x, y):
+            return mse(K.reshape(x,(K.shape(x)[0],data_dim,)),
+                       K.reshape(y,(K.shape(x)[0],data_dim,)))
+        def activation(x, y):
+            return K.mean(z[:,:,0])
+        
+        def entropy(x, y):
+            pi = K.softmax(self.gs.logits)
+            return K.mean(K.sum(- pi * K.log(pi+K.epsilon()), axis=[-1,-2]))
+        def max_bitwise_entropy_in_batch(x, y):
+            pi = K.softmax(self.gs.logits)
+            return K.max(K.sum(- pi * K.log(pi+K.epsilon()),axis=-1))
+        def mean_max_bitwise_entropy(x, y):
+            pi = K.softmax(self.gs.logits)
+            return K.mean(K.max(K.sum(- pi * K.log(pi+K.epsilon()),axis=-1),axis=-1))
+        
         def loss(x, y):
             return rec(x,y) + self.gs.loss()
 
@@ -604,6 +619,11 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
         self.loss = loss
         self.metrics.append(rec)
+        self.metrics.append(acc)
+        self.metrics.append(activation)
+        self.metrics.append(entropy)
+        self.metrics.append(max_bitwise_entropy_in_batch)
+        self.metrics.append(mean_max_bitwise_entropy)
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.autoencoder = Model(x, y)
