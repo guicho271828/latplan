@@ -22,7 +22,6 @@ mode = 'learn_dump'
 default_parameters = {
     'lr'              : 0.0001, # learning rate
     'batch_size'      : 2000,
-    'full_epoch'      : 1000,   # full epoch used for calcurating the GS annearling rate
     'epoch'           : 1000,   # training epoch. If epoch < full_epoch, it just stops there.
     'max_temperature' : 5.0,
     'min_temperature' : 0.7,
@@ -164,7 +163,6 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
         'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' :['tanh'],
-        'full_epoch' :[150],
         'epoch'      :[150],
         'batch_size' :[4000],
         'lr'         :[0.001],
@@ -200,7 +198,6 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
         'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' : ['tanh'],
-        'full_epoch' :[1000],
         'epoch'      :[1000],
         'batch_size' :[500],
         'optimizer'  :['adam'],
@@ -237,7 +234,6 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
         'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' : ['tanh'],
-        'full_epoch' :[100],
         'epoch'      :[100],
         'batch_size' :[2000],
         'lr'         :[0.001],
