@@ -1,3 +1,6 @@
 #!/bin/bash
 
-tensorboard --logdir=$(echo */logs/ | tr " " ",")
+while :
+do
+    tensorboard --logdir=$(echo */logs/ | tr " " ",")
+done
