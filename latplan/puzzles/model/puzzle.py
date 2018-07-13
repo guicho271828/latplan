@@ -337,4 +337,7 @@ def to_objects(configs,width,height):
 
     objects = np.concatenate((p,x,y), axis=-1)
 
+    for sample in objects:
+        np.random.shuffle(sample)
+
     return objects
