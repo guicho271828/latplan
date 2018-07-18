@@ -43,7 +43,30 @@ def set_trainable (model, flag):
             set_trainable(l, flag)
     else:
         model.trainable = flag
-    
+
+def sort_binary(x):
+    x = x.round().astype(np.uint64)
+    steps = np.arange(start=x.shape[-1]-1, stop=-1, step=-1, dtype=np.uint64)
+    two_exp = (2 << steps)//2
+    x_int = np.sort(np.dot(x, two_exp))
+    # print(x_int)
+    xs=[]
+    for i in range(((x.shape[-1]-1)//8)+1):
+        xs.append(x_int % (2**8))
+        x_int = x_int // (2**8)
+    xs.reverse()
+    # print(xs)
+    tmp = np.stack(xs,axis=-1)
+    # print(tmp)
+    tmp = np.unpackbits(tmp.astype(np.uint8),-1)
+    # print(tmp)
+    return tmp[...,-x.shape[-1]:]
+
+# tests
+# sort_binary(np.array([[[1,0,0,0],[0,1,0,0],],[[0,1,0,0],[1,0,0,0]]]))
+# sort_binary(np.array([[[1,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],],
+#                       [[0,1,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0]]]))
+
 def Print():
     def printer(x):
         print(x)
