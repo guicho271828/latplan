@@ -23,6 +23,8 @@ from keras.callbacks import LambdaCallback, LearningRateScheduler, Callback
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 from .util.noise import gaussian, salt, pepper
+from .util.distances import *
+
 
 debug = False
 # debug = True
@@ -98,7 +100,6 @@ def Residual (layer):
 def ResUnit (*layers):
     return Residual(
         Sequential(layers))
-
 
 # modified version
 import progressbar
