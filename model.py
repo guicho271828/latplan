@@ -176,6 +176,8 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             return
         self._build(input_shape)
         self.built = True
+        if not hasattr(self,"eval"):
+            self.eval = self.loss
         return self
     
     def _build(self):
@@ -320,8 +322,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         except KeyboardInterrupt:
             print("learning stopped\n")
         finally:
-            # force the metrics are not returned in the evaluation
-            self.net.compile(optimizer=o, loss=self.loss)
+            self.net.compile(optimizer=o, loss=self.eval)
         self.loaded = True
         if report:
             self.report(train_data,
@@ -505,14 +506,14 @@ The latter two are used for verifying the performance of the AE.
                 reg(query+["test"], result, performance)
                 print(*query,"test", result)
         
-        self.autoencoder.compile(optimizer='adam', loss=mse)
-        test_both(["MSE","vanilla"],
+        self.autoencoder.compile(optimizer='adam', loss=self.eval)
+        test_both([self.eval.__name__,"vanilla"],
                   lambda data: float(self.autoencoder.evaluate(data,data,**opts)))
-        test_both(["MSE","gaussian"],
+        test_both([self.eval.__name__,"gaussian"],
                   lambda data: float(self.autoencoder.evaluate(gaussian(data),data,**opts)))
-        test_both(["MSE","salt"],
+        test_both([self.eval.__name__,"salt"],
                   lambda data: float(self.autoencoder.evaluate(salt(data),data,**opts)))
-        test_both(["MSE","pepper"],
+        test_both([self.eval.__name__,"pepper"],
                   lambda data: float(self.autoencoder.evaluate(pepper(data),data,**opts)))
 
         test_both(["activation"],
@@ -623,14 +624,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         y2 = Sequential(_decoder)(flatten(z2))
         w2 = Sequential([*_encoder, self.gs2])(flatten(y2))
 
-        data_dim = np.prod(input_shape)
-        def rec(x, y):
-            #return K.mean(K.binary_crossentropy(x,y))
-            return bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                       K.reshape(y,(K.shape(x)[0],data_dim,)))
-        def acc(x, y):
-            return mse(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                       K.reshape(y,(K.shape(x)[0],data_dim,)))
         def activation(x, y):
             return K.mean(z[:,:,0])
         
@@ -645,14 +638,15 @@ Note: references to self.parameters[key] are all hyperparameters."""
             return K.mean(K.max(K.sum(- pi * K.log(pi+K.epsilon()),axis=-1),axis=-1))
         
         def loss(x, y):
-            return rec(x,y) + self.gs.loss()
+            return BCE(x,y) + self.gs.loss()
 
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.cool))
         self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.cool))
         self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.tau)
         self.loss = loss
-        self.metrics.append(rec)
-        self.metrics.append(acc)
+        self.eval = MSE
+        self.metrics.append(BCE)
+        self.metrics.append(MSE)
         self.metrics.append(activation)
         self.metrics.append(entropy)
         self.metrics.append(max_bitwise_entropy_in_batch)
