@@ -69,6 +69,15 @@ def sort_binary(x):
 # sort_binary(np.array([[[1,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],],
 #                       [[0,1,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0]]]))
 
+def count_params(model):
+    from keras.utils.layer_utils import count_params
+    model._check_trainable_weights_consistency()
+    if hasattr(model, '_collected_trainable_weights'):
+        trainable_count = count_params(model._collected_trainable_weights)
+    else:
+        trainable_count = count_params(model.trainable_weights)
+    return trainable_count
+
 def Print():
     def printer(x):
         print(x)
@@ -538,6 +547,10 @@ The latter two are used for verifying the performance of the AE.
         import json
         with open(self.local('performance.json'), 'w') as f:
             json.dump(performance, f)
+        
+        import json
+        with open(self.local('parameter_count.json'), 'w') as f:
+            json.dump(count_params(self.autoencoder), f)
         
         return self
     
