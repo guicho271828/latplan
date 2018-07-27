@@ -1,34 +1,10 @@
 import numpy as np
 
-def fix_images(images,dims=None):
-    if isinstance(images,list) or isinstance(images,tuple):
-        expanded = []
-        for i in images:
-            expanded.extend(fix_image(i,dims))
-        return expanded
-    if len(images.shape) == 3:
-        return images
-    if len(images.shape) == 4:
-        return np.einsum("bxyc->bcxy",images).reshape((-1,)+images.shape[1:3])
-    if len(images.shape) == 2:
-        return images.reshape((images.shape[0],)+dims)
-    raise BaseException("images.shape={}, dims={}".format(images.shape,dims))
-
-def fix_image(image,dims=None):
-    if len(image.shape) == 2:
-        return np.expand_dims(image,axis=0)
-    if len(image.shape) == 3:
-        return np.einsum("xyc->cxy",image).reshape((-1,)+image.shape[0:2])
-    if len(image.shape) == 1:
-        return image.reshape((1,)+dims)
-    raise BaseException("image.shape={}, dims={}".format(image.shape,dims))
-
 import math
 
 def plot_grid(images,w=10,path="plan.png",verbose=False):
     import matplotlib.pyplot as plt
     l = 0
-    images = fix_images(images)
     l = len(images)
     h = int(math.ceil(l/w))
     plt.figure(figsize=(w*1.5, h*1.5))
@@ -48,7 +24,6 @@ def plot_grid(images,w=10,path="plan.png",verbose=False):
 # contiguous image
 def plot_grid2(images,w=10,path="plan.png",verbose=False):
     import matplotlib.pyplot as plt
-    images = fix_images(images)
     l = images.shape[0]
     h = int(math.ceil(l/w))
     margin = 3
