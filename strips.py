@@ -43,8 +43,9 @@ def plot_autoencoding_image(ae,test,train):
 def plot_variance_image(ae,test,train):
     if 'plot' not in mode:
         return
-    ae.plot_variance(select(test,6), "variance_test.png",  verbose=True)
-    ae.plot_variance(select(train,6),"variance_train.png", verbose=True)
+    if hasattr(ae,"plot_variance"):
+        ae.plot_variance(select(test,6), "variance_test.png",  verbose=True)
+        ae.plot_variance(select(train,6),"variance_train.png", verbose=True)
     
 def plot_autoencoding_image_if_necessary(ae,test,train):
     if 'learn' not in mode:
