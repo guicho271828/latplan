@@ -1,0 +1,139 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=128000 -Q -- $0 "$@"
+|#
+
+#|
+
+This is a converter from a CSV file containing the propositional state vectors
+to a PDDL *domain* file.
+The algorithm follows the Action Learner algorithm (Amado et.al., 2018).
+
+PDDL files are compatible to any classical planning solvers.
+See the past competition solvers for example.
+
+http://www.plg.inf.uc3m.es/ipc2011-deterministic/
+https://helios.hud.ac.uk/scommv/IPC-14/planners.html
+
+|#
+
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre function-cache) :silent t)
+  )
+
+(defpackage :ros.script.to-sas.3690427216
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :function-cache))
+(in-package :ros.script.to-sas.3690427216)
+
+(defclass _nil () ())
+(defun _nil () (make-instance '_nil))
+(defmethod print-object ((object _nil) stream)
+  (write-string "()" stream))
+
+#+nil
+(defun read-as-lists (csv)
+  (remove nil
+          (iter (for line in-file csv using #'read-line)
+                (collect
+                    (iter (for o in-stream (make-string-input-stream line))
+                          (collect o))))))
+
+#+nil
+(defun read-as-bitvector (csv)
+  (mapcar (lambda (x)
+            (coerce x 'bit-vector))
+          (read-as-lists csv)))
+
+(defun read-as-bitvector (csv)
+  (iter (for line in-file csv using #'read-line)
+        (with len2 = 0)
+        (with len = 0)
+
+        (when (first-iteration-p)
+          (setf len2
+                (iter (for o in-stream (make-string-input-stream line))
+                      (counting o)))
+          (assert (evenp len2))
+          (setf len (/ len2 2)))
+        
+        (collecting
+         (iter (for o in-stream (make-string-input-stream line))
+               (for i from 0)
+               (if (< i len)
+                   (collect o into pre result-type bit-vector)
+                   (collect o into suc result-type bit-vector))
+               (finally
+                (return
+                  (cons pre suc)))))))
+
+(function-cache:defcached sym (&rest args)
+  (intern (format nil "~{~a~}" args))
+  ;; (apply #'symbolicate (mapcar #'princ-to-string args))
+  )
+
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (list (sym 'z dim)))
+
+(defun negative-precondition (pre suc)
+  (bit-nor pre suc))
+(defun positive-precondition (pre suc)
+  (bit-and pre suc))
+
+(defun action-learner (data)
+  (let ((candidate-actions (make-hash-table :test 'equal)))
+    (iter (for (pre . suc) in data)
+          (for eff = (cons (bit-andc1 pre suc)   ; positive effects
+                           (bit-andc2 pre suc))) ; negative effects
+          (for precond = (cons (bit-and pre suc)   ; positive precondition
+                               (bit-nor pre suc))) ; negative precondition
+          (pushnew precond
+                   (gethash eff candidate-actions)
+                   :test 'equal))
+    (iter (for (eff preconds) in-hashtable candidate-actions)
+          (for pos-precond = (reduce #'bit-and preconds :key #'car))
+          (for neg-precond = (reduce #'bit-and preconds :key #'cdr))
+          (collecting
+           (cons (cons pos-precond neg-precond)
+                 eff)))))
+
+(defun make-domain (data)
+  (let* ((dim (length (car (first data))))
+         (dims (iota dim))
+         (actions (action-learner data)))
+    `(define (domain latent)
+         (:requirements :strips :negative-preconditions)
+       (:predicates
+        ,@(mapcar #'z dims))
+       ,@(iter (for ((precond+ . precond-) . (eff+ . eff-)) in actions)
+               (for i from 0)
+               (collect
+                   `(:action ,(sym 'a i)
+                     :parameters ,(_nil) ;TODO: Is it possible to use parameters in our framework?
+                     :precondition
+                     (and ,@(iter (for p in-vector precond+ with-index i)
+                                  (when (plusp p)
+                                    (collect (z i))))
+                          ,@(iter (for p in-vector precond- with-index i)
+                                  (when (plusp p)
+                                    (collect `(not ,(z i))))))
+                     :effect
+                     (and ,@(iter (for p in-vector eff+ with-index i)
+                                  (when (plusp p)
+                                    (collect (z i))))
+                          ,@(iter (for p in-vector eff- with-index i)
+                                  (when (plusp p)
+                                    (collect `(not ,(z i))))))))))))
+
+(defun main (csv)
+  (let ((*print-right-margin* 70))
+    (format t "~(~:S~)~%"
+            (make-domain (read-as-bitvector csv)))))
+
+
+;;; vim: set ft=lisp lisp:
+
+
+

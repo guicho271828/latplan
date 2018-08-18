@@ -1,17 +1,22 @@
 #!/bin/sh
 #|-*- mode:lisp -*-|#
 #| <Put a one-line description here>
-exec ros dynamic-space-size=8000 -Q -- $0 "$@"
+exec ros dynamic-space-size=32000 -Q -- $0 "$@"
 |#
 
 #|
 
-This is a converter from the a CSV file containing the propositional vector to a PDDL problem file.
+This is a converter from a CSV file containing the propositional state vectors
+to a PDDL *domain* file.
 PDDL files are compatible to any classical planning solvers.
 See the past competition solvers for example.
 
 http://www.plg.inf.uc3m.es/ipc2011-deterministic/
 https://helios.hud.ac.uk/scommv/IPC-14/planners.html
+
+In a CSV file, each line is a description of a transition.
+The first half of the line is for the before-state and
+the second half of the line is for the after-state (successor state).
 
 Problem files are small, just containing the initial and the goal states,
 but the PDDL domain file is huge, due to the large number of actions.

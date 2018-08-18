@@ -6,21 +6,24 @@ exec ros dynamic-space-size=8000 -Q -- $0 "$@"
 
 #|
 
-This is a converter from the a CSV file containing the propositional vector to a PDDL problem file.
+This program takes as arguments a sequence 0s and 1s,
+ which denotes the initial state and the goal state,
+and output the corresponding PDDL problem file.
+
+The first half of the arguments are treated as the initial state,
+and the second half of the arguments as the goal state.
+For example, if this program is invoked as `problem.bin 0 0 1 1`,
+the initial state is `0 0` (i.e. both propositional variable are false)
+and the goal state is `1 1` (i.e. both variables are true).
+The length of the two states should match.
+
 PDDL files are compatible to any classical planning solvers.
 See the past competition solvers for example.
 
 http://www.plg.inf.uc3m.es/ipc2011-deterministic/
 https://helios.hud.ac.uk/scommv/IPC-14/planners.html
 
-Problem files are small, just containing the initial and the goal states,
-but the PDDL domain file is huge, due to the large number of actions.
-Thus, while in princeple any PDDL-based solver should be able to parse it and solve it,
-some solvers may fail to even read/parse it (e.g. buffer overflow),
-or take incredibly larger amount of runtime.
-
-Thus we developped sas.ros, which skips part of the computation and
-replace the original python script (very slow) in Fast Downward to a compiled program (sas.ros).
+See domain.ros for other information.
 
 |#
 
