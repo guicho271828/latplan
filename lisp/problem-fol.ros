@@ -1,0 +1,127 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=8000 -Q -- $0 "$@"
+|#
+
+#|
+
+This is a converter from a CSV file containing the FOL state vectors
+for the initial and goal states of a problem
+to a PDDL *problem* file.
+
+In a FOL state vector CSV file,
+each line is a description of a transition.
+The first half of the line is for the before-state and
+the second half for the after-state (successor state).
+
+A state description consists of multiple predicate unit (PU) descriptions.
+The number of PUs should be provided by the command-line argument `N`.
+Each PU description consists of:
+
+* IDs for objects (as many as the arity A, provided by the command-line argument)
+* Truth values for predicate 1..P (P is provided by the command-line argument)
+
+Usage: problem-fol.bin N A P O ama1_ig.csv
+Example: ./problem-fol.bin 3 2 3 9 problem-fol.csv
+|#
+
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre function-cache) :silent t)
+  )
+
+(defpackage :ros.script.to-sas.3690427216
+  (:use :cl :iterate :alexandria :trivia :trivia.ppcre :function-cache))
+(in-package :ros.script.to-sas.3690427216)
+
+(defvar *A*)
+(defvar *P*)
+(defvar *N*)
+(defvar *O*)
+
+(defclass _nil () ())
+(defun _nil () (make-instance '_nil))
+(defmethod print-object ((object _nil) stream)
+  (write-string "()" stream))
+
+(defun read-as-lists (csv)
+  (remove nil
+          (iter (for line in-file csv using #'read-line)
+                (collecting
+                 (with-input-from-string (s line)
+                   (iter (repeat 2)     ; before/after state
+                         (collecting
+                          (iter (repeat *N*) ; each PU
+                                (for objs = (iter (repeat *A*)
+                                                  (collect (read s))))
+                                (for facts = (iter (repeat *P*)
+                                                   (collect (read s))))
+                                (collecting
+                                 (cons objs facts))))))))))
+
+(function-cache:defcached sym (&rest args)
+  (intern (format nil "~{~a~}" args))
+  ;; (apply #'symbolicate (mapcar #'princ-to-string args))
+  )
+
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (list (sym 'z dim)))
+(defun obj (dim)
+  "(pred 0) returns a form (pred0) and alike"
+  (sym 'o dim))
+(defun pred (dim args)
+  "(pred 0) returns a form (p0) and alike"
+  (list* (sym 'p dim) args))
+(defun param (dim)
+  "(pred 0) returns a form (pred0) and alike"
+  (sym '?p dim))
+
+(defun negate (x) `(not ,x))
+
+(defun decode-state (state positive)
+  (iter outer
+        (for pu in state)
+        (for n from 0)
+        (for (args . facts) = pu)
+        (iter (for fact in facts)
+              (for p from 0)
+              (if positive
+                  (when (= 1 fact)
+                    (in outer
+                        (collecting
+                         ;; We add auxilially object nX, since the decoder needs to know
+                         ;; which PU it came from
+                         (pred p (cons (sym 'n n) (mapcar #'obj args))))))
+                  (when (= 0 fact)
+                    (in outer
+                        (collecting
+                         (pred p (cons (sym 'n n) (mapcar #'obj args))))))))))
+
+(defun make-domain (data)
+  (match data
+    ((list* (list from to) _)
+    `(define (problem latent)
+         (:domain latent)
+       (:objects)
+       (:init
+        ,@(decode-state from t))
+       (:goal
+        (and ,@(decode-state to t)))))))
+
+(defun main (N A P O csv)
+  (let ((*N* (read-from-string N))
+        (*A* (read-from-string A))
+        (*P* (read-from-string P))
+        (*O* (read-from-string O))
+        (*print-right-margin* 70))
+    (format t "~(~:S~)~%"
+            (make-domain (read-as-lists csv)))))
+
+;; test it by domain-fol.bin 3 2 3 9 actions-fol-s.csv
+
+;;; vim: set ft=lisp lisp:
+
+
+

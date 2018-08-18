@@ -13,9 +13,9 @@ and output the corresponding PDDL problem file.
 The first half of the arguments are treated as the initial state,
 and the second half of the arguments as the goal state.
 For example, if this program is invoked as `problem.bin 0 0 1 1`,
-the initial state is `0 0` (i.e. both propositional variable are false)
+the initial state is `0 0` (i.e. both propositional variables are false)
 and the goal state is `1 1` (i.e. both variables are true).
-The length of the two states should match.
+The length of the two states must match.
 
 PDDL files are compatible to any classical planning solvers.
 See the past competition solvers for example.
