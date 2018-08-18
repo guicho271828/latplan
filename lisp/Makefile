@@ -1,5 +1,5 @@
 
-all: domain.bin problem.bin parse-plan.bin sas.bin domain-actionlearner.bin
+all: domain.bin problem.bin parse-plan.bin sas.bin domain-actionlearner.bin domain-fol.bin problem-fol.bin
 
 %.bin: %.ros
 	ros build $<
