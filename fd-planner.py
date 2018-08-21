@@ -86,7 +86,7 @@ def latent_plan(init,goal,mode):
     plan_raw = problem(network("{}.sasp.gz.plan".format(action_type)))
     plan     = problem(network("{}.{}.plan".format(action_type,mode)))
     
-    echodo(["helper/fd.sh",options[mode], sasp])
+    echodo(["helper/fd-sasgz.sh",options[mode], sasp])
     assert os.path.exists(plan_raw)
     echodo(["mv",plan_raw,plan])
     
