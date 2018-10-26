@@ -434,6 +434,16 @@ class SimpleGumbelSoftmax(GumbelSoftmax):
         return Lambda(self.call,name="simplegumbel_{}".format(c))(prev)
 
 # Network mixins ################################################################
+
+def reg(query, data, d={}):
+    if len(query) == 1:
+        d[query[0]] = data
+        return d
+    if query[0] not in d:
+        d[query[0]] = {}
+    reg(query[1:],data,d[query[0]])
+    return d
+
 class AE(Network):
     """Autoencoder class. Supports SAVE and LOAD, as well as REPORT methods.
 Additionally, provides ENCODE / DECODE / AUTOENCODE / AUTODECODE methods.
@@ -459,51 +469,50 @@ The latter two are used for verifying the performance of the AE.
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
         opts = {'verbose':0,'batch_size':batch_size}
-        def test_both(msg, fn):
-            print(msg.format(fn(train_data)))
-            if test_data is not None:
-                print((msg+" (validation)").format(fn(test_data)))
-        self.autoencoder.compile(optimizer='adam', loss=mse)
-        test_both("Reconstruction MSE: {}",
-                  lambda data: self.autoencoder.evaluate(data,data,**opts))
-        test_both("Reconstruction MSE (gaussian 0.3): {}",
-                  lambda data: self.autoencoder.evaluate(gaussian(data),data,**opts))
-        test_both("Reconstruction MSE (salt 0.06): {}",
-                  lambda data: self.autoencoder.evaluate(salt(data),data,**opts))
-        test_both("Reconstruction MSE (pepper 0.06): {}",
-                  lambda data: self.autoencoder.evaluate(pepper(data),data,**opts))
-        # self.autoencoder.compile(optimizer=optimizer, loss=bce)
-        # test_both("Reconstruction BCE: {}",
-        #           lambda data: self.autoencoder.evaluate(data,data,**opts))
-        # test_both("Noise reconstruction BCE (gaussian 0.3): {}",
-        #           lambda data: self.autoencoder.evaluate(gaussian(data),data,**opts))
-        # test_both("Noise reconstruction BCE (salt 0.1): {}",
-        #           lambda data: self.autoencoder.evaluate(salt(data),data,**opts))
-        # test_both("Noise reconstruction BCE (pepper 0.1): {}",
-        #           lambda data: self.autoencoder.evaluate(pepper(data),data,**opts))
-        test_both("Latent activation: {}",
-                  lambda data: self.encode_binary(data,batch_size=batch_size,).mean())
-        test_both("Inactive bits (always false): {}",
-                  lambda data: self.parameters['N']-np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0)))
-        test_both("Inactive bits (always true): {}",
-                  lambda data: self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0)))
-        test_both("Inactive bits (always true or false): {}",
-                  lambda data: 2*self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0)) -np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0)))
 
-        def latent_variance(data):
-            encoded = [self.encode_binary(data,batch_size=batch_size,).round() for i in range(10)]
-            var = np.var(encoded,axis=0)
-            return [np.amax(var), np.amin(var), np.mean(var), np.median(var)]
+        performance = {}
+            
+        def test_both(query, fn):
+            result = fn(train_data)
+            reg(query+["train"], result, performance)
+            print(*query,"train", result)
+            if test_data is not None:
+                result = fn(test_data)
+                reg(query+["test"], result, performance)
+                print(*query,"test", result)
         
+        self.autoencoder.compile(optimizer='adam', loss=mse)
+        test_both(["MSE","vanilla"],
+                  lambda data: float(self.autoencoder.evaluate(data,data,**opts)))
+        test_both(["MSE","gaussian"],
+                  lambda data: float(self.autoencoder.evaluate(gaussian(data),data,**opts)))
+        test_both(["MSE","salt"],
+                  lambda data: float(self.autoencoder.evaluate(salt(data),data,**opts)))
+        test_both(["MSE","pepper"],
+                  lambda data: float(self.autoencoder.evaluate(pepper(data),data,**opts)))
+
+        test_both(["activation"],
+                  lambda data: float(self.encode_binary(data,batch_size=batch_size,).mean()))
+        test_both(["inactive","false"],
+                  lambda data: float(self.parameters['N']-np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0))))
+        test_both(["inactive","true"],
+                  lambda data: float(self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0))))
+        test_both(["inactive","both"],
+                  lambda data: float(2*self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0)) -np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0))))
+
         def latent_variance_noise(data,noise):
             encoded = [self.encode_binary(noise(data),batch_size=batch_size,).round() for i in range(10)]
             var = np.var(encoded,axis=0)
-            return [np.amax(var), np.amin(var), np.mean(var), np.median(var)]
+            return np.array([np.amax(var), np.amin(var), np.mean(var), np.median(var)]).tolist()
             
-        test_both("Latent variance (max,min,mean,median): {}", latent_variance)
-        test_both("Latent variance (max,min,mean,median),gaussian: {}", lambda data: latent_variance_noise(data,gaussian))
-        test_both("Latent variance (max,min,mean,median),salt: {}"    , lambda data: latent_variance_noise(data,salt))
-        test_both("Latent variance (max,min,mean,median),pepper: {}"  , lambda data: latent_variance_noise(data,pepper))
+        test_both(["variance","vanilla" ], lambda data: latent_variance_noise(data,(lambda x: x)))
+        test_both(["variance","gaussian"], lambda data: latent_variance_noise(data,gaussian))
+        test_both(["variance","salt"    ], lambda data: latent_variance_noise(data,salt))
+        test_both(["variance","pepper"  ], lambda data: latent_variance_noise(data,pepper))
+
+        import json
+        with open(self.local('performance.json'), 'w') as f:
+            json.dump(performance, f)
         
         return self
     
