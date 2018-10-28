@@ -36,16 +36,16 @@ def plot_autoencoding_image(ae,test,train):
     if 'plot' not in mode:
         return
     rz = np.random.randint(0,2,(6,ae.parameters['N']))
-    ae.plot_autodecode(rz,"autodecoding_random.png",verbose=True)
-    ae.plot(select(test,6),"autoencoding_test.png",verbose=True)
-    ae.plot(select(train,6),"autoencoding_train.png",verbose=True)
+    ae.plot_autodecode(rz,ae.local("autodecoding_random.png"),verbose=True)
+    ae.plot(select(test,6),ae.local("autoencoding_test.png"),verbose=True)
+    ae.plot(select(train,6),ae.local("autoencoding_train.png"),verbose=True)
 
 def plot_variance_image(ae,test,train):
     if 'plot' not in mode:
         return
     if hasattr(ae,"plot_variance"):
-        ae.plot_variance(select(test,6), "variance_test.png",  verbose=True)
-        ae.plot_variance(select(train,6),"variance_train.png", verbose=True)
+        ae.plot_variance(select(test,6), ae.local("variance_test.png"),  verbose=True)
+        ae.plot_variance(select(train,6),ae.local("variance_train.png"), verbose=True)
     
 def plot_autoencoding_image_if_necessary(ae,test,train):
     if 'learn' not in mode:

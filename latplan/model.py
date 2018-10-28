@@ -735,7 +735,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         from .util.plot import plot_grid
         for seq in zip(x, _z, y, dy, _b, by, dby, xg, yg, dyg, xs, ys, dys, xp, yp, dyp):
             images.extend(seq)
-        plot_grid(images, w=16, path=self.local(path), verbose=verbose)
+        plot_grid(images, w=16, path=path, verbose=verbose)
         return x,z,y,b,by
 
     def plot_autodecode(self,data,path,verbose=False):
@@ -766,7 +766,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         from .util.plot import plot_grid
         for seq in zip(_z, x, _z2, _z2r, x2, x2r, _z3, _z3r, x3, x3r):
             images.extend(seq)
-        plot_grid(images, w=10, path=self.local(path), verbose=verbose)
+        plot_grid(images, w=10, path=path, verbose=verbose)
         return _z, x, _z2, _z2r
 
     def plot_variance(self,data,path,verbose=False):
@@ -776,7 +776,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         z = np.array([ np.round(self.encode_binary(x)) for i in range(samples)])
         z = np.einsum("sbz->bsz",z)
         from .util.plot import plot_grid
-        plot_grid(z, w=6, path=self.local(path), verbose=verbose)
+        plot_grid(z, w=6, path=path, verbose=verbose)
 
 class GumbelAE2(GumbelAE):
     """This network uses GS also for the output, assuming that the input pictures are black/white."""
