@@ -111,7 +111,7 @@ def learn(method):
     }
     data_valid = np.loadtxt(sae.local("states.csv"),dtype=np.int8)
     train_in, train_out, test_in, test_out, data_valid, data_mixed = prepare(data_valid,sae)
-    sae.plot_autodecode(data_mixed[:8], "_sd3/fake_samples.png")
+    sae.plot_autodecode(data_mixed[:8], sae.local("_sd3/fake_samples.png"))
 
     if method == "feature":
         # decode into image, extract features and learn from it
