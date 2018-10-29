@@ -7,8 +7,7 @@ assuming the input/output image is binarized
 
 import numpy as np
 from functools import reduce
-from keras.layers import Input, Dense, Dropout, Convolution2D, Deconvolution2D, MaxPooling2D, UpSampling2D, Reshape, Flatten, Activation, Cropping2D, SpatialDropout2D, SpatialDropout1D, Lambda, GaussianNoise, LocallyConnected2D
-from keras.layers.merge import Concatenate, Dot, average
+from keras.layers import *
 from keras.layers.normalization import BatchNormalization as BN
 from keras.models import Model
 import keras.optimizers
