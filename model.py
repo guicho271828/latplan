@@ -27,6 +27,8 @@ from .util.layers    import *
 
 # utilities ###############################################################
 
+def get(name):
+    return globals()[name]
 
 class Network:
     """Base class for various neural networks including GANs, AEs and Classifiers.
@@ -1027,13 +1029,3 @@ class UBDiscriminator(Discriminator):
     def discriminate(self,data,**kwargs):
         return self.net.predict(data,**kwargs)
 
-default_networks = {
-    'fc':GumbelAE,
-    'conv':ConvolutionalGumbelAE,
-    'cc' : Convolutional2GumbelAE,
-    **{
-        name: classobj \
-        for name, classobj in globals().items() \
-        if isinstance(classobj, type)
-    }
-}

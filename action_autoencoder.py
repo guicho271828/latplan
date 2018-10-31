@@ -2,7 +2,8 @@
 import warnings
 import config
 import numpy as np
-from latplan.model import ActionAE, default_networks
+import latplan.model
+from latplan.model import ActionAE
 from latplan.util        import curry
 from latplan.util.tuning import grid_search, nn_task
 
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     mode = sys.argv[2]
     
     from latplan.util import get_ae_type
-    ae = default_networks[get_ae_type(directory)](directory).load()
+    ae = latplan.model.get(get_ae_type(directory))(directory).load()
 
     if "hanoi" in ae.path:
         data = np.loadtxt(ae.local("all_actions.csv"),dtype=np.int8)

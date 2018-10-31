@@ -5,7 +5,7 @@ import numpy as np
 import subprocess
 import os
 import latplan
-from latplan.model import default_networks
+import latplan.model
 from latplan.util import get_ae_type, bce, mae, mse, ensure_directory
 from latplan.util.plot import plot_grid
 import os.path
@@ -144,7 +144,7 @@ def main(_network_dir, _problem_dir, heuristics='blind'):
     problem_dir = _problem_dir
     network_dir = _network_dir
     p = latplan.util.puzzle_module(network_dir)
-    sae = default_networks[get_ae_type(network_dir)](network_dir).load(allow_failure=True)
+    sae = latplan.model.get(get_ae_type(network_dir))(network_dir).load(allow_failure=True)
 
     def heur(path):
         root, ext = os.path.splitext(path)

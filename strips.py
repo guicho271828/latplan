@@ -3,7 +3,8 @@
 import config
 import numpy as np
 import numpy.random as random
-from latplan.model import default_networks
+import latplan
+import latplan.model
 from latplan.util        import curry
 from latplan.util.tuning import grid_search, nn_task
 from latplan.util.noise  import gaussian
@@ -147,7 +148,7 @@ def run(path,train,test,parameters,train_out=None,test_out=None,):
                       test_data_to  = test_out,)
             # plot_autoencoding_image(ae,test,train)
             
-        ae, _, _ = grid_search(curry(nn_task, default_networks[default_parameters["aeclass"]],
+        ae, _, _ = grid_search(curry(nn_task, latplan.model.get(default_parameters["aeclass"]),
                                      path,
                                      train, train_out, test, test_out), # noise data is used for tuning metric
                                default_parameters,
@@ -156,7 +157,7 @@ def run(path,train,test,parameters,train_out=None,test_out=None,):
                                report_best = fn,)
         ae.save()
     else:
-        ae = default_networks[default_parameters["aeclass"]](path).load()
+        ae = latplan.model.get(default_parameters["aeclass"])(path).load()
     return ae
 
 def show_summary(ae,train,test):
@@ -275,7 +276,7 @@ def main():
     global mode, sae_path
     import sys
     if len(sys.argv) == 1:
-        print({ k for k in default_networks})
+        print({ k for k in dir(latplan.model)})
         gs = globals()
         print({ k for k in gs if hasattr(gs[k], '__call__')})
     else:
