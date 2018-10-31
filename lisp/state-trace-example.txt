@@ -1,0 +1,3 @@
+((z0) (z3) (z5))
+((z11) (z13) (z10) (junk))
+; run ./read-latent-state-traces.bin state-trace-example.txt 15

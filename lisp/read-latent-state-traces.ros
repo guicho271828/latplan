@@ -1,0 +1,38 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:iterate :trivia) :silent t)
+  )
+
+(defpackage :ros.script.read-latent-state-traces.3759822099
+  (:use :cl :iterate :trivia))
+(in-package :ros.script.read-latent-state-traces.3759822099)
+
+(defun main (state-trace N &optional (output "/dev/stdout"))
+  (declare (ignorable argv))
+  (with-open-file (*standard-output* output
+                                     :direction :output
+                                     :if-does-not-exist :create
+                                     :if-exists :supersede)
+                  (iter (for state in-file state-trace)
+                        (with N = (read-from-string N))
+                        (for bv = (make-array N :initial-element 0))
+                        (iter (for fact in state)
+                              (for bit =
+                                   (ematch fact
+                                           ((list (symbol :name (and z (string* #\Z))))
+                                            (read-from-string (subseq z 1)))
+                                           (_
+                                            (warn "ignoring non-latent fact ~a" fact)
+                                            (next-iteration))))
+                              (setf (aref bv bit) 1))
+                        (fresh-line)
+                        (iter (for bit in-vector bv)
+                              (format t "~a " bit)))
+                  (fresh-line)))
+
+;;; vim: set ft=lisp lisp:
