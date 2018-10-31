@@ -3,7 +3,8 @@ import warnings
 import config
 import numpy as np
 import latplan
-from latplan.model import default_networks, combined_discriminate, combined_discriminate2
+import latplan.model
+from latplan.model import combined_discriminate, combined_discriminate2
 from latplan.util        import curry, prepare_binary_classification_data, set_difference, union, bce
 from latplan.util.tuning import grid_search, nn_task
 
@@ -117,7 +118,7 @@ def learn(method):
         # decode into image, extract features and learn from it
         train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
         train_in2, test_in2 = sae.get_features(train_image), sae.get_features(test_image)
-        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], sae.local("_sd3/"),
+        discriminator,_,_ = grid_search(curry(nn_task, latplan.model.get('PUDiscriminator'), sae.local("_sd3/"),
                                               train_in2, train_out, test_in2, test_out,),
                                         default_parameters,
                                         {
@@ -134,7 +135,7 @@ def learn(method):
     if method == "cae":
         # decode into image, learn a separate cae and learn from it
         train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
-        cae,_,_ = grid_search(curry(nn_task, default_networks['SimpleCAE'],
+        cae,_,_ = grid_search(curry(nn_task, latplan.model.get('SimpleCAE'),
                                     sae.local("_cae"),
                                     train_image, train_image, test_image, test_image),
                               default_parameters,
@@ -151,7 +152,7 @@ def learn(method):
                               })
         cae.save()
         train_in2, test_in2 = cae.encode(train_image), cae.encode(test_image)
-        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], sae.local("_sd3/"),
+        discriminator,_,_ = grid_search(curry(nn_task, latplan.model.get('PUDiscriminator'), sae.local("_sd3/"),
                                               train_in2, train_out, test_in2, test_out,),
                                         default_parameters,
                                         {
@@ -167,7 +168,7 @@ def learn(method):
                                         })
     if method == "direct":
         # learn directly from the latent encoding
-        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], sae.local("_sd3/"),
+        discriminator,_,_ = grid_search(curry(nn_task, latplan.model.get('PUDiscriminator'), sae.local("_sd3/"),
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         {
@@ -184,7 +185,7 @@ def learn(method):
     if method == "image":
         # learn directly from the image
         train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
-        discriminator,_,_ = grid_search(curry(nn_task, default_networks['PUDiscriminator'], sae.local("_sd3/"),
+        discriminator,_,_ = grid_search(curry(nn_task, latplan.model.get('PUDiscriminator'), sae.local("_sd3/"),
                                               train_image, train_out, test_image, test_out,),
                                         default_parameters,
                                         {
@@ -204,14 +205,14 @@ def learn(method):
 def load(method):
     global cae, discriminator
     if method == "feature":
-        discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
+        discriminator = latplan.model.get('PUDiscriminator')(sae.local("_sd3/")).load()
     if method == "cae":
-        cae = default_networks['SimpleCAE'    ](sae.local("_cae")).load()
-        discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
+        cae = latplan.model.get('SimpleCAE'    )(sae.local("_cae")).load()
+        discriminator = latplan.model.get('PUDiscriminator')(sae.local("_sd3/")).load()
     if method == "direct":
-        discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
+        discriminator = latplan.model.get('PUDiscriminator')(sae.local("_sd3/")).load()
     if method == "image":
-        discriminator = default_networks['PUDiscriminator'](sae.local("_sd3/")).load()
+        discriminator = latplan.model.get('PUDiscriminator')(sae.local("_sd3/")).load()
     assert method == discriminator.parameters["method"]
 
 def load2(method):
@@ -288,7 +289,7 @@ def test(method):
 def main(directory, mode="test", method='feature'):
     from latplan.util import get_ae_type
     global sae
-    sae = default_networks[get_ae_type(directory)](directory).load()
+    sae = latplan.model.get(get_ae_type(directory))(directory).load()
     import subprocess
     subprocess.call(["mkdir","-p", sae.local("_sd3/")])
 

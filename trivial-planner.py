@@ -3,7 +3,8 @@ import warnings
 import config_cpu
 import numpy as np
 import latplan
-from latplan.model import default_networks, ActionAE, Discriminator, PUDiscriminator
+import latplan.model
+from latplan.model import ActionAE, Discriminator, PUDiscriminator
 from latplan.util import get_ae_type, bce, mae, mse, ensure_directory
 from latplan.util.plot import plot_grid
 import os.path
@@ -275,7 +276,7 @@ def main(network_dir, problem_dir, searcher):
     
     p = latplan.util.puzzle_module(network_dir)
 
-    sae = default_networks[get_ae_type(network_dir)](network_dir).load(allow_failure=True)
+    sae = latplan.model.get(get_ae_type(network_dir))(network_dir).load(allow_failure=True)
     oae = ActionAE(sae.local("_aae/")).load(allow_failure=True)
     try:
         ad  = PUDiscriminator(sae.local("_ad/")).load(allow_failure=True)
@@ -286,10 +287,10 @@ def main(network_dir, problem_dir, searcher):
     # sd2 = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
     sd3 = PUDiscriminator(sae.local("_sd3/")).load()
     try:
-        cae = default_networks['SimpleCAE'](sae.local("_cae/")).load()
-        combined_discriminator = default_networks['CombinedDiscriminator'](sae,cae,sd3)
+        cae = latplan.model.get('SimpleCAE')(sae.local("_cae/")).load()
+        combined_discriminator = latplan.model.get('CombinedDiscriminator')(sae,cae,sd3)
     except:
-        combined_discriminator = default_networks['CombinedDiscriminator2'](sae,sd3)
+        combined_discriminator = latplan.model.get('CombinedDiscriminator2')(sae,sd3)
 
     def problem(path):
         return os.path.join(problem_dir,path)
