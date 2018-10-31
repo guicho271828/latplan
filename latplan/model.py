@@ -361,9 +361,14 @@ The latter two are used for verifying the performance of the AE.
                max_temperature=self.parameters['max_temperature'],
                min_temperature=self.parameters['min_temperature'],
                full_epoch=self.parameters['full_epoch'],):
-            return GumbelSoftmax(
-                N,M,min_temperature,max_temperature,
-                anneal_rate(full_epoch, min_temperature, max_temperature))
+            gs = GumbelSoftmax(
+                N,M,min_temperature,max_temperature,full_epoch,
+                # Entropy Regularization
+                alpha = -1.)
+            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
+            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
+            return gs
+            
         return fn(**kwargs)
 
 class GumbelAE(AE):
@@ -371,7 +376,9 @@ class GumbelAE(AE):
 Fully connected layers only, no convolutions.
 Note: references to self.parameters[key] are all hyperparameters."""
     def build_encoder(self,input_shape):
-        return [GaussianNoise(self.parameters['noise']),
+        gs = self.build_gs()
+        return [flatten,
+                GaussianNoise(self.parameters['noise']),
                 BN(),
                 Dense(self.parameters['layer'], activation='relu', use_bias=False),
                 BN(),
@@ -382,11 +389,13 @@ Note: references to self.parameters[key] are all hyperparameters."""
                 Dense(self.parameters['layer'], activation='relu', use_bias=False),
                 BN(),
                 Dropout(self.parameters['dropout']),
-                Dense(self.parameters['N']*self.parameters['M']),]
+                Dense(self.parameters['N']*self.parameters['M']),
+                gs]
     
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
+            flatten,
             *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
             Dense(self.parameters['layer'], activation='relu', use_bias=False),
             BN(),
@@ -400,45 +409,22 @@ Note: references to self.parameters[key] are all hyperparameters."""
     def _build(self,input_shape):
         _encoder = self.build_encoder(input_shape)
         _decoder = self.build_decoder(input_shape)
-        self.gs = self.build_gs()
-        self.gs2 = self.build_gs()
-        
 
         x = Input(shape=input_shape)
-        z = Sequential([flatten, *_encoder, self.gs])(x)
-        y = Sequential(_decoder)(flatten(z))
+        z = Sequential(_encoder)(x)
+        y = Sequential(_decoder)(z)
          
         z2 = Input(shape=(self.parameters['N'], self.parameters['M']))
-        y2 = Sequential(_decoder)(flatten(z2))
-        w2 = Sequential([*_encoder, self.gs2])(flatten(y2))
+        y2 = Sequential(_decoder)(z2)
+        w2 = Sequential(_encoder)(y2)
 
         def activation(x, y):
             return K.mean(z[:,:,0])
         
-        def entropy(x, y):
-            pi = K.softmax(self.gs.logits)
-            return K.mean(K.sum(- pi * K.log(pi+K.epsilon()), axis=[-1,-2]))
-        def max_bitwise_entropy_in_batch(x, y):
-            pi = K.softmax(self.gs.logits)
-            return K.max(K.sum(- pi * K.log(pi+K.epsilon()),axis=-1))
-        def mean_max_bitwise_entropy(x, y):
-            pi = K.softmax(self.gs.logits)
-            return K.mean(K.max(K.sum(- pi * K.log(pi+K.epsilon()),axis=-1),axis=-1))
-        
-        def loss(x, y):
-            return BCE(x,y) + self.gs.loss()
-
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.update))
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.update))
-        self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.variable)
-        self.loss = loss
+        self.loss = BCE
         self.eval = MSE
         self.metrics.append(BCE)
-        self.metrics.append(MSE)
         self.metrics.append(activation)
-        self.metrics.append(entropy)
-        self.metrics.append(max_bitwise_entropy_in_batch)
-        self.metrics.append(mean_max_bitwise_entropy)
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.autoencoder = Model(x, y)
@@ -556,6 +542,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
 class ConvolutionalGumbelAE(GumbelAE):
     """A mixin that uses convolutions in the encoder."""
     def build_encoder(self,input_shape):
+        gs = self.build_gs()
         return [Reshape((*input_shape,1)),
                 GaussianNoise(self.parameters['noise']),
                 BN(),
@@ -575,7 +562,8 @@ class ConvolutionalGumbelAE(GumbelAE):
                     BN(),
                     Dropout(self.parameters['dropout']),
                     Dense(self.parameters['N']*self.parameters['M']),
-                ])]
+                ]),
+                gs]
 
 class Convolutional2GumbelAE(ConvolutionalGumbelAE):
     """A mixin that uses convolutions also in the decoder. Somehow it does not converge."""
@@ -916,15 +904,9 @@ We again use gumbel-softmax for representing A."""
         def rec(x, y):
             return bce(K.reshape(x,(K.shape(x)[0],dim*2,)),
                        K.reshape(y,(K.shape(x)[0],dim*2,)))
-        def loss(x, y):
-            kl_loss = gs.loss()
-            reconstruction_loss = rec(x, y)
-            return reconstruction_loss + kl_loss
-
+        
         self.metrics.append(rec)
-        self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
-        self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
-        self.loss = loss
+        self.loss = rec
         self.encoder     = Model(x, [pre,action])
         self.decoder     = Model([pre2,action2], y2)
 
