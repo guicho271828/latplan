@@ -141,7 +141,7 @@ def run(path,train,test,parameters):
                                default_parameters,
                                parameters,
                                shuffle     = False,
-                               report      = lambda ae: ae.report(train, train, test, test),
+                               report      = lambda ae: ae.report(train, test),
                                report_best = lambda ae: plot_autoencoding_image(ae,test,train))
         ae.save()
     else:
