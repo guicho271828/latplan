@@ -14,6 +14,13 @@ def MAE(x, y):
     return mae(K.batch_flatten(x),
                K.batch_flatten(y))
 
+def BCE2(x, y):
+    "Do not average over bits"
+    return K.sum(K.binary_crossentropy(K.batch_flatten(x), K.batch_flatten(y)), axis=-1)
+
+def SE(x, y):
+    "Square Error"
+    return K.sum(K.square(K.batch_flatten(x) - K.batch_flatten(y)), axis=-1)
 
 # Hausdorff distance
 # (Piramuthu 1999) The Hausdor Distance Measure for Feature Selection in Learning Applications
