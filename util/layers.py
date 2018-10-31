@@ -141,7 +141,7 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     return math.log(max/min) / epoch
 
 def take_true(y_cat):
-    return tf.slice(y_cat,[0,0,0],[-1,-1,1])
+    return wrap(y_cat, y_cat[:,:,0], name="take_true")
 
 def wrap_loss_gs(gs):
     def _loss_gs_(x, y):
