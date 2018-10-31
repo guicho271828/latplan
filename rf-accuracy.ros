@@ -1,0 +1,61 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:cl-json :alexandria :iterate :lparallel :trivia) :silent t))
+(declaim (sb-ext:muffle-conditions STYLE-WARNING))
+(defpackage :ros.script.rf-accuracy.3775861111
+  (:use :cl :cl-json :iterate :trivia :alexandria))
+(in-package :ros.script.rf-accuracy.3775861111)
+
+(defparameter lparallel:*kernel* (lparallel:make-kernel 48))
+
+(defun per-sample (dir)
+  (format nil "~a ~a ~a~%"
+          (enough-namestring dir)
+          (pre-average-accuracy dir)
+          (eff-average-accuracy dir)))
+
+(defun pre-average-accuracy (dir)
+  (mean
+   (mapcar #'best-accuracy
+           (directory (merge-pathnames "PRECONDITION/*/" dir)))))
+
+(defun eff-average-accuracy (dir)
+  (mean
+   (mapcar #'eff-accuracy
+           (directory (merge-pathnames "EFFECT/*/" dir)))))
+
+(defun eff-accuracy (dir)
+  (reduce #'*
+          (directory (merge-pathnames "*/" dir))
+          :key #'best-accuracy
+          :initial-value 1))
+
+(defun best-accuracy (dir)
+  (accuracy (merge-pathnames "best.json" dir)))
+
+(defun accuracy (file)
+  (with-open-file (s file)
+    (match (cl-json:decode-json s)
+      ((assoc :val (assoc :accuracy v))
+       (/ v 100)))))
+
+#+(or)
+(best-accuracy #P"/dccstor/latplan1/repos/latplan-zsae-icaps/latplan/samples/puzzle_HammingTransitionAE_spider_3_3_169_10000_0.7_1.0/EFFECT/2/0/")
+#+(or)
+(eff-accuracy #P"/dccstor/latplan1/repos/latplan-zsae-icaps/latplan/samples/puzzle_HammingTransitionAE_spider_3_3_169_10000_0.7_1.0/EFFECT/2/")
+#+(or)
+(eff-average-accuracy #P"/dccstor/latplan1/repos/latplan-zsae-icaps/latplan/samples/puzzle_HammingTransitionAE_spider_3_3_169_10000_0.7_1.0/")
+
+(defun main (&rest argv)
+  (let ((samples (or argv (directory "samples/*/"))))
+    (map nil #'princ
+         (sort (lparallel:pmap 'vector #'per-sample samples)
+               #'string<))))
+
+
+;;; vim: set ft=lisp lisp:

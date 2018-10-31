@@ -176,7 +176,7 @@ def show_summary(ae,train,test):
 
 ################################################################
 
-def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,num_examples=6500,zerosuppress=0.0):
+def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,num_examples=6500,zerosuppress=0.0,locality=0.0):
     for name, value in locals().items():
         default_parameters[name] = value
     
@@ -186,10 +186,10 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
         'dropout'    :[0.4], #[0.1,0.4],
         'noise'      :[0.4],
         'dropout_z'  :[False],
-        'activation' :['tanh'],
-        'epoch'      :[150],
-        'batch_size' :[1000],
-        'lr'         :[0.001],
+        'epoch'      :[300],
+        'batch_size' :[250,],
+        'lr'         :[0.001,],
+        'activation' :['relu','tanh'],
     }
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
@@ -201,9 +201,10 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
     random.shuffle(configs)
     transitions = p.transitions(width,height,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
-    print(states.shape)
-    train = states[:int(len(states)*0.9)]
-    test  = states[int(len(states)*0.9):]
+    data = np.swapaxes(transitions,0,1)
+    print(data.shape)
+    train = data[:int(len(data)*0.9)]
+    test  = data[int(len(data)*0.9):]
     ae = run(os.path.join("samples",sae_path), train, test, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image(ae,test[:1000],train[:1000])
@@ -213,7 +214,7 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
-def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=6500,zerosuppress=0.0):
+def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=6500,zerosuppress=0.0,locality=0.0):
     for name, value in locals().items():
         default_parameters[name] = value
     parameters = {
@@ -228,9 +229,11 @@ def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=650
         'batch_size' :[500],
         'optimizer'  :['adam'],
         'lr'         :[0.001],
+        'activation' :['relu','tanh'],
     }
     print("this setting is tuned for conv")
     import latplan.puzzles.hanoi as p
+    p.setup()
     configs = p.generate_configs(disks,towers)
     configs = np.array([ c for c in configs ])
     assert len(configs) >= num_examples
@@ -238,9 +241,10 @@ def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=650
     random.shuffle(configs)
     transitions = p.transitions(disks,towers,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
-    print(states.shape)
-    train = states[:int(len(states)*0.9)]
-    test  = states[int(len(states)*0.9):]
+    data = np.swapaxes(transitions,0,1)
+    print(data.shape)
+    train = data[:int(len(data)*0.9)]
+    test  = data[int(len(data)*0.9):]
     ae = run(os.path.join("samples",sae_path), train, test, parameters)
     print("*** NOTE *** if l_rec is above 0.01, it is most likely not learning the correct model")
     show_summary(ae, train, test)
@@ -251,7 +255,7 @@ def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=650
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),repeat=100)
     dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),repeat=100)
 
-def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_examples=6500,zerosuppress=0.0):
+def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_examples=6500,zerosuppress=0.0,locality=0.0):
     for name, value in locals().items():
         default_parameters[name] = value
     parameters = {
@@ -261,13 +265,14 @@ def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_exa
         'noise'      :[0.4],
         'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
-        'activation' : ['relu'],
-        'epoch'      :[150],
-        'batch_size' :[1000],
-        'lr'         :[0.001],
+        'epoch'      :[300],
+        'batch_size' :[250,],
+        'lr'         :[0.001,],
+        'activation' :['relu','tanh'],
     }
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
+    p.setup()
     configs = p.generate_configs(size)
     configs = np.array([ c for c in configs ])
     assert len(configs) >= num_examples
@@ -275,9 +280,10 @@ def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_exa
     random.shuffle(configs)
     transitions = p.transitions(size,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
-    print(states.shape)
-    train = states[:int(len(states)*0.9)]
-    test  = states[int(len(states)*0.9):]
+    data = np.swapaxes(transitions,0,1)
+    print(data.shape)
+    train = data[:int(len(data)*0.9)]
+    test  = data[int(len(data)*0.9):]
     ae = run(os.path.join("samples",sae_path), train, test, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image(ae,test[:1000],train[:1000])

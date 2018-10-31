@@ -1,8 +1,12 @@
 
-all: domain.bin problem.bin parse-plan.bin sas.bin domain-actionlearner.bin domain-fol.bin problem-fol.bin parse-plan-fol.ros
+all: domain.bin problem.bin parse-plan.bin sas.bin domain-actionlearner.bin domain-fol.bin problem-fol.bin parse-plan-fol.ros \
+	read-latent-state-traces.bin val-simulate.bin
+
+val-simulate.ros:
+	ln -s ~/.roswell/bin/val-simulate $@
 
 %.bin: %.ros
-	ros build $<
+	LANG=en_US.utf8 ros build $<
 	mv $* $@
 
 clean:
