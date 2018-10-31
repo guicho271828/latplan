@@ -15,8 +15,8 @@ import tensorflow as tf
 float_formatter = lambda x: "%.5f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
-encoder = 'fc'
-mode = 'learn_dump'
+mode     = 'learn_dump'
+sae_path = None
 
 # default values
 default_parameters = {
@@ -133,19 +133,30 @@ def dump_states(ae,states,name="states.csv",repeat=1):
 
 # note: lightsout has epoch 200
 
-def run(path,train,test,parameters):
+def run(path,train,test,parameters,train_out=None,test_out=None,):
     if 'learn' in mode:
+        if train_out is None:
+            train_out = train
+        if test_out is None:
+            test_out = test
         from latplan.util import curry
-        ae, _, _ = grid_search(curry(nn_task, default_networks[encoder], path,
-                                     train, train, gaussian(test), test), # noise data is used for tuning metric
+        def fn(ae):
+            ae.report(train,
+                      test_data     = test,
+                      train_data_to = train_out,
+                      test_data_to  = test_out,)
+            # plot_autoencoding_image(ae,test,train)
+            
+        ae, _, _ = grid_search(curry(nn_task, default_networks[default_parameters["aeclass"]],
+                                     path,
+                                     train, train_out, test, test_out), # noise data is used for tuning metric
                                default_parameters,
                                parameters,
                                shuffle     = False,
-                               report      = lambda ae: ae.report(train, test),
-                               report_best = lambda ae: plot_autoencoding_image(ae,test,train))
+                               report_best = fn,)
         ae.save()
     else:
-        ae = default_networks[encoder](path).load()
+        ae = default_networks[default_parameters["aeclass"]](path).load()
     return ae
 
 def show_summary(ae,train,test):
@@ -261,7 +272,7 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
     dump_all_states(ae,configs,        lambda configs: p.states(size,configs),)
 
 def main():
-    global encoder, mode
+    global mode, sae_path
     import sys
     if len(sys.argv) == 1:
         print({ k for k in default_networks})
@@ -270,11 +281,9 @@ def main():
     else:
         print('args:',sys.argv)
         sys.argv.pop(0)
-        encoder = sys.argv.pop(0)
-        if encoder not in default_networks:
-            raise ValueError("invalid encoder!: {}".format(encoder))
-        task = sys.argv.pop(0)
         mode = sys.argv.pop(0)
+        sae_path = "_".join(sys.argv)
+        task = sys.argv.pop(0)
 
         def myeval(str):
             try:
