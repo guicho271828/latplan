@@ -8,9 +8,8 @@ ulimit -v 16000000000
 
 dir=$(dirname $(dirname $(readlink -ef $0)))
 proj=$(date +%Y%m%d%H%M)
-common="--dry-run --keep-order -j 1 PYTHONPATH=$dir:$PYTHONPATH PYTHONUNBUFFERED=1"
 # Example command for lsf job scheduler
-# common="--dry-run --keep-order -j 1 jbsub -mem 64g -cores 1+1 -queue x86_12h -proj $proj PYTHONPATH=$dir:$PYTHONPATH PYTHONUNBUFFERED=1"
+common="--dry-run --keep-order -j 1 jbsub -mem 64g -cores 1+1 -queue x86_12h -proj $proj PYTHONPATH=$dir:$PYTHONPATH PYTHONUNBUFFERED=1"
 
 # Note: ZSAE with alpha=0.0 is same as normal SAE.
 # Note: you can train NG-SAE (i.e. the "correct" VAE in the paper) by NGZeroSuppressConvolutionalGumbelAE
