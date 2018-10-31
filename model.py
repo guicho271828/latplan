@@ -553,64 +553,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         from .util.plot import plot_grid
         plot_grid(z, w=6, path=path, verbose=verbose)
 
-class GumbelAE2(GumbelAE):
-    """This network uses GS also for the output, assuming that the input pictures are black/white."""
-    def build_decoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        return [
-            *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []) ,
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(data_dim*2),]
-    
-    def _build(self,input_shape):
-        data_dim = np.prod(input_shape) 
-        self.gs = self.build_gs()
-        self.gs2 = self.build_gs(N=data_dim)
-        self.gs3 = self.build_gs(N=data_dim)
-
-        _encoder = self.build_encoder(input_shape)
-        _decoder = self.build_decoder(input_shape)
-        
-        x = Input(shape=input_shape)
-        z = Sequential([flatten, *_encoder, self.gs])(x)
-        y = Sequential([flatten,
-                        *_decoder,
-                        self.gs2,
-                        Lambda(take_true),
-                        Reshape(input_shape)])(z)
-         
-        z2 = Input(shape=(self.parameters['N'], self.parameters['M']))
-        y2 = Sequential([flatten,
-                        *_decoder,
-                        self.gs3,
-                        Lambda(take_true),
-                        Reshape(input_shape)])(z2)
-
-        def rec(x, y):
-            return bce(K.reshape(x,(K.shape(x)[0],data_dim,)),
-                       K.reshape(y,(K.shape(x)[0],data_dim,)))
-        def loss(x, y):
-            return rec(x,y) + self.gs.loss() + self.gs2.loss()
-
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs.update))
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs2.update))
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.gs3.update))
-        self.custom_log_functions['tau'] = lambda: K.get_value(self.gs.variable)
-        self.loss = loss
-        self.metrics.append(rec)
-        self.encoder     = Model(x, z)
-        self.decoder     = Model(z2, y2)
-        self.net = Model(x, y)
-        self.autoencoder = self.net
-
 class ConvolutionalGumbelAE(GumbelAE):
     """A mixin that uses convolutions in the encoder."""
     def build_encoder(self,input_shape):
@@ -670,48 +612,6 @@ class Convolutional2GumbelAE(ConvolutionalGumbelAE):
                   Deconvolution2D(1,(3,3), activation='sigmoid',padding='same'),],
                 Cropping2D(crop),
                 Reshape(input_shape),]
-
-class AltConvGumbelAE(GumbelAE):
-    def build_encoder(self,input_shape):
-        last_convolution = np.array(input_shape) // 8
-        self.parameters['clayer'] = 8
-        self.parameters['N'] = int(np.prod(last_convolution)*self.parameters['clayer'] // self.parameters['M'])
-        return [Reshape((*input_shape,1)),
-                GaussianNoise(0.1),
-                BN(),
-                Convolution2D(16,(3,3),
-                              activation=self.parameters['activation'],padding='same', use_bias=False),
-                Dropout(self.parameters['dropout']),
-                BN(),
-                MaxPooling2D((2,2)),
-                
-                Convolution2D(64,(3,3),
-                              activation=self.parameters['activation'],padding='same', use_bias=False),
-                SpatialDropout2D(self.parameters['dropout']),
-                BN(),
-                MaxPooling2D((2,2)),
-                
-                Convolution2D(64,(3,3),
-                              activation=self.parameters['activation'],padding='same', use_bias=False),
-                SpatialDropout2D(self.parameters['dropout']),
-                BN(),
-                MaxPooling2D((2,2)),
-                
-                Convolution2D(64,(1,1),
-                              activation=self.parameters['activation'],padding='same', use_bias=False),
-                SpatialDropout2D(self.parameters['dropout']),
-                BN(),
-
-                Convolution2D(self.parameters['clayer'],(1,1),
-                              padding='same'),
-                flatten,
-        ]
-
-# mixin classes ###############################################################
-# Now effectively 3 subclasses; GumbelSoftmax in the output, Convolution, Gaussian.
-# there are 4 more results of mixins:
-class ConvolutionalGumbelAE2(ConvolutionalGumbelAE,GumbelAE2):
-    pass
 
 # state/action discriminator ####################################################
 class Discriminator(Network):
@@ -1208,11 +1108,8 @@ if __name__ == '__main__':
 
 default_networks = {
     'fc':GumbelAE,
-    'fc2':GumbelAE2,
     'conv':ConvolutionalGumbelAE,
-    'conv2':ConvolutionalGumbelAE2,
     'cc' : Convolutional2GumbelAE,
-    'aconv':AltConvGumbelAE,
     **{
         name: classobj \
         for name, classobj in globals().items() \
