@@ -143,11 +143,6 @@ def anneal_rate(epoch,min=0.1,max=5.0):
 def take_true(y_cat):
     return wrap(y_cat, y_cat[:,:,0], name="take_true")
 
-def wrap_loss_gs(gs):
-    def _loss_gs_(x, y):
-        return gs.loss()
-    return _loss_gs_
-
 class ScheduledVariable:
     """General variable which is changed during the course of training according to some schedule"""
     def __init__(self,name="variable",):
@@ -166,15 +161,13 @@ Each subclasses should implement a method for it."""
 class GumbelSoftmax(ScheduledVariable):
     count = 0
     
-    def __init__(self,N,M,min,max,anneal_rate):
+    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, alpha=1.):
         self.N = N
         self.M = M
-        self.layers = Sequential([
-            # Dense(N * M),
-            Reshape((N,M))])
         self.min = min
         self.max = max
-        self.anneal_rate = anneal_rate
+        self.anneal_rate = annealer(full_epoch,min,max)
+        self.alpha = alpha
         super(GumbelSoftmax, self).__init__("temperature")
         
     def call(self,logits):
@@ -185,21 +178,17 @@ class GumbelSoftmax(ScheduledVariable):
     def __call__(self,prev):
         GumbelSoftmax.count += 1
         c = GumbelSoftmax.count-1
-        prev = flatten(prev)
-        logits = self.layers(prev)
-        if hasattr(self,"logits"):
-            print("reusing gumbel-softmax; loss is calcurated from the input of the first application")
-        else:
-            self.logits = logits
-        return Lambda(self.call,name="gumbel_{}".format(c))(logits)
-    
-    def loss(self):
-        logits = self.logits
+        logits = Reshape((self.N,self.M))(prev)
+
+        layer = Lambda(self.call,name="gumbel_{}".format(c))
+
         q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
-        # note : log_q - log(1/M) = log q / (1/M) = log Mq
-        return - K.mean(q * log_q,
-                        axis=tuple(range(1,len(K.int_shape(logits)))))
+        loss = K.mean(q * log_q) * self.alpha
+
+        layer.add_loss(K.in_train_phase(loss, 0.0), logits)
+
+        return layer(logits)
 
     def value(self,epoch):
         return np.max([self.min,
