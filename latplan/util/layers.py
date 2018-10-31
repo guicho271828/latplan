@@ -143,6 +143,36 @@ def anneal_rate(epoch,min=0.1,max=5.0):
 def take_true(y_cat):
     return wrap(y_cat, y_cat[:,:,0], name="take_true")
 
+class Gaussian:
+    count = 0
+    
+    def __init__(self, beta=1.):
+        self.beta = beta
+        
+    def call(self, mean_log_var):
+        batch = K.shape(mean_log_var)[0]
+        dim = K.int_shape(mean_log_var)[1]//2
+        print(batch,dim)
+        mean    = mean_log_var[:,:dim]
+        log_var = mean_log_var[:,dim:]
+        return mean + K.exp(0.5 * log_var) * K.random_normal(shape=(batch, dim))
+    
+    def __call__(self, mean_log_var):
+        Gaussian.count += 1
+        c = Gaussian.count-1
+
+        layer = Lambda(self.call,name="gaussian_{}".format(c))
+
+        batch = K.shape(mean_log_var)[0]
+        dim = K.int_shape(mean_log_var)[1]//2
+        mean    = mean_log_var[:,:dim]
+        log_var = mean_log_var[:,dim:]
+        loss = -0.5 * K.mean(K.sum(1 + log_var - K.square(mean) - K.exp(log_var), axis=-1)) * self.beta
+
+        layer.add_loss(K.in_train_phase(loss, 0.0), mean_log_var)
+        
+        return layer(mean_log_var)
+
 class ScheduledVariable:
     """General variable which is changed during the course of training according to some schedule"""
     def __init__(self,name="variable",):
