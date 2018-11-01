@@ -2,5 +2,5 @@
 
 while :
 do
-    tensorboard --logdir=$(echo */logs/ | tr " " ",")
+    tensorboard --logdir=$(echo $1*/logs/ | tr " " ",")
 done
