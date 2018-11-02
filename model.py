@@ -64,7 +64,7 @@ This dict can be used while building the network, making it easier to perform a 
                                          on_epoch_end=self.bar_update,
                                          # on_epoch_begin=self.bar_update
                                          ),
-                          keras.callbacks.TensorBoard(log_dir=self.local('logs/{}'.format(datetime.datetime.now().isoformat())), write_graph=False)]
+                          keras.callbacks.TensorBoard(log_dir=self.local('logs/{}-{}'.format(path,datetime.datetime.now().isoformat())), write_graph=False)]
         
     def build(self,input_shape):
         """An interface for building a network. Input-shape: list of dimensions.
