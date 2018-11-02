@@ -22,6 +22,7 @@ def enhance(image):
     return np.clip((image-0.5)*3,-0.5,0.5)+0.5
 
 def preprocess(image):
+    image = image.astype(float)
     image = equalize(image)
     image = normalize(image)
     image = enhance(image)
