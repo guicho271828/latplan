@@ -117,6 +117,12 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
                        "input_shape":self.net.input_shape[1:]}, f)
+
+    def save_epoch(self, freq=10):
+        def fn(epoch, logs):
+            if (epoch % freq) == 0:
+                self.save()
+        return fn
             
     def load(self,allow_failure=False):
         """An interface for loading a network.
