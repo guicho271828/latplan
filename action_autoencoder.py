@@ -78,7 +78,8 @@ if __name__ == '__main__':
     
     actions = aae.encode_action(data, batch_size=1000).round()
     histogram = np.squeeze(actions.sum(axis=0,dtype=int))
-    all_labels = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
+    effective_labels = np.count_nonzero(histogram)
+    all_labels = np.zeros((effective_labels, actions.shape[1], actions.shape[2]), dtype=int)
     for i, pos in enumerate(np.where(histogram > 0)[0]):
         all_labels[i][0][pos] = 1
     
@@ -123,14 +124,14 @@ if __name__ == '__main__':
             for pre_state,suc_state,pre_image,suc_image in zip(pre_states,suc_states,pre_images,suc_images):
                 
                 generated_transitions = aae.decode([
-                    np.repeat([pre_state],128,axis=0),
+                    np.repeat([pre_state],effective_labels,axis=0),
                     all_labels,
                 ],batch_size=1000)
                 generated_suc_states = generated_transitions[:,N:]
                 generated_suc_images = ae.decode_binary(generated_suc_states,batch_size=1000)
 
                 from latplan.util import bce
-                errors = bce(generated_suc_images, np.repeat([suc_image],128,axis=0), axis=(1,2))
+                errors = bce(generated_suc_images, np.repeat([suc_image],effective_labels,axis=0), axis=(1,2))
                 min_error = np.amin(errors)
                 if min_error < 0.01:
                     count += 1
