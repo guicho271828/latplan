@@ -40,8 +40,8 @@ def plot_autoencoding_image(ae,test,train):
         return
     rz = np.random.randint(0,2,(6,ae.parameters['N']))
     ae.plot_autodecode(rz,ae.local("autodecoding_random.png"),verbose=True)
-    ae.plot(select(test,6),ae.local("autoencoding_test.png"),verbose=True)
-    ae.plot(select(train,6),ae.local("autoencoding_train.png"),verbose=True)
+    ae.plot(test[:6],ae.local("autoencoding_test.png"),verbose=True)
+    ae.plot(train[:6],ae.local("autoencoding_train.png"),verbose=True)
 
 def plot_variance_image(ae,test,train):
     if 'plot' not in mode:
