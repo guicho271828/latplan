@@ -845,12 +845,9 @@ We again use gumbel-softmax for representing A."""
         M, N = self.parameters['M'], self.parameters['N']
         
         x = Input(shape=input_shape)
-
-        _pre = tf.slice(x, [0,0],   [-1,dim])
-        _suc = tf.slice(x, [0,dim], [-1,dim])
         
-        pre = wrap(x,_pre,name="pre")
-        suc = wrap(x,_suc,name="suc")
+        pre = wrap(x,x[:,:dim],name="pre")
+        suc = wrap(x,x[:,dim:],name="suc")
 
         print("encoder")
         _encoder = self.build_encoder([dim])
