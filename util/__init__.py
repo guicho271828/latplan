@@ -9,9 +9,9 @@ def get_ae_type(directory):
     import os.path
     d, n = os.path.split(directory)
     if n == '':
-        return d.split("/")[-1].split("_")[-1]
+        return d.split("/")[-1].split("_")[1]
     else:
-        return n.split("_")[-1]
+        return n.split("_")[1]
 
 def ensure_directory(directory):
     if directory[-1] is "/":
