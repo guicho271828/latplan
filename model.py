@@ -651,37 +651,6 @@ class Discriminator(Network):
         self.net.summary()
         return self
 
-class ConvolutionalDiscriminator(Discriminator):
-    def _build(self,input_shape):
-        x = Input(shape=input_shape)
-
-        y = Sequential([
-            Convolution2D(self.parameters['clayer'], (3,3), padding='same', activation=self.parameters['activation']),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            MaxPooling2D((2,2)),
-            Convolution2D(self.parameters['clayer'], (3,3), padding='same', activation=self.parameters['activation']),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            MaxPooling2D((2,2)),
-            Convolution2D(self.parameters['clayer'], (3,3), padding='same', activation=self.parameters['activation']),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            MaxPooling2D((2,2)),
-            flatten,
-            Dense(self.parameters['layer'], activation=self.parameters['activation']),
-            # BN(),
-            # Dropout(self.parameters['dropout'])
-            # *[Sequential([,])
-            #   for i in range(self.parameters['num_layers']) ],
-            Dense(1,activation="sigmoid")
-        ])(x)
-
-        def loss(x,y):
-            return bce(x,y)
-        self.loss = loss
-        self.net = Model(x, y)
-
 class PUDiscriminator(Discriminator):
     """Subclass for PU-learning."""
     def _load(self):
