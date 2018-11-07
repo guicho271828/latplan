@@ -368,11 +368,12 @@ The latter two are used for verifying the performance of the AE.
                M=self.parameters['M'],
                max_temperature=self.parameters['max_temperature'],
                min_temperature=self.parameters['min_temperature'],
-               full_epoch=self.parameters['full_epoch'],):
+               full_epoch=self.parameters['full_epoch'],
+               alpha=-1.):
             gs = GumbelSoftmax(
                 N,M,min_temperature,max_temperature,full_epoch,
                 # Entropy Regularization
-                alpha = -1.)
+                alpha = alpha)
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
             # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
             return gs
