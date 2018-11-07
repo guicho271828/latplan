@@ -438,12 +438,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.autoencoder = Model(x, y)
         self.autodecoder = Model(z2, w2)
         self.net = self.autoencoder
-        y2_downsample = Sequential([
-            Reshape((*input_shape,1)),
-            MaxPooling2D((2,2))
-            ])(y2)
-        shape = K.int_shape(y2_downsample)[1:3]
-        self.decoder_downsample = Model(z2, Reshape(shape)(y2_downsample))
         self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
         self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
@@ -461,15 +455,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         M, N = self.parameters['M'], self.parameters['N']
         assert M == 2, "M={}, not 2".format(M)
         return self.autodecode(np.stack((data,1-data),axis=-1),**kwargs)[:,:,0].reshape(-1, N)
-
-    def decode_downsample(self,data,**kwargs):
-        self.load()
-        return self.decoder_downsample.predict(data,**kwargs)
-
-    def decode_downsample_binary(self,data,**kwargs):
-        M, N = self.parameters['M'], self.parameters['N']
-        assert M == 2, "M={}, not 2".format(M)
-        return self.decode_downsample(np.stack((data,1-data),axis=-1),**kwargs)
 
     def get_features(self, data, **kwargs):
         return self.features.predict(data, **kwargs)
