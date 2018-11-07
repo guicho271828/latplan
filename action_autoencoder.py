@@ -120,15 +120,7 @@ if __name__ == '__main__':
             pre_images = ae.decode_binary(pre_states,batch_size=1000)
             suc_images = ae.decode_binary(suc_states,batch_size=1000)
 
-            import progressbar as pb
-            bar = pb.ProgressBar(
-                max_value=len(all_actions),
-                widgets=[
-                    pb.Timer("Elap: %(elapsed) "),
-                    pb.AbsoluteETA("Est: %(elapsed) "),
-                    pb.Bar(),
-                ])
-            for pre_state,suc_state,pre_image,suc_image in bar(zip(pre_states,suc_states,pre_images,suc_images)):
+            for pre_state,suc_state,pre_image,suc_image in zip(pre_states,suc_states,pre_images,suc_images):
                 
                 generated_transitions = aae.decode([
                     np.repeat([pre_state],128,axis=0),
