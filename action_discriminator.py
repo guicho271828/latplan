@@ -291,7 +291,10 @@ def test():
     N = valid.shape[1] // 2
     print("valid",len(valid))
 
+    performance = {}
+    
     prediction = np.clip(discriminator.discriminate(valid,batch_size=1000).round(), 0,1)
+    performance["type1"] = 100 * np.mean(1-prediction)
     print("type1 error: ",100 * np.mean(1-prediction), "%")
 
     mixed = generate_oae_action(valid[:1000]) # x2x128 max
@@ -304,13 +307,20 @@ def test():
     print("mixed",len(mixed), "invalid", len(invalid))
 
     prediction = np.clip(discriminator.discriminate(invalid,batch_size=1000).round(), 0,1)
+    performance["type2"] = 100 * np.mean(prediction)
     print("type2 error: ",100 * np.mean(prediction), "%")
 
     ind = np.where(np.squeeze(combined(invalid[:,N:])) > 0.5)[0]
+    performance["type2/sd"] = 100 * np.mean(prediction[ind])
     print("type2 error (w/o invalid states by sd3): ",100 * np.mean(prediction[ind]), "%")
 
     ind = p.validate_states(sae.decode_binary(invalid[:,N:],batch_size=1000),verbose=False,batch_size=1000)
+    performance["type2/v"] = 100 * np.mean(prediction[ind])
     print("type2 error (w/o invalid states by validator): ",100 * np.mean(prediction[ind]), "%")
+    
+    import json
+    with open(discriminator.local('performance.json'), 'w') as f:
+        json.dump(performance, f)
 
 def main(directory, mode="test", input_type="prepare_oae_PU3"):
     from latplan.util import get_ae_type
