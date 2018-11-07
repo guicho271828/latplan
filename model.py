@@ -385,7 +385,6 @@ class GumbelAE(AE):
 Fully connected layers only, no convolutions.
 Note: references to self.parameters[key] are all hyperparameters."""
     def build_encoder(self,input_shape):
-        gs = self.build_gs()
         return [flatten,
                 GaussianNoise(self.parameters['noise']),
                 BN(),
@@ -399,7 +398,8 @@ Note: references to self.parameters[key] are all hyperparameters."""
                 BN(),
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['N']*self.parameters['M']),
-                gs]
+                self.build_gs(),
+        ]
     
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
@@ -536,7 +536,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
 class ConvolutionalGumbelAE(GumbelAE):
     """A mixin that uses convolutions in the encoder."""
     def build_encoder(self,input_shape):
-        gs = self.build_gs()
         return [Reshape((*input_shape,1)),
                 GaussianNoise(self.parameters['noise']),
                 BN(),
@@ -557,7 +556,8 @@ class ConvolutionalGumbelAE(GumbelAE):
                     Dropout(self.parameters['dropout']),
                     Dense(self.parameters['N']*self.parameters['M']),
                 ]),
-                gs]
+                self.build_gs(),
+        ]
 
 class Convolutional2GumbelAE(ConvolutionalGumbelAE):
     """A mixin that uses convolutions also in the decoder. Somehow it does not converge."""
@@ -818,7 +818,11 @@ We again use gumbel-softmax for representing A."""
                     Dropout(self.parameters['dropout']),])
                 for i in range(self.parameters['encoder_layers'])
             ],
-            Dense(self.parameters['N']*self.parameters['M']),]
+            Sequential([
+                    Dense(self.parameters['N']*self.parameters['M']),
+                    self.build_gs(),
+            ]),
+        ]
     
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
@@ -850,11 +854,8 @@ We again use gumbel-softmax for representing A."""
 
         print("encoder")
         _encoder = self.build_encoder([dim])
-        action_logit = ConditionalSequential(_encoder, pre, axis=1)(suc)
+        action = ConditionalSequential(_encoder, pre, axis=1)(suc)
         
-        gs = self.build_gs()
-        action = gs(action_logit)
-
         print("decoder")
         _decoder = self.build_decoder([dim])
         suc_reconstruction = ConditionalSequential(_decoder, pre, axis=1)(flatten(action))
