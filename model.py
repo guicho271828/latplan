@@ -434,6 +434,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.loss = BCE
         self.eval = MSE
         self.metrics.append(BCE)
+        self.metrics.append(MSE)
         self.metrics.append(activation)
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
