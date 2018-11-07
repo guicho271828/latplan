@@ -15,7 +15,8 @@ float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
 
 def generate_random(data,sae,batch=None):
-    threshold = 0.01
+    import sys
+    threshold = sys.float_info.epsilon
     rate_threshold = 0.99
     max_repeat = 50
 
@@ -33,13 +34,13 @@ def generate_random(data,sae,batch=None):
             if len(data) > 3000:
                 print(loss, loss / prev_loss)
             data = data_rec
-            if loss / prev_loss > rate_threshold:
+            if (loss / prev_loss > rate_threshold):
                 if len(data) > 3000:
                     print("improvement saturated: loss / prev_loss = ", loss / prev_loss, ">", rate_threshold)
                 break
-            # if loss < threshold:
-            #     print("good amount of loss:", loss, "<", threshold)
-            #     break
+            if loss <= threshold:
+                print("good amount of loss:", loss, "<", threshold)
+                break
         return data.round().astype(np.int8)
     
     def prune_unreconstructable(sae,data):
@@ -63,13 +64,17 @@ def prepare(data_valid, sae):
         p = 0
         pp = 0
         ppp = 0
-        while len(data_mixed) < len(data_valid) and p < len(data_mixed):
+        i = 0
+        limit = 600
+        while len(data_mixed) < len(data_valid) and p < len(data_mixed) and i < limit:
+            i += 1
             p = pp
             pp = ppp
             ppp = len(data_mixed)
             data_mixed = union(data_mixed, generate_random(data_valid, sae, gen_batch))
             print("valid:",len(data_valid),
                   "mixed:", len(data_mixed),
+                  "iteration:", i, "/", limit,
                   "## generation stops when it failed to generate new examples three times in a row")
     except KeyboardInterrupt:
         pass
@@ -79,6 +84,8 @@ def prepare(data_valid, sae):
     if len(data_valid) < len(data_mixed):
         # downsample
         data_mixed = data_mixed[:len(data_valid)]
+    elif len(data_mixed) == 0:
+        data_mixed = data_valid.copy() # valid data are also mixed data by definition
     else:
         # oversample
         data_mixed = np.repeat(data_mixed, 1+(len(data_valid)//len(data_mixed)), axis=0)
