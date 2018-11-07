@@ -50,10 +50,6 @@ def plot_variance_image(ae,test,train):
         ae.plot_variance(select(test,6), ae.local("variance_test.png"),  verbose=True)
         ae.plot_variance(select(train,6),ae.local("variance_train.png"), verbose=True)
     
-def plot_autoencoding_image_if_necessary(ae,test,train):
-    if 'learn' not in mode:
-        plot_autoencoding_image(ae,test,train)
-
 def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
     if 'dump' not in mode:
         return
@@ -199,7 +195,7 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
     test  = states[int(len(states)*0.9):]
     ae = run(os.path.join("samples",sae_path), train, test, parameters)
     show_summary(ae, train, test)
-    plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
+    plot_autoencoding_image(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
@@ -237,7 +233,7 @@ def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=650
     ae = run(os.path.join("samples",sae_path), train, test, parameters)
     print("*** NOTE *** if l_rec is above 0.01, it is most likely not learning the correct model")
     show_summary(ae, train, test)
-    plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
+    plot_autoencoding_image(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions,repeat=100)
     dump_states (ae,states,repeat=100)
@@ -273,7 +269,7 @@ def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_exa
     test  = states[int(len(states)*0.9):]
     ae = run(os.path.join("samples",sae_path), train, test, parameters)
     show_summary(ae, train, test)
-    plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
+    plot_autoencoding_image(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
     dump_actions(ae,transitions)
     dump_states (ae,states)
