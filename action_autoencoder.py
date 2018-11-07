@@ -100,9 +100,9 @@ if __name__ == '__main__':
         # transitions = aae.decode([np.repeat(all_actions[:1,:N], len(all_labels), axis=0), all_labels])
         suc = transitions[:,N:]
         from latplan.util.plot import plot_grid, squarify
-        plot_grid([x for x in ae.decode_binary(suc)], w=8, path=aae.local("aae_all_actions_for_a_state_8x16.png"), verbose=True)
-        plot_grid([x for x in ae.decode_binary(suc)], w=16, path=aae.local("aae_all_actions_for_a_state_16x8.png"), verbose=True)
-        plot_grid(ae.decode_binary(data[:1,:N]), w=1, path=aae.local("aae_all_actions_for_a_state_state.png"), verbose=True)
+        plot_grid([x for x in ae.decode(suc)], w=8, path=aae.local("aae_all_actions_for_a_state_8x16.png"), verbose=True)
+        plot_grid([x for x in ae.decode(suc)], w=16, path=aae.local("aae_all_actions_for_a_state_16x8.png"), verbose=True)
+        plot_grid(ae.decode(data[:1,:N]), w=1, path=aae.local("aae_all_actions_for_a_state_state.png"), verbose=True)
         
     
     if 'test' in mode:
@@ -118,8 +118,8 @@ if __name__ == '__main__':
         try:
             pre_states = all_actions[:,:N]
             suc_states = all_actions[:,N:]
-            pre_images = ae.decode_binary(pre_states,batch_size=1000)
-            suc_images = ae.decode_binary(suc_states,batch_size=1000)
+            pre_images = ae.decode(pre_states,batch_size=1000)
+            suc_images = ae.decode(suc_states,batch_size=1000)
 
             for pre_state,suc_state,pre_image,suc_image in zip(pre_states,suc_states,pre_images,suc_images):
                 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
                     all_labels,
                 ],batch_size=1000)
                 generated_suc_states = generated_transitions[:,N:]
-                generated_suc_images = ae.decode_binary(generated_suc_states,batch_size=1000)
+                generated_suc_images = ae.decode(generated_suc_states,batch_size=1000)
 
                 from latplan.util import bce
                 errors = bce(generated_suc_images, np.repeat([suc_image],effective_labels,axis=0), axis=(1,2))

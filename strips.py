@@ -65,8 +65,8 @@ def dump_all_actions(ae,configs,trans_fn,name="all_actions.csv",repeat=1):
                     print((begin,end,len(configs)))
                     transitions = trans_fn(configs[begin:end])
                     orig, dest = transitions[0], transitions[1]
-                    orig_b = ae.encode_binary(orig,batch_size=1000).round().astype(int)
-                    dest_b = ae.encode_binary(dest,batch_size=1000).round().astype(int)
+                    orig_b = ae.encode(orig,batch_size=1000).round().astype(int)
+                    dest_b = ae.encode(dest,batch_size=1000).round().astype(int)
                     actions = np.concatenate((orig_b,dest_b), axis=1)
                     np.savetxt(f,actions,"%d")
     except AttributeError:
@@ -82,8 +82,8 @@ def dump_actions(ae,transitions,name="actions.csv",repeat=1):
         with open(ae.local(name), 'wb') as f:
             orig, dest = transitions[0], transitions[1]
             for i in range(repeat):
-                orig_b = ae.encode_binary(orig,batch_size=1000).round().astype(int)
-                dest_b = ae.encode_binary(dest,batch_size=1000).round().astype(int)
+                orig_b = ae.encode(orig,batch_size=1000).round().astype(int)
+                dest_b = ae.encode(dest,batch_size=1000).round().astype(int)
                 actions = np.concatenate((orig_b,dest_b), axis=1)
                 np.savetxt(f,actions,"%d")
     except AttributeError:
@@ -106,7 +106,7 @@ def dump_all_states(ae,configs,states_fn,name="all_states.csv",repeat=1):
                     end = begin + batch
                     print((begin,end,len(configs)))
                     states = states_fn(configs[begin:end])
-                    states_b = ae.encode_binary(states,batch_size=1000).round().astype(int)
+                    states_b = ae.encode(states,batch_size=1000).round().astype(int)
                     np.savetxt(f,states_b,"%d")
     except AttributeError:
         print("this AE does not support dumping")
@@ -120,7 +120,7 @@ def dump_states(ae,states,name="states.csv",repeat=1):
         print(ae.local(name))
         with open(ae.local(name), 'wb') as f:
             for i in range(repeat):
-                np.savetxt(f,ae.encode_binary(states,batch_size=1000).round().astype(int),"%d")
+                np.savetxt(f,ae.encode(states,batch_size=1000).round().astype(int),"%d")
     except AttributeError:
         print("this AE does not support dumping")
     except KeyboardInterrupt:
