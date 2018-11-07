@@ -12,6 +12,8 @@ from latplan.util.noise  import gaussian
 import keras.backend as K
 import tensorflow as tf
 
+import os
+import os.path
 
 float_formatter = lambda x: "%.5f" % x
 np.set_printoptions(formatter={'float_kind':float_formatter})
@@ -167,13 +169,15 @@ def show_summary(ae,train,test):
 
 ################################################################
 
-def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
+def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,num_examples=6500):
+    for name, value in locals().items():
+        default_parameters[name] = value
+    
     parameters = {
         'layer'      :[1000],# [400,4000],
         'clayer'     :[16],# [400,4000],
         'dropout'    :[0.4], #[0.1,0.4],
         'noise'      :[0.4],
-        'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
         'activation' :['tanh'],
         'epoch'      :[150],
@@ -193,7 +197,7 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     print(states.shape)
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
-    ae = run("_".join(map(str,("samples/puzzle",type,width,height,N,num_examples,encoder))), train, test, parameters)
+    ae = run(os.path.join("samples",sae_path), train, test, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
@@ -202,7 +206,9 @@ def puzzle(type='mnist',width=3,height=3,N=36,num_examples=6500):
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
-def hanoi(disks=7,towers=4,N=36,num_examples=6500):
+def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=6500):
+    for name, value in locals().items():
+        default_parameters[name] = value
     parameters = {
         'layer'      :[1000],# [400,4000],
         'clayer'     :[12],# [400,4000],
@@ -228,7 +234,7 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     print(states.shape)
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
-    ae = run("_".join(map(str,("samples/hanoi",disks,towers,N,num_examples,encoder))), train, test, parameters)
+    ae = run(os.path.join("samples",sae_path), train, test, parameters)
     print("*** NOTE *** if l_rec is above 0.01, it is most likely not learning the correct model")
     show_summary(ae, train, test)
     plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
@@ -238,7 +244,9 @@ def hanoi(disks=7,towers=4,N=36,num_examples=6500):
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),repeat=100)
     dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),repeat=100)
 
-def lightsout(type='digital',size=4,N=36,num_examples=6500):
+def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_examples=6500):
+    for name, value in locals().items():
+        default_parameters[name] = value
     parameters = {
         'layer'      :[1000],# [400,4000],
         'clayer'     :[16],# [400,4000],
@@ -263,7 +271,7 @@ def lightsout(type='digital',size=4,N=36,num_examples=6500):
     print(states.shape)
     train = states[:int(len(states)*0.9)]
     test  = states[int(len(states)*0.9):]
-    ae = run("_".join(map(str,("samples/lightsout",type,size,N,num_examples,encoder))), train, test, parameters)
+    ae = run(os.path.join("samples",sae_path), train, test, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image_if_necessary(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
