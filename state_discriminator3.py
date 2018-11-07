@@ -247,11 +247,13 @@ def test(method):
     print("valid",states_valid.shape)
 
     from latplan.util.plot import plot_grid
+    performance = {}
 
     ################################################################
     # type 1 error
     type1_d = combined(states_valid)
     type1_error = np.sum(1- type1_d)
+    performance["type1"] = type1_error/len(states_valid) * 100
     print("type1 error:",type1_error,"/",len(states_valid),
           "Error ratio:", type1_error/len(states_valid) * 100, "%")
 
@@ -267,14 +269,17 @@ def test(method):
     # type 2 error
     _,_,_,_, _, states_mixed = prepare(states_valid[:50000],sae)
     print(len(states_mixed),"reconstructable states generated.")
+    performance["reconstructable_states"] = len(states_mixed)
 
     p = latplan.util.puzzle_module(sae.path)
     is_valid = p.validate_states(sae.decode_binary(states_mixed))
     states_invalid = states_mixed[np.logical_not(is_valid)]
     states_invalid = states_invalid[:30000]
     print(len(states_invalid),"invalid states generated.")
+    performance["invalid_states"] = len(states_invalid)
 
     if len(states_invalid) == 0:
+        performance["type2"] = float('nan')
         print("We observed ZERO invalid states.")
     else:
         plot_grid(sae.decode_binary(states_invalid)[:120],
@@ -282,6 +287,7 @@ def test(method):
               path=discriminator.local("surely_invalid_states.png"))
         type2_d = combined(states_invalid)
         type2_error = np.sum(type2_d)
+        performance["type2"] = type2_error/len(states_invalid) * 100
         print("type2 error:",type2_error,"/",len(states_invalid),
               "Error ratio:", type2_error/len(states_invalid) * 100, "%")
 
@@ -292,6 +298,10 @@ def test(method):
             plot_grid(type2_error_images,
                       w=20,
                       path=discriminator.local("type2_error.png"))
+    
+    import json
+    with open(discriminator.local('performance.json'), 'w') as f:
+        json.dump(performance, f)
 
 def main(directory, mode="test", method='feature'):
     from latplan.util import get_ae_type
