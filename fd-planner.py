@@ -99,7 +99,7 @@ def init_goal_misc(p, init_image, goal_image, init, goal):
     print("goal:",goal_image.min(),goal_image.max(),)
     print(init)
     print(goal)
-    rec = sae.decode_binary(np.array([init,goal]))
+    rec = sae.decode(np.array([init,goal]))
     init_rec, goal_rec = rec
     print("init (reconstruction):",init_rec.min(),init_rec.max(),)
     print("goal (reconstruction):",goal_rec.min(),goal_rec.max(),)
@@ -155,17 +155,17 @@ def main(_network_dir, _problem_dir, heuristics='blind'):
     # is already enhanced, equalized
     init_image = normalize(misc.imread(problem("init.png")))
     goal_image = normalize(misc.imread(problem("goal.png")))
-    init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
-    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
+    init = sae.encode(np.expand_dims(init_image,0))[0].round().astype(int)
+    goal = sae.encode(np.expand_dims(goal_image,0))[0].round().astype(int)
     init_goal_misc(p, init_image, goal_image, init, goal)
     plan = latent_plan(init, goal, heuristics)
     print(plan)
-    plot_grid(sae.decode_binary(plan),
+    plot_grid(sae.decode(plan),
               path=problem(network(heur("path_{}.png".format(0)))),verbose=True)
 
-    validation = p.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])])
+    validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
     print(validation)
-    print(p.validate_states(sae.decode_binary(plan)))
+    print(p.validate_states(sae.decode(plan)))
     
     import subprocess
     subprocess.call(["rm", "-f", problem(network(heur("path_{}.valid".format(0))))])

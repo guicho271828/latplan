@@ -309,16 +309,16 @@ The latter two are used for verifying the performance of the AE.
                   lambda data: float(self.autoencoder.evaluate(pepper(data),data,**opts)))
 
         test_both(["activation"],
-                  lambda data: float(self.encode_binary(data,batch_size=batch_size,).mean()))
+                  lambda data: float(self.encode(data,batch_size=batch_size,).mean()))
         test_both(["inactive","false"],
-                  lambda data: float(self.parameters['N']-np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0))))
+                  lambda data: float(self.parameters['N']-np.sum(np.amax(self.encode(data,batch_size=batch_size,),axis=0))))
         test_both(["inactive","true"],
-                  lambda data: float(self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0))))
+                  lambda data: float(self.parameters['N']-np.sum(np.amax(1-self.encode(data,batch_size=batch_size,),axis=0))))
         test_both(["inactive","both"],
-                  lambda data: float(2*self.parameters['N']-np.sum(np.amax(1-self.encode_binary(data,batch_size=batch_size,),axis=0)) -np.sum(np.amax(self.encode_binary(data,batch_size=batch_size,),axis=0))))
+                  lambda data: float(2*self.parameters['N']-np.sum(np.amax(1-self.encode(data,batch_size=batch_size,),axis=0)) -np.sum(np.amax(self.encode(data,batch_size=batch_size,),axis=0))))
 
         def latent_variance_noise(data,noise):
-            encoded = [self.encode_binary(noise(data),batch_size=batch_size,).round() for i in range(10)]
+            encoded = [self.encode(noise(data),batch_size=batch_size,).round() for i in range(10)]
             var = np.var(encoded,axis=0)
             return np.array([np.amax(var), np.amin(var), np.mean(var), np.median(var)]).tolist()
             
@@ -399,6 +399,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['N']*self.parameters['M']),
                 self.build_gs(),
+                take_true,
         ]
     
     def build_decoder(self,input_shape):
@@ -428,7 +429,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         w2 = Sequential(_encoder)(y2)
 
         def activation(x, y):
-            return K.mean(z[:,:,0])
+            return K.mean(z)
         
         self.loss = BCE
         self.eval = MSE
@@ -442,31 +443,16 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
         self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
         
-    def encode_binary(self,data,**kwargs):
-        M, N = self.parameters['M'], self.parameters['N']
-        assert M == 2, "M={}, not 2".format(M)
-        return self.encode(data,**kwargs)[:,:,0].reshape(-1, N)
-    
-    def decode_binary(self,data,**kwargs):
-        M, N = self.parameters['M'], self.parameters['N']
-        assert M == 2, "M={}, not 2".format(M)
-        return self.decode(np.stack((data,1-data),axis=-1),**kwargs)
-
-    def autodecode_binary(self,data,**kwargs):
-        M, N = self.parameters['M'], self.parameters['N']
-        assert M == 2, "M={}, not 2".format(M)
-        return self.autodecode(np.stack((data,1-data),axis=-1),**kwargs)[:,:,0].reshape(-1, N)
-
     def get_features(self, data, **kwargs):
         return self.features.predict(data, **kwargs)
 
     def plot(self,data,path,verbose=False):
         self.load()
         x = data
-        z = self.encode_binary(x)
-        y = self.decode_binary(z)
+        z = self.encode(x)
+        y = self.decode(z)
         b = np.round(z)
-        by = self.decode_binary(b)
+        by = self.decode(b)
 
         xg = gaussian(x)
         xs = salt(x)
@@ -496,17 +482,17 @@ Note: references to self.parameters[key] are all hyperparameters."""
     def plot_autodecode(self,data,path,verbose=False):
         self.load()
         z = data
-        x = self.decode_binary(z)
+        x = self.decode(z)
         
-        z2 = self.encode_binary(x)
+        z2 = self.encode(x)
         z2r = z2.round()
-        x2 = self.decode_binary(z2)
-        x2r = self.decode_binary(z2r)
+        x2 = self.decode(z2)
+        x2r = self.decode(z2r)
 
-        z3 = self.encode_binary(x2)
+        z3 = self.encode(x2)
         z3r = z3.round()
-        x3 = self.decode_binary(z3)
-        x3r = self.decode_binary(z3r)
+        x3 = self.decode(z3)
+        x3r = self.decode(z3r)
         
         M, N = self.parameters['M'], self.parameters['N']
 
@@ -528,7 +514,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.load()
         x = data
         samples = 100
-        z = np.array([ np.round(self.encode_binary(x)) for i in range(samples)])
+        z = np.array([ np.round(self.encode(x)) for i in range(samples)])
         z = np.einsum("sbz->bsz",z)
         from .util.plot import plot_grid
         plot_grid(z, w=6, path=path, verbose=verbose)
@@ -557,6 +543,7 @@ class ConvolutionalGumbelAE(GumbelAE):
                     Dense(self.parameters['N']*self.parameters['M']),
                 ]),
                 self.build_gs(),
+                take_true,
         ]
 
 class Convolutional2GumbelAE(ConvolutionalGumbelAE):
@@ -752,7 +739,7 @@ class SimpleCAE(AE):
         pass
 
 def combined_discriminate(data,sae,cae,discriminator,**kwargs):
-    images = sae.decode_binary(data,**kwargs)
+    images = sae.decode(data,**kwargs)
     data2  = cae.encode(images,**kwargs)
     return discriminator.discriminate(data2,**kwargs)
 
@@ -913,10 +900,10 @@ We again use gumbel-softmax for representing A."""
         y_suc_r, by_suc_r = y_suc.round(), by_suc.round()
 
         if ae:
-            x_pre_im, x_suc_im = ae.decode_binary(x[:,:dim]), ae.decode_binary(x[:,dim:])
-            y_pre_im, y_suc_im = ae.decode_binary(y[:,:dim]), ae.decode_binary(y[:,dim:])
-            by_pre_im, by_suc_im = ae.decode_binary(by[:,:dim]), ae.decode_binary(by[:,dim:])
-            y_suc_r_im, by_suc_r_im = ae.decode_binary(y[:,dim:].round()), ae.decode_binary(by[:,dim:].round())
+            x_pre_im, x_suc_im = ae.decode(x[:,:dim]), ae.decode(x[:,dim:])
+            y_pre_im, y_suc_im = ae.decode(y[:,:dim]), ae.decode(y[:,dim:])
+            by_pre_im, by_suc_im = ae.decode(by[:,:dim]), ae.decode(by[:,dim:])
+            y_suc_r_im, by_suc_r_im = ae.decode(y[:,dim:].round()), ae.decode(by[:,dim:].round())
             images = []
             for seq in zip(x_pre_im, x_suc_im, squarify(np.squeeze(z)), y_pre_im, y_suc_im, y_suc_r_im, squarify(np.squeeze(b)), by_pre_im, by_suc_im, by_suc_r_im):
                 images.extend(seq)

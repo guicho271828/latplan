@@ -72,7 +72,7 @@ def state_reconstruction_filtering(y):
     # filtering based on SAE state reconstruction
     N = y.shape[1]//2
     t = y[:,N:]
-    t_reconstruction = sae.autodecode_binary(t).round()
+    t_reconstruction = sae.autodecode(t).round()
     return y[np.all(np.equal(t, t_reconstruction),axis=(1,))]
 
 def inflate_actions(y):
@@ -80,7 +80,7 @@ def inflate_actions(y):
     N = y.shape[1]//2
     t = y[:,N:]
     for i in range(inflation-1):
-        t = union(sae.autodecode_binary(t).round().astype(int), t)
+        t = union(sae.autodecode(t).round().astype(int), t)
     import math
     y = y.repeat(math.ceil(len(t)/len(y)), axis=0)[:len(t)]
     y[:,N:] = t
@@ -101,14 +101,14 @@ def state_discriminator3_filtering(y):
 def cheating_validation_filtering(y):
     N = y.shape[1]//2
     p = latplan.util.puzzle_module(sae.local(""))
-    pre_images = sae.decode_binary(y[:,:N],batch_size=1000)
-    suc_images = sae.decode_binary(y[:,N:],batch_size=1000)
+    pre_images = sae.decode(y[:,:N],batch_size=1000)
+    suc_images = sae.decode(y[:,N:],batch_size=1000)
     return y[p.validate_transitions([pre_images, suc_images],batch_size=1000)]
 
 def cheating_image_reconstruction_filtering(y):
     N = y.shape[1]//2
     # filtering based on SAE reconstruction
-    images  = sae.decode_binary(y[:,N:]).round()
+    images  = sae.decode(y[:,N:]).round()
     images2 = sae.autoencode(images).round()
     loss = image_diff(images,images2,(1,2))
     # print(loss)
@@ -301,7 +301,6 @@ def main(network_dir, problem_dir, searcher):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(searcher, root, ext)
 
-
     from scipy import misc
     from latplan.puzzles.util import preprocess, normalize
     # is already enhanced, equalized
@@ -309,11 +308,11 @@ def main(network_dir, problem_dir, searcher):
     goal_image = normalize(misc.imread(problem("goal.png")))
     print("init:",init_image.min(),init_image.max(),)
     print("goal:",goal_image.min(),goal_image.max(),)
-    init = sae.encode_binary(np.expand_dims(init_image,0))[0].round().astype(int)
-    goal = sae.encode_binary(np.expand_dims(goal_image,0))[0].round().astype(int)
+    init = sae.encode(np.expand_dims(init_image,0))[0].round().astype(int)
+    goal = sae.encode(np.expand_dims(goal_image,0))[0].round().astype(int)
     print(init)
     print(goal)
-    rec = sae.decode_binary(np.array([init,goal]))
+    rec = sae.decode(np.array([init,goal]))
     init_rec, goal_rec = rec
     print("init (reconstruction):",init_rec.min(),init_rec.max(),)
     print("goal (reconstruction):",goal_rec.min(),goal_rec.max(),)
@@ -374,14 +373,14 @@ def main(network_dir, problem_dir, searcher):
     for i, found_goal_state in enumerate(eval(searcher)().search(init,goal,goalcount)):
         plan = np.array( found_goal_state.path())
         print(plan)
-        plot_grid(sae.decode_binary(plan),
+        plot_grid(sae.decode(plan),
                   path=problem(network(search("path_{}.png".format(i)))),verbose=True)
 
-        validation = p.validate_transitions([sae.decode_binary(plan[0:-1]), sae.decode_binary(plan[1:])])
+        validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
         print(validation)
         print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
 
-        print(p.validate_states(sae.decode_binary(plan)))
+        print(p.validate_states(sae.decode(plan)))
         print(combined_discriminator(plan).flatten())
         import subprocess
         subprocess.call(["rm", "-f", problem(network(search("path_{}.valid".format(i))))])

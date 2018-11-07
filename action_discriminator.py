@@ -127,7 +127,7 @@ def prepare_oae_validated(known_transisitons):
     valid_suc = np.zeros(len(y),dtype=bool)
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
-        suc_images = sae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        suc_images = sae.decode(y[batch*i:batch*(i+1),N:],batch_size=1000)
         valid_suc[batch*i:batch*(i+1)] = p.validate_states(suc_images,verbose=False,batch_size=1000)
         # This state validation is just for reducing the later effort for validating transitions
     
@@ -138,8 +138,8 @@ def prepare_oae_validated(known_transisitons):
     answers = np.zeros(len(y),dtype=int)
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
-        pre_images = sae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
-        suc_images = sae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        pre_images = sae.decode(y[batch*i:batch*(i+1),:N],batch_size=1000)
+        suc_images = sae.decode(y[batch*i:batch*(i+1),N:],batch_size=1000)
         answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images],batch_size=1000)).astype(int)
     
     l = len(y)
@@ -172,7 +172,7 @@ def prepare_oae_PU2(known_transisitons):
     valid_suc = np.zeros(len(y),dtype=bool)
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
-        suc_images = sae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        suc_images = sae.decode(y[batch*i:batch*(i+1),N:],batch_size=1000)
         valid_suc[batch*i:batch*(i+1)] = p.validate_states(suc_images,verbose=False,batch_size=1000)
     
     before_len = len(y)
@@ -299,8 +299,8 @@ def test():
 
     mixed = generate_oae_action(valid[:1000]) # x2x128 max
     p = latplan.util.puzzle_module(sae.local(""))
-    pre_images = sae.decode_binary(mixed[:,:N],batch_size=1000)
-    suc_images = sae.decode_binary(mixed[:,N:],batch_size=1000)
+    pre_images = sae.decode(mixed[:,:N],batch_size=1000)
+    suc_images = sae.decode(mixed[:,N:],batch_size=1000)
     answers = np.array(p.validate_transitions([pre_images, suc_images],batch_size=1000))
     invalid = mixed[np.logical_not(answers)]
 
@@ -314,7 +314,7 @@ def test():
     performance["type2/sd"] = 100 * np.mean(prediction[ind])
     print("type2 error (w/o invalid states by sd3): ",100 * np.mean(prediction[ind]), "%")
 
-    ind = p.validate_states(sae.decode_binary(invalid[:,N:],batch_size=1000),verbose=False,batch_size=1000)
+    ind = p.validate_states(sae.decode(invalid[:,N:],batch_size=1000),verbose=False,batch_size=1000)
     performance["type2/v"] = 100 * np.mean(prediction[ind])
     print("type2 error (w/o invalid states by validator): ",100 * np.mean(prediction[ind]), "%")
     
@@ -401,8 +401,8 @@ def test_oae_pre_label():
     batch = 100000
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
-        pre_images = sae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
-        suc_images = sae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        pre_images = sae.decode(y[batch*i:batch*(i+1),:N],batch_size=1000)
+        suc_images = sae.decode(y[batch*i:batch*(i+1),N:],batch_size=1000)
         answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], batch_size=1000)).astype(int)
 
     # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
@@ -416,7 +416,7 @@ def test_oae_pre_label():
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("type2 error (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
-    ind = p.validate_states(sae.decode_binary(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
+    ind = p.validate_states(sae.decode(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
     print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
     print("type2 error (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
@@ -432,8 +432,8 @@ def test_oae_pre_suc_label():
     batch = 100000
     for i in range(1+len(y)//batch):
         print(i,"/",len(y)//batch)
-        pre_images = sae.decode_binary(y[batch*i:batch*(i+1),:N],batch_size=1000)
-        suc_images = sae.decode_binary(y[batch*i:batch*(i+1),N:],batch_size=1000)
+        pre_images = sae.decode(y[batch*i:batch*(i+1),:N],batch_size=1000)
+        suc_images = sae.decode(y[batch*i:batch*(i+1),N:],batch_size=1000)
         answers[batch*i:batch*(i+1)] = np.array(p.validate_transitions([pre_images, suc_images], batch_size=1000)).astype(int)
 
     # discriminator.report(y, train_data_to=answers) # not appropriate for PUDiscriminator
@@ -447,7 +447,7 @@ def test_oae_pre_suc_label():
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("type2 error (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
-    ind = p.validate_states(sae.decode_binary(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
+    ind = p.validate_states(sae.decode(y[:,N:],batch_size=1000),verbose=False,batch_size=1000)
     print("BCE (w/o invalid states by validator):", bce(predictions[ind], answers[ind]))
     print("type2 error (w/o invalid states by validator):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
@@ -474,8 +474,8 @@ def test_artificial():
         count = 0
         batch = 10000
         for i in range(len(invalid)//batch):
-            pre_images = sae.decode_binary(invalid[batch*i:batch*(i+1),:N],batch_size=1000)
-            suc_images = sae.decode_binary(invalid[batch*i:batch*(i+1),N:],batch_size=1000)
+            pre_images = sae.decode(invalid[batch*i:batch*(i+1),:N],batch_size=1000)
+            suc_images = sae.decode(invalid[batch*i:batch*(i+1),N:],batch_size=1000)
             validation = p.validate_transitions([pre_images, suc_images])
             count += np.count_nonzero(validation)
         print(count,"valid actions in invalid", c)

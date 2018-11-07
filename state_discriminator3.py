@@ -21,8 +21,8 @@ def generate_random(data,sae,batch=None):
     max_repeat = 50
 
     def regenerate(sae, data):
-        images           = sae.decode_binary(data,batch_size=2000)
-        data_invalid_rec = sae.encode_binary(images,batch_size=2000)
+        images           = sae.decode(data,batch_size=2000)
+        data_invalid_rec = sae.encode(images,batch_size=2000)
         return data_invalid_rec
 
     def regenerate_many(sae, data):
@@ -123,7 +123,7 @@ def learn(method):
 
     if method == "feature":
         # decode into image, extract features and learn from it
-        train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
+        train_image, test_image = sae.decode(train_in), sae.decode(test_in)
         train_in2, test_in2 = sae.get_features(train_image), sae.get_features(test_image)
         discriminator,_,_ = grid_search(curry(nn_task, latplan.model.get('PUDiscriminator'), sae.local("_sd3/"),
                                               train_in2, train_out, test_in2, test_out,),
@@ -141,7 +141,7 @@ def learn(method):
                                         })
     if method == "cae":
         # decode into image, learn a separate cae and learn from it
-        train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
+        train_image, test_image = sae.decode(train_in), sae.decode(test_in)
         cae,_,_ = grid_search(curry(nn_task, latplan.model.get('SimpleCAE'),
                                     sae.local("_cae"),
                                     train_image, train_image, test_image, test_image),
@@ -191,7 +191,7 @@ def learn(method):
                                         })
     if method == "image":
         # learn directly from the image
-        train_image, test_image = sae.decode_binary(train_in), sae.decode_binary(test_in)
+        train_image, test_image = sae.decode(train_in), sae.decode(test_in)
         discriminator,_,_ = grid_search(curry(nn_task, latplan.model.get('PUDiscriminator'), sae.local("_sd3/"),
                                               train_image, train_out, test_image, test_out,),
                                         default_parameters,
@@ -238,7 +238,7 @@ def load2(method):
         combined = d
     if method == "image":
         def d (states):
-            images = sae.decode_binary(data,batch_size=1000)
+            images = sae.decode(data,batch_size=1000)
             return discriminator.discriminate(images,batch_size=1000).round()
         combined = d
 
@@ -257,7 +257,7 @@ def test(method):
     print("type1 error:",type1_error,"/",len(states_valid),
           "Error ratio:", type1_error/len(states_valid) * 100, "%")
 
-    type1_error_images = sae.decode_binary(states_valid[np.where(type1_d < 0.1)[0]])[:120]
+    type1_error_images = sae.decode(states_valid[np.where(type1_d < 0.1)[0]])[:120]
     if len(type1_error_images) == 0:
         print("We observed ZERO type1-error! Hooray!")
     else:
@@ -272,7 +272,7 @@ def test(method):
     performance["reconstructable_states"] = len(states_mixed)
 
     p = latplan.util.puzzle_module(sae.path)
-    is_valid = p.validate_states(sae.decode_binary(states_mixed))
+    is_valid = p.validate_states(sae.decode(states_mixed))
     states_invalid = states_mixed[np.logical_not(is_valid)]
     states_invalid = states_invalid[:30000]
     print(len(states_invalid),"invalid states generated.")
@@ -282,7 +282,7 @@ def test(method):
         performance["type2"] = float('nan')
         print("We observed ZERO invalid states.")
     else:
-        plot_grid(sae.decode_binary(states_invalid)[:120],
+        plot_grid(sae.decode(states_invalid)[:120],
               w=20,
               path=discriminator.local("surely_invalid_states.png"))
         type2_d = combined(states_invalid)
@@ -291,7 +291,7 @@ def test(method):
         print("type2 error:",type2_error,"/",len(states_invalid),
               "Error ratio:", type2_error/len(states_invalid) * 100, "%")
 
-        type2_error_images = sae.decode_binary(states_invalid[np.where(type2_d > 0.9)[0]])[:120]
+        type2_error_images = sae.decode(states_invalid[np.where(type2_d > 0.9)[0]])[:120]
         if len(type2_error_images) == 0:
             print("We observed ZERO type2-error! Hooray!")
         else:
