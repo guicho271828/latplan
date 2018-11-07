@@ -424,7 +424,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         z = Sequential(_encoder)(x)
         y = Sequential(_decoder)(z)
          
-        z2 = Input(shape=(self.parameters['N'], self.parameters['M']))
+        z2 = Input(shape=K.int_shape(z)[1:])
         y2 = Sequential(_decoder)(z2)
         w2 = Sequential(_encoder)(y2)
 
