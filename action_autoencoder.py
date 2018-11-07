@@ -11,7 +11,7 @@ import keras.backend as K
 import tensorflow as tf
 
 float_formatter = lambda x: "%.3f" % x
-np.set_printoptions(formatter={'float_kind':float_formatter})
+np.set_printoptions(formatter={'float_kind':float_formatter},threshold=np.nan)
 
 ################################################################
 
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         plot_grid(ae.decode_binary(data[:1,:N]), w=1, path=aae.local("aae_all_actions_for_a_state_state.png"), verbose=True)
         
     
-    if 'check' in mode:
+    if 'test' in mode:
         from latplan.util.timer import Timer
         with Timer("loading csv..."):
             all_actions = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
@@ -143,7 +143,9 @@ if __name__ == '__main__':
                 if min_error < 0.01:
                     count += 1
         finally:
-            print({"count": count, "total":len(all_actions)})
+            import json
+            with open(aae.local("performance.json"),"w") as f:
+                json.dump({"count": count, "total":len(all_actions)}, f)
     
     actions = aae.encode_action(data, batch_size=1000)
     actions_r = actions.round()
