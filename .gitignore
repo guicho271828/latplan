@@ -13,5 +13,7 @@ learn/events*
 *.bin
 *.lprof
 /samples/table
-samples/*/
+samples*/
 problem-instances/*/
+blocks*/
+countries*/
