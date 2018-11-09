@@ -342,3 +342,20 @@ def to_objects(configs,width,height,shuffle=False):
             np.random.shuffle(sample)
 
     return objects
+
+def object_transitions(width, height, configs=None, one_per_state=False,shuffle=False, **kwargs):
+    digit = width * height
+    if configs is None:
+        configs = generate_configs(digit)
+    if one_per_state:
+        def pickone(thing):
+            index = np.random.randint(0,len(thing))
+            return thing[index]
+        pre = to_objects(configs, width, height, shuffle)
+        suc = to_objects(np.array([pickone(successors(c1,width,height)) for c1 in configs ]), width, height, shuffle, **kwargs)
+        return np.array([pre, suc])
+    else:
+        transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1,width,height) ])
+        pre = to_objects(transitions[:,0,:],width,height, shuffle, **kwargs)
+        suc = to_objects(transitions[:,1,:],width,height, shuffle, **kwargs)
+        return np.array([pre, suc])
