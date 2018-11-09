@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from .model.puzzle import setting, generate, states, transitions, generate_configs, successors
+from .model.puzzle import *
 from .split_image import split_image
 from .util import preprocess
 import os
