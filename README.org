@@ -3,50 +3,55 @@
 
 * LatPlan : A domain-independent, image-based classical planner
 
++ *NEWS* Initial release: Published after AAAI18.
++ *NEWS* Updates on version 2: Mainly the refactoring. AAAI18 experiments still works.
+
 # [[https://travis-ci.org/guicho271828/latplan][https://travis-ci.org/guicho271828/latplan.svg?branch=master]]
 
 This repository contains the source code of LatPlan.
 
++ Asai, M.: 2019. Unsupervised Grounding of Plannable First-Order Logic Representation from Images (code not yet available)
+  + *Accepted* in ICAPS-2019, Learning and Planning Track. https://arxiv.org/abs/1902.08093
++ Asai, M.; Kajino, F: 2019. Towards Stable Symbol Grounding with Zero-Suppressed State AutoEncoder (code not yet available)
+  + *Accepted* in ICAPS-2019, Learning and Planning Track. https://arxiv.org/abs/1903.11277
 + Asai, M.; Fukunaga, A: 2018. Classical Planning in Deep Latent Space: Breaking the Subsymbolic-Symbolic Boundary.
-  + *Accepted* in AAAI-2018.
+  + *Accepted* in AAAI-2018. https://arxiv.org/abs/1705.00154
 + Asai, M.; Fukunaga, A: 2017. Classical Planning in Deep Latent Space: From Unlabeled Images to PDDL (and back).
   + In /Knowledge Engineering for Planning and Scheduling (KEPS) Workshop (ICAPS2017)/.
   + In Cognitum Workshop at ICJAI-2017.
   + In Neural-Symbolic Workshop 2017.
-+ Arxiv https://arxiv.org/abs/1705.00154
 
 [[./install.sh][install.sh]] should install the required libraries on a standard Ubuntu rig.
 It requires =sudo= several times. However Python packages are installed in the user directory.
 
 Run =do-everything.sh= to generate the problem instances, train the network etc.
 
-** Required software (install.sh)
+** Required software
 
 Python 3.5 or later is required.
 
-install.sh only works on ubuntu.
+On Ubuntu, prerequisites can be installed via launching [[./install.sh]] .
+The script compiles several C++ and Lisp binaries. However, it does not affect the
+running system (e.g. installing a custom software under =/usr/=) except for
+performing several =apt-get install= from the official ubuntu repository.
 
-: mercurial g++ cmake make python flex bison g++-multilib
+The applications installed by the script consists of:
 
-For compiling Fast Downward. FD is just compiled, not installed.
++ =mercurial g++ cmake make python flex bison g++-multilib= --- these are required for compiling Fast Downward.
 
-: git build-essential automake libcurl4-openssl-dev
++ =git build-essential automake libcurl4-openssl-dev= --- these are required for compiling [Roswell](http://roswell.github.io/). OSX users should use =brew install roswell=.
 
-For compiling [Roswell](http://roswell.github.io/).
-OSX users should use =brew install roswell=.
++ =parallel= --- for running some scripts. This is not essential, but if you don't parallel, give it a try! It is a super useful tool.
 
-: python3-pip python3-pil parallel bash-completion byobu htop parallel mosh git
++ =python3-pip python3-pil= --- python packages.
 
-Some are not necessary :)
++ =tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image= --- more python packages.
 
-: tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image
-
-I didn't follow the latest keras, though. (It works in 2.0.5)
-This part may not work right.
++ =bash-completion byobu htop mosh= These are not necessary :) but I just use this script also for setting up the environment in a new machine.
 
 ** file structure
 
-+ config.py :: keras/tensorflow configuration.
++ config.py, config_cpu.py :: keras/tensorflow configuration.
 + model.py :: network definitions.
 + strips.py :: (Bad name!) the program for training an SAE,
                and writes the propositional encoding of states/transitions to a CSV file.
@@ -56,7 +61,7 @@ This part may not work right.
 + fd-planner.py :: Latplan using AMA1.
 + trivial-planner.py :: Latplan using AMA2.
 + run_ama1_all.sh, run_ama2_all.sh :: Run all experiments.
-+ various junk sh files :: supporting scripts.
++ various sh files :: supporting scripts.
 + util/ :: contains general-purpose utility functions for python code.
 + tests/ :: test files, mostly the unit tests for domain generator/validator
 + samples/ :: where the learned results should go. Each SAE training results are stored in a subdirectory.
@@ -68,8 +73,6 @@ This part may not work right.
 + (git submodule) planner-scripts/ :: My personal scripts for invoking domain-independent planners.
      Not just Fast Downward.
 + (git submodule) downward/ :: My personally maintained version of Fast Downward, forked around 2015.
-
-
 
 ** Gallery
 
