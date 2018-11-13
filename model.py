@@ -399,7 +399,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
                 Dropout(self.parameters['dropout']),
                 Dense(self.parameters['N']*self.parameters['M']),
                 self.build_gs(),
-                take_true,
+                take_true(),
         ]
     
     def build_decoder(self,input_shape):
@@ -544,7 +544,7 @@ class ConvolutionalGumbelAE(GumbelAE):
                     Dense(self.parameters['N']*self.parameters['M']),
                 ]),
                 self.build_gs(),
-                take_true,
+                take_true(),
         ]
 
 class Convolutional2GumbelAE(ConvolutionalGumbelAE):
