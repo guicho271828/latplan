@@ -746,9 +746,7 @@ def combined_discriminate(data,sae,cae,discriminator,**kwargs):
 
 def combined_discriminate2(data,sae,discriminator,**kwargs):
     _data        = Input(shape=data.shape[1:])
-    _data2       = Reshape((*data.shape[1:],1))(_data)
-    _categorical = wrap(_data,K.concatenate([_data2, 1-_data2],-1),name="categorical")
-    _images      = sae.decoder(_categorical)
+    _images      = sae.decoder(_data)
     _features    = sae.features(_images)
     _results     = discriminator.net(_features)
     m            = Model(_data, _results)
@@ -757,9 +755,7 @@ def combined_discriminate2(data,sae,discriminator,**kwargs):
 class CombinedDiscriminator:
     def __init__(self,sae,cae,discriminator):
         _data        = Input(shape=(sae.parameters['N'],))
-        _data2       = Reshape((sae.parameters['N'],1))(_data)
-        _categorical = wrap(_data,K.concatenate([_data2, 1-_data2],-1),name="categorical")
-        _images      = sae.decoder(_categorical)
+        _images      = sae.decoder(_data)
         _features    = cae.encoder(_images)
         _results     = discriminator.net(_features)
         m            = Model(_data, _results)
@@ -771,9 +767,7 @@ class CombinedDiscriminator:
 class CombinedDiscriminator2(CombinedDiscriminator):
     def __init__(self,sae,discriminator):
         _data        = Input(shape=(sae.parameters['N'],))
-        _data2       = Reshape((sae.parameters['N'],1))(_data)
-        _categorical = wrap(_data,K.concatenate([_data2, 1-_data2],-1),name="categorical")
-        _images      = sae.decoder(_categorical)
+        _images      = sae.decoder(_data)
         _features    = sae.features(_images)
         _results     = discriminator.net(_features)
         m            = Model(_data, _results)
