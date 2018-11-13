@@ -25,6 +25,7 @@ default_parameters = {
     'max_temperature' : 5.0,
     'min_temperature' : 0.1,
     'M'               : 2,
+    'argmax'          : True,
 }
 
 min_num_actions = 8
