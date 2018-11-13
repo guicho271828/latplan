@@ -524,7 +524,31 @@ Note: references to self.parameters[key] are all hyperparameters."""
         from .util.plot import plot_grid
         plot_grid(z, w=6, path=path, verbose=verbose)
 
-class ConvolutionalGumbelAE(GumbelAE):
+# Mixins ################################################################
+
+class ZeroSuppressMixin:
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        
+        last_output = self.encoder.output
+
+        alpha = LinearSchedule(schedule={
+            0:0,
+            (self.parameters["epoch"]//3):0,
+            (self.parameters["epoch"]//3)*2:self.parameters["zerosuppress"]
+        })
+        self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
+        zerosuppress_loss = K.mean(last_output)
+
+        self.autoencoder.add_loss(K.in_train_phase(zerosuppress_loss * alpha.variable, 0.0))
+        
+        def activation(x, y):
+            return zerosuppress_loss
+        
+        self.metrics.append(activation)
+        return
+
+class ConvolutionalMixin:
     """A mixin that uses convolutions in the encoder."""
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
@@ -551,7 +575,7 @@ class ConvolutionalGumbelAE(GumbelAE):
                 take_true(),
         ]
 
-class Convolutional2GumbelAE(ConvolutionalGumbelAE):
+class Convolutional2Mixin:
     """A mixin that uses convolutions also in the decoder. Somehow it does not converge."""
     def build_decoder(self,input_shape):
         "this function did not converge well. sigh"
@@ -586,6 +610,96 @@ class Convolutional2GumbelAE(ConvolutionalGumbelAE):
                   Deconvolution2D(1,(3,3), activation='sigmoid',padding='same'),],
                 Cropping2D(crop),
                 Reshape(input_shape),]
+
+# The original Gumbel Softmax formulation that minimizes the KL divergence
+# between the latent and the the Bernoulli(0.5)
+class NGMixin:
+    def build_gs(self,
+                 **kwargs):
+
+        def fn(N=self.parameters['N'],
+               M=self.parameters['M'],
+               max_temperature=self.parameters['max_temperature'],
+               min_temperature=self.parameters['min_temperature'],
+               full_epoch=self.parameters['full_epoch'],
+               argmax=self.parameters['argmax'],
+               alpha=1.):       # positive alpha
+            gs = GumbelSoftmax(
+                N,M,min_temperature,max_temperature,full_epoch,
+                test_gumbel=not argmax,
+                test_softmax=not argmax,
+                # Entropy Regularization
+                alpha = alpha)
+            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
+            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
+            return gs
+            
+        return fn(**kwargs)
+    
+# The version that does not maximize nor minimize the KL divergence while
+# still adding noise
+class NoKLMixin:
+    def build_gs(self,
+                 **kwargs):
+
+        def fn(N=self.parameters['N'],
+               M=self.parameters['M'],
+               max_temperature=self.parameters['max_temperature'],
+               min_temperature=self.parameters['min_temperature'],
+               full_epoch=self.parameters['full_epoch'],
+               argmax=self.parameters['argmax'],
+               alpha=0.):       # positive alpha
+            gs = GumbelSoftmax(
+                N,M,min_temperature,max_temperature,full_epoch,
+                test_gumbel=not argmax,
+                test_softmax=not argmax,
+                # Entropy Regularization
+                alpha = alpha)
+            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
+            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
+            return gs
+            
+        return fn(**kwargs)
+
+# Zero-sup FOSAE ###############################################################
+
+class ConvolutionalGumbelAE(ConvolutionalMixin, GumbelAE):
+    pass
+class Convolutional2GumbelAE(Convolutional2Mixin, GumbelAE):
+    pass
+class NGGumbelAE(NGMixin, GumbelAE):
+    pass
+class NGConvolutionalGumbelAE(NGMixin, ConvolutionalMixin, GumbelAE):
+    pass
+class NGConvolutional2GumbelAE(NGMixin, Convolutional2Mixin, GumbelAE):
+    pass
+class NoKLGumbelAE(NoKLMixin, GumbelAE):
+    pass
+class NoKLConvolutionalGumbelAE(NoKLMixin, ConvolutionalMixin, GumbelAE):
+    pass
+class NoKLConvolutional2GumbelAE(NoKLMixin, Convolutional2Mixin, GumbelAE):
+    pass
+
+
+class ZeroSuppressGumbelAE(ZeroSuppressMixin, GumbelAE):
+    pass
+class ZeroSuppressConvolutionalGumbelAE(ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+    pass
+class ZeroSuppressConvolutional2GumbelAE(ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+    pass
+class NGZeroSuppressGumbelAE(NGMixin, ZeroSuppressMixin, GumbelAE):
+    pass
+class NGZeroSuppressConvolutionalGumbelAE(NGMixin, ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+    pass
+class NGZeroSuppressConvolutional2GumbelAE(NGMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+    pass
+class NoKLZeroSuppressGumbelAE(NoKLMixin, ZeroSuppressMixin, GumbelAE):
+    pass
+class NoKLZeroSuppressConvolutionalGumbelAE(NoKLMixin, ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+    pass
+class NoKLZeroSuppressConvolutional2GumbelAE(NoKLMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+    pass
+
 
 # state/action discriminator ####################################################
 class Discriminator(Network):
