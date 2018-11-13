@@ -140,8 +140,8 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return math.log(max/min) / epoch
 
-def take_true(y_cat):
-    return wrap(y_cat, y_cat[:,:,0], name="take_true")
+def take_true():
+    return Lambda(lambda x: x[:,:,0], name="take_true")
 
 class Gaussian:
     count = 0
