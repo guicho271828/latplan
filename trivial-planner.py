@@ -127,6 +127,8 @@ class Searcher:
             "expanded":0,
             "reopened":0,
         }
+        import time
+        self.starttime = time.time()
 
     def successors(self,state):
         self.stats["expanded"] += 1
@@ -162,6 +164,9 @@ class Searcher:
         print("**************** Search statistics ****************")
         for k, v in self.stats.items():
             print(k, v)
+        import time
+        self.endtime = time.time()
+        print("time", self.endtime-self.starttime)
 
 class StateBasedGoalDetection:
     def goalp(self,state,goal):
@@ -202,6 +207,9 @@ class Astar(Searcher,StateBasedGoalDetection):
                 print("new h = {}".format(h))
 
             if self.goalp(state.state, goal):
+                import time
+                self.endtime = time.time()
+                print("time", self.endtime-self.starttime)
                 yield state
             else:
                 for c in self.successors(state):
@@ -241,6 +249,9 @@ class GBFS(Searcher,StateBasedGoalDetection):
                 print("new h = {}".format(h))
 
             if self.goalp(state.state, goal):
+                import time
+                self.endtime = time.time()
+                print("time", self.endtime-self.starttime)
                 yield state
             else:
                 for c in self.successors(state):
