@@ -83,7 +83,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             self.eval = self.loss
         return self
     
-    def _build(self):
+    def _build(self,input_shape):
         """An interface for building a network.
 This function is called by build() only when the network is not build yet.
 Users may define a method for each subclass for adding a new build-time feature.
