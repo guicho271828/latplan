@@ -271,7 +271,7 @@ def goalcount(state,goal):
 def blind(state,goal):
     return 0
 
-def main(network_dir, problem_dir, searcher):
+def main(network_dir, problem_dir, searcher, first_solution=False):
     global sae, oae, ad, ad2, sd, sd2, sd3, cae, combined_discriminator, available_actions
     
     p = latplan.util.puzzle_module(network_dir)
@@ -386,6 +386,8 @@ def main(network_dir, problem_dir, searcher):
         subprocess.call(["rm", "-f", problem(network(search("path_{}.valid".format(i))))])
         if np.all(validation):
             subprocess.call(["touch", problem(network(search("path_{}.valid".format(i))))])
+            sys.exit(0)
+        if first_solution:
             sys.exit(0)
 
 if __name__ == '__main__':
