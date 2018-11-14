@@ -114,14 +114,7 @@ def cheating_image_reconstruction_filtering(y):
     # print(loss)
     return y[np.where(loss < image_threshold)].astype(int)
 
-pruning_methods = [
-    action_reconstruction_filtering,           # if applied, this should be the first method
-    # state_reconstruction_from_oae_filtering,
-    inflate_actions,
-    action_discriminator_filtering,
-    state_reconstruction_filtering,
-    state_discriminator3_filtering,
-]
+pruning_methods = None
 
 class Searcher:
     def __init__(self):
@@ -291,6 +284,35 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
         combined_discriminator = latplan.model.get('CombinedDiscriminator')(sae,cae,sd3)
     except:
         combined_discriminator = latplan.model.get('CombinedDiscriminator2')(sae,sd3)
+
+    # Ad-hoc improvement: if the state discriminator type-1 error is very high
+    # (which is not cheating because it can be verified from the training
+    # dataset), don't include SD pruning. The threshold misclassification rate
+    # is arbitrarily set as 0.25 .
+
+    global pruning_methods
+    print("verifying SD type-1 error")
+    states_valid = np.loadtxt(sae.local("all_states.csv"),dtype=np.int8)
+    type1_d = combined_discriminator(states_valid)
+    type1_error = np.sum(1- type1_d) / len(states_valid)
+    if type1_error > 0.25:
+        pruning_methods = [
+            action_reconstruction_filtering,           # if applied, this should be the first method
+            # state_reconstruction_from_oae_filtering,
+            # inflate_actions,
+            action_discriminator_filtering,
+            state_reconstruction_filtering,
+        ]
+    else:
+        pruning_methods = [
+            action_reconstruction_filtering,           # if applied, this should be the first method
+            # state_reconstruction_from_oae_filtering,
+            # inflate_actions,
+            action_discriminator_filtering,
+            state_reconstruction_filtering,
+            state_discriminator3_filtering,
+        ]
+    
 
     def problem(path):
         return os.path.join(problem_dir,path)
