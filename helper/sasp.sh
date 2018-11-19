@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash +x
 
 # dirty hack because python subprocess sucks
 
