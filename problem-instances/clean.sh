@@ -10,3 +10,5 @@ find $1 -name "*.csv" -delete
 find $1 -name "*lock" -delete
 find $1 -name "*.pddl" -delete
 find $1 -name "*.plan" -delete
+find $1 -name "*blind*png" -delete
+
