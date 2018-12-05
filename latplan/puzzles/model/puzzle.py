@@ -325,7 +325,7 @@ validate_transitions = validate_transitions_cpu
 #     return np.unpackbits(xy, 2)
 
 # experimental
-def to_objects(configs,width,height):
+def to_objects(configs,width,height,shuffle=False):
     configs = np.array(configs)
     ix = np.eye(width)
     iy = np.eye(height)
@@ -337,7 +337,8 @@ def to_objects(configs,width,height):
 
     objects = np.concatenate((p,x,y), axis=-1)
 
-    for sample in objects:
-        np.random.shuffle(sample)
+    if shuffle:
+        for sample in objects:
+            np.random.shuffle(sample)
 
     return objects
