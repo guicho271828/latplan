@@ -23,6 +23,7 @@ import tensorflow as tf
 from .util.noise import gaussian, salt, pepper
 from .util.distances import *
 from .util.layers    import *
+from .util.perminv   import *
 
 
 # utilities ###############################################################
