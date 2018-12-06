@@ -5,4 +5,10 @@
 trap "rm $2" ERR
 
 echo $0 $@
-[ -s $2 ] || ( gunzip < $1 | $(dirname $0)/../downward/builds/release64/bin/preprocess | gzip > $2 )
+start=`date +%s`
+if ! [ -s $2 ]
+then
+    gunzip < $1 | $(dirname $0)/../downward/builds/release64/bin/preprocess | gzip > $2
+    end=`date +%s`
+    echo $((end-start)) > $2.time
+fi
