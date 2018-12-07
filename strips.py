@@ -178,7 +178,7 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
         'dropout_z'  :[False],
         'activation' :['tanh'],
         'epoch'      :[150],
-        'batch_size' :[4000],
+        'batch_size' :[1000],
         'lr'         :[0.001],
     }
     import importlib
@@ -251,9 +251,9 @@ def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_exa
         'noise'      :[0.4],
         'N'          :[N],  #[25,49],
         'dropout_z'  :[False],
-        'activation' : ['tanh'],
-        'epoch'      :[100],
-        'batch_size' :[2000],
+        'activation' : ['relu'],
+        'epoch'      :[150],
+        'batch_size' :[1000],
         'lr'         :[0.001],
     }
     import importlib
