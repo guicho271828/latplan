@@ -26,6 +26,8 @@ default_parameters = {
     'M'               : 2,
 }
 
+num_actions = 128
+
 if __name__ == '__main__':
     import numpy.random as random
 
@@ -47,7 +49,7 @@ if __name__ == '__main__':
     
     parameters = {
         'N'          :[1],
-        'M'          :[128],
+        'M'          :[num_actions],
         'layer'      :[400],# 200,300,400,700,1000
         'encoder_layers' : [2], # 0,2,3
         'decoder_layers' : [2], # 0,1,3
@@ -78,6 +80,8 @@ if __name__ == '__main__':
     
     actions = aae.encode_action(data, batch_size=1000).round()
     histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+    print(histogram)
+    print(np.count_nonzero(histogram > 0))
     effective_labels = np.count_nonzero(histogram)
     all_labels = np.zeros((effective_labels, actions.shape[1], actions.shape[2]), dtype=int)
     for i, pos in enumerate(np.where(histogram > 0)[0]):
@@ -140,14 +144,13 @@ if __name__ == '__main__':
             with open(aae.local("performance.json"),"w") as f:
                 json.dump({"count": count, "total":len(all_actions)}, f)
     
-    actions = aae.encode_action(data, batch_size=1000)
-    actions_r = actions.round()
-
-    histogram = actions.sum(axis=0)
-    print(histogram)
-    histogram_r = actions_r.sum(axis=0,dtype=int)
-    print(histogram_r)
-    print (np.count_nonzero(histogram_r > 0))
+    if "dump" in mode:
+        # one-hot to id
+        actions_byid = (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
+        with open(ae.local("action_ids.csv"), 'wb') as f:
+            np.savetxt(f,actions_byid,"%d")
+        
+        
         
 """* Summary:
 Input: a subset of valid action pairs.
