@@ -27,10 +27,9 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
   (:use :cl :iterate :alexandria :trivia :trivia.ppcre :function-cache))
 (in-package :ros.script.to-sas.3690427216)
 
-(defclass _nil () ())
-(defun _nil () (make-instance '_nil))
-(defmethod print-object ((object _nil) stream)
-  (write-string "()" stream))
+(defmethod print-object ((o (eql nil)) s)
+  (write-char #\( s)
+  (write-char #\) s))
 
 #+nil
 (defun read-as-lists (csv)
@@ -111,7 +110,7 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
                (for i from 0)
                (collect
                    `(:action ,(sym 'a i)
-                     :parameters ,(_nil) ;TODO: Is it possible to use parameters in our framework?
+                     :parameters () ;TODO: Is it possible to use parameters in our framework?
                      :precondition
                      (and ,@(iter (for p in-vector precond+ with-index i)
                                   (when (plusp p)

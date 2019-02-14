@@ -41,10 +41,9 @@ but in AMA1 this is not used. Just 0 = false, 1 = true.
   (:use :cl :iterate :alexandria :trivia :trivia.ppcre :function-cache))
 (in-package :ros.script.to-sas.3690427216)
 
-(defclass _nil () ())
-(defun _nil () (make-instance '_nil))
-(defmethod print-object ((object _nil) stream)
-  (write-string "()" stream))
+(defmethod print-object ((o (eql nil)) s)
+  (write-char #\( s)
+  (write-char #\) s))
 
 (defun read-as-lists (csv)
   (remove nil
@@ -76,7 +75,7 @@ but in AMA1 this is not used. Just 0 = false, 1 = true.
                (collect
                    `(:action ,(sym 'a (apply #'concatenate 'string
                                              (mapcar #'princ-to-string transition)))
-                     :parameters ,(_nil) ;TODO: Is it possible to use parameters in our framework?
+                     :parameters () ;TODO: Is it possible to use parameters in our framework?
                      :precondition
                      (and ,@(iter (for d in dims)
                                   (for value in from)
