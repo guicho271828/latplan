@@ -127,9 +127,11 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
                                     (collect `(not ,(z i))))))))))))
 
 (defun main (csv)
-  (let ((*print-right-margin* 70))
-    (format t "~(~:S~)~%"
-            (make-domain (read-as-bitvector csv)))))
+  (let ((*print-right-margin* 70)
+        (*trace-output* *error-output*))
+    (time
+     (format t "~(~:S~)~%"
+             (make-domain (read-as-bitvector csv))))))
 
 
 ;;; vim: set ft=lisp lisp:
