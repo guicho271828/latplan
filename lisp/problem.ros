@@ -6,9 +6,11 @@ exec ros dynamic-space-size=8000 -Q -- $0 "$@"
 
 #|
 
-This program takes as arguments a sequence 0s and 1s,
- which denotes the initial state and the goal state,
+   problem.ros [initial state bits...] [goal state bits...]
+
+This program takes as arguments a sequence 0s and 1s
 and output the corresponding PDDL problem file.
+The sequence denotes the initial state and the goal state.
 
 The first half of the arguments are treated as the initial state,
 and the second half of the arguments as the goal state.
