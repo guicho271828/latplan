@@ -26,7 +26,9 @@ default_parameters = {
     'M'               : 2,
 }
 
-num_actions = 128
+min_num_actions = 8
+max_num_actions = 128
+inc_num_actions = 8
 
 import numpy.random as random
 
@@ -46,33 +48,40 @@ if "hanoi" in ae.path:
 else:
     data = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
 
-parameters = {
-    'N'          :[1],
-    'M'          :[num_actions],
-    'layer'      :[400],# 200,300,400,700,1000
-    'encoder_layers' : [2], # 0,2,3
-    'decoder_layers' : [2], # 0,1,3
-    'dropout'    :[0.4], #[0.1,0.4],
-    # 'dropout_z'  :[False],
-    'batch_size' :[2000],
-    'full_epoch' :[1000],
-    'epoch'      :[1000],
-    'encoder_activation' :['relu'], # 'tanh'
-    'decoder_activation' :['relu'], # 'tanh',
-    # quick eval
-    'lr'         :[0.001],
-}
 print(data.shape)
+
+
 try:
     if 'learn' in mode:
         raise Exception('learn')
     aae = ActionAE(directory_aae).load()
+    num_actions = aae.parameters["M"]
 except:
-    aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae,
-                                data[:int(len(data)*0.9)], data[:int(len(data)*0.9)],
-                                data[int(len(data)*0.9):], data[int(len(data)*0.9):],),
-                          default_parameters,
-                          parameters)
+    train = data[:int(len(data)*0.9)]
+    val   = data[int(len(data)*0.9):]
+    for num_actions in range(min_num_actions,max_num_actions,inc_num_actions):
+        parameters = {
+            'N'          :[1],
+            'M'          :[num_actions],
+            'layer'      :[400],# 200,300,400,700,1000
+            'encoder_layers' : [2], # 0,2,3
+            'decoder_layers' : [2], # 0,1,3
+            'dropout'    :[0.4], #[0.1,0.4],
+            # 'dropout_z'  :[False],
+            'batch_size' :[2000],
+            'full_epoch' :[1000],
+            'epoch'      :[1000],
+            'encoder_activation' :['relu'], # 'tanh'
+            'decoder_activation' :['relu'], # 'tanh',
+            # quick eval
+            'lr'         :[0.001],
+            }
+        aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae, train, train, val, val,),
+                              default_parameters,
+                              parameters)
+        error = np.mean(np.abs(aae.autoencode(val)-val))
+        if error < 0.001:
+            break
     aae.save()
 
 N = data.shape[1]//2
