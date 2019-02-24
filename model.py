@@ -845,12 +845,8 @@ We again use gumbel-softmax for representing A."""
         suc_reconstruction2 = ConditionalSequential(_decoder, pre2, axis=1)(flatten(action2))
         y2 = Concatenate(axis=1)([pre2,suc_reconstruction2])
 
-        def rec(x, y):
-            return bce(K.reshape(x,(K.shape(x)[0],dim*2,)),
-                       K.reshape(y,(K.shape(x)[0],dim*2,)))
-        
-        self.metrics.append(rec)
-        self.loss = rec
+        self.metrics.append(MAE)
+        self.loss = BCE
         self.encoder     = Model(x, [pre,action])
         self.decoder     = Model([pre2,action2], y2)
 
