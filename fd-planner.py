@@ -4,6 +4,7 @@ import config_cpu
 import numpy as np
 import subprocess
 import os
+import sys
 import latplan
 import latplan.model
 from latplan.util import get_ae_type, bce, mae, mse, ensure_directory
@@ -14,7 +15,7 @@ import tensorflow as tf
 import math
 
 float_formatter = lambda x: "%.3f" % x
-np.set_printoptions(formatter={'float_kind':float_formatter})
+np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
 
 def echodo(cmd,*args,**kwargs):
     print(cmd,flush=True)
