@@ -24,7 +24,19 @@ This repository contains the source code of LatPlan.
 [[./install.sh][install.sh]] should install the required libraries on a standard Ubuntu rig.
 It requires =sudo= several times. However Python packages are installed in the user directory.
 
-Run =do-everything.sh= to generate the problem instances, train the network etc.
+Then run:
+
+#+begin_src sh
+./train_all.sh # ~~ few hours
+
+(cd problem-instances; ./example.sh)
+
+# modify run_ama1_all.sh and run_ama2_all.sh for the job scheduler for your compute cluster
+
+./run_ama1_all.sh # MANY hours unless you have a compute cluster
+./run_ama2_all.sh # MANY hours unless you have a compute cluster
+#+end_src
+
 
 ** Required software
 
