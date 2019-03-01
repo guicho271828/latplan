@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import warnings
 import config
+import sys
 import numpy as np
 import latplan.model
 from latplan.model import ActionAE
@@ -11,7 +12,7 @@ import keras.backend as K
 import tensorflow as tf
 
 float_formatter = lambda x: "%.3f" % x
-np.set_printoptions(formatter={'float_kind':float_formatter},threshold=np.nan)
+np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
 
 ################################################################
 

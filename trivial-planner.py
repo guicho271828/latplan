@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import warnings
 import config_cpu
+import sys
 import numpy as np
 import latplan
 import latplan.model
@@ -13,7 +14,7 @@ import tensorflow as tf
 import math
 
 float_formatter = lambda x: "%.3f" % x
-np.set_printoptions(formatter={'float_kind':float_formatter})
+np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
 
 sae = None
 oae = None
