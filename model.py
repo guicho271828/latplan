@@ -661,6 +661,31 @@ class NoKLMixin:
             
         return fn(**kwargs)
 
+# The version that does not use Gumbel noise
+class DetMixin:
+    def build_gs(self,
+                 **kwargs):
+
+        def fn(N=self.parameters['N'],
+               M=self.parameters['M'],
+               max_temperature=self.parameters['max_temperature'],
+               min_temperature=self.parameters['min_temperature'],
+               full_epoch=self.parameters['full_epoch'],
+               argmax=self.parameters['argmax'],
+               alpha=0.):       # positive alpha
+            gs = GumbelSoftmax(
+                N,M,min_temperature,max_temperature,full_epoch,
+                train_gumbel=False,
+                test_gumbel=not argmax,
+                test_softmax=not argmax,
+                # Entropy Regularization
+                alpha = alpha)
+            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
+            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
+            return gs
+            
+        return fn(**kwargs)
+
 # Zero-sup FOSAE ###############################################################
 
 class ConvolutionalGumbelAE(ConvolutionalMixin, GumbelAE):
@@ -698,6 +723,12 @@ class NoKLZeroSuppressGumbelAE(NoKLMixin, ZeroSuppressMixin, GumbelAE):
 class NoKLZeroSuppressConvolutionalGumbelAE(NoKLMixin, ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
     pass
 class NoKLZeroSuppressConvolutional2GumbelAE(NoKLMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+    pass
+class DetZeroSuppressGumbelAE(DetMixin, ZeroSuppressMixin, GumbelAE):
+    pass
+class DetZeroSuppressConvolutionalGumbelAE(DetMixin, ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+    pass
+class DetZeroSuppressConvolutional2GumbelAE(DetMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
     pass
 
 
