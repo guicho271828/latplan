@@ -191,11 +191,15 @@ Each subclasses should implement a method for it."""
 class GumbelSoftmax(ScheduledVariable):
     count = 0
     
-    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, alpha=1.):
+    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, alpha=1.,
+                 train_gumbel=True, test_gumbel=True, test_softmax=True, ):
         self.N = N
         self.M = M
         self.min = min
         self.max = max
+        self.train_gumbel = train_gumbel
+        self.test_gumbel = test_gumbel
+        self.test_softmax = test_softmax
         self.anneal_rate = annealer(full_epoch,min,max)
         self.alpha = alpha
         super(GumbelSoftmax, self).__init__("temperature")
@@ -203,7 +207,33 @@ class GumbelSoftmax(ScheduledVariable):
     def call(self,logits):
         u = K.random_uniform(K.shape(logits), 0, 1)
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
-        return K.softmax( ( logits + gumbel ) / self.variable )
+
+        if self.train_gumbel:
+            train_logit = logits + gumbel
+        else:
+            train_logit = logits
+            
+        if self.test_gumbel:
+            test_logit = logits + gumbel
+        else:
+            test_logit = logits
+
+        def softmax_train(x):
+            return K.softmax( x / self.variable )
+        def softmax_test(x):
+            return K.softmax( x / self.min )
+        def argmax(x):
+            return K.one_hot(K.argmax( x ), self.M)
+            
+        train_activation = softmax_train
+        if self.test_softmax:
+            test_activation = softmax_test
+        else:
+            test_activation = argmax
+        
+        return K.in_train_phase(
+            train_activation( train_logit ),
+            test_activation ( test_logit  ))
     
     def __call__(self,prev):
         GumbelSoftmax.count += 1
