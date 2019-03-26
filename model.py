@@ -429,14 +429,10 @@ Note: references to self.parameters[key] are all hyperparameters."""
         y2 = Sequential(_decoder)(z2)
         w2 = Sequential(_encoder)(y2)
 
-        def activation(x, y):
-            return K.mean(z)
-        
         self.loss = BCE
         self.eval = MSE
         self.metrics.append(BCE)
         self.metrics.append(MSE)
-        self.metrics.append(activation)
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
         self.autoencoder = Model(x, y)
@@ -527,22 +523,25 @@ class ZeroSuppressMixin:
     def _build(self,input_shape):
         super()._build(input_shape)
         
-        last_output = self.encoder.output
-
         alpha = LinearSchedule(schedule={
             0:0,
             (self.parameters["epoch"]//3):0,
             (self.parameters["epoch"]//3)*2:self.parameters["zerosuppress"]
         })
         self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
-        zerosuppress_loss = K.mean(last_output)
-
-        self.autoencoder.add_loss(K.in_train_phase(zerosuppress_loss * alpha.variable, 0.0))
         
-        def activation(x, y):
+        zerosuppress_loss = K.mean(self.encoder.output)
+
+        self.net.add_loss(K.in_train_phase(zerosuppress_loss * alpha.variable, 0.0))
+        
+        def zerosuppress(x, y):
             return zerosuppress_loss
         
-        self.metrics.append(activation)
+        def zerosuppress_alpha(x, y):
+            return alpha.variable
+        
+        self.metrics.append(zerosuppress)
+        self.metrics.append(zerosuppress_alpha)
         return
 
 class ConvolutionalMixin:
@@ -683,7 +682,175 @@ class DetMixin:
             
         return fn(**kwargs)
 
-# Zero-sup FOSAE ###############################################################
+
+# The variant that takes transitions instead of states
+class TransitionAE(GumbelAE):
+    def double_mode(self):
+        self.mode(False)
+    def single_mode(self):
+        self.mode(True)
+    def mode(self, single):
+        if single:
+            self.encoder     = self.s_encoder     
+            self.decoder     = self.s_decoder     
+            self.autoencoder = self.s_autoencoder 
+            self.autodecoder = self.s_autodecoder
+        else:
+            self.encoder     = self.d_encoder     
+            self.decoder     = self.d_decoder     
+            self.autoencoder = self.d_autoencoder 
+            self.autodecoder = self.d_autodecoder 
+
+    def as_single(self, fn, data, *args, **kwargs):
+        self.single_mode()
+        try:
+            if data.shape[1] == 2:
+                return fn(data[:, 0, ...],*args,**kwargs)
+            else:
+                return fn(data,*args,**kwargs)
+        finally:
+            self.double_mode()
+        
+    def plot(self, data, *args, **kwargs):
+        return self.as_single(super().plot, data, *args, **kwargs)
+    def plot_autodecode(self, data, *args, **kwargs):
+        return self.as_single(super().plot_autodecode, data, *args, **kwargs)
+    def plot_variance(self, data, *args, **kwargs):
+        return self.as_single(super().plot_variance, data, *args, **kwargs)
+
+    def adaptively(self, fn, data, *args, **kwargs):
+        try:
+            if data.shape[1] == 2:
+                self.double_mode()
+                return fn(data,*args,**kwargs)
+            else:
+                self.single_mode()
+                return fn(data,*args,**kwargs)
+        finally:
+            self.double_mode()
+
+    def encode(self, data, *args, **kwargs):
+        return self.adaptively(super().encode, data, *args, **kwargs)
+    def decode(self, data, *args, **kwargs):
+        return self.adaptively(super().decode, data, *args, **kwargs)
+    def autoencode(self, data, *args, **kwargs):
+        return self.adaptively(super().autoencode, data, *args, **kwargs)
+    def autodecode(self, data, *args, **kwargs):
+        return self.adaptively(super().autodecode, data, *args, **kwargs)
+    
+    def _build(self,input_shape):
+        # [batch, 2, ...] -> [batch, ...]
+        _encoder = self.build_encoder(input_shape[1:])
+        _decoder = self.build_decoder(input_shape[1:])
+
+        x = Input(shape=input_shape[1:])
+        z = Sequential(_encoder)(x)
+        y = Sequential(_decoder)(z)
+         
+        z2 = Input(shape=K.int_shape(z)[1:])
+        y2 = Sequential(_decoder)(z2)
+        w2 = Sequential(_encoder)(y2)
+
+        self.s_encoder     = Model(x, z)
+        self.s_decoder     = Model(z2, y2)
+        self.s_autoencoder = Model(x, y)
+        self.s_autodecoder = Model(z2, w2)
+
+        def dapply(x,fn):
+            x1 = wrap(x,x[:,0,...])
+            x2 = wrap(x,x[:,1,...])
+            y1 = fn(x1)
+            y2 = fn(x2)
+            y = concatenate([wrap(y1, y1[:,None,...]),wrap(y2, y2[:,None,...])],axis=1)
+            return y, y1, y2
+        
+        x               = Input(shape=input_shape)
+        z, z_pre, z_suc = dapply(x, lambda x: Sequential(_encoder)(x))
+        y, _,     _     = dapply(z, lambda x: Sequential(_decoder)(x))
+        
+        z2       = Input(shape=K.int_shape(z)[1:])
+        y2, _, _ = dapply(z2, lambda x: Sequential(_decoder)(x))
+        w2, _, _ = dapply(y2, lambda x: Sequential(_encoder)(x))
+        
+
+        self.loss = BCE
+        self.eval = MSE
+        self.metrics.append(BCE)
+        self.metrics.append(MSE)
+        self.net = Model(x, y)
+
+        self.d_encoder     = Model(x, z)
+        self.d_decoder     = Model(z2, y2)
+        self.d_autoencoder = Model(x, y)
+        self.d_autodecoder = Model(z2, w2)
+
+        self.double_mode()
+        return
+
+class HammingLoggerMixin:
+    def _report(self,test_both,**opts):
+        super()._report(test_both,**opts)
+        test_both(["hamming"],
+                  lambda data: \
+                    float( \
+                      np.mean( \
+                        abs(self.encode(data[:,0,...]) \
+                            - self.encode(data[:,1,...])))))
+        return
+
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        def hamming(x, y):
+            return K.mean(mae(self.encoder.output[:,0,...],
+                              self.encoder.output[:,1,...]))
+        self.metrics.append(hamming)
+        return
+
+class LocalityMixin:
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        
+        self.locality_alpha = LinearSchedule(schedule={
+            self.parameters["locality"]:self.parameters["locality"]
+        })
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.locality_alpha.update))
+        
+        def locality_alpha(x, y):
+            return self.locality_alpha.variable
+        
+        self.metrics.append(locality_alpha)
+
+class HammingMixin(LocalityMixin, HammingLoggerMixin):
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        loss = K.mean(mae(self.encoder.output[:,0,...],
+                          self.encoder.output[:,1,...]))
+        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
+        return
+
+class CosineMixin (LocalityMixin, HammingLoggerMixin):
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        loss = K.mean(keras.losses.cosine_proximity(self.encoder.output[:,0,...],
+                                                    self.encoder.output[:,1,...]))
+        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
+        def cosine(x, y):
+            return loss
+        self.metrics.append(cosine)
+        return
+
+class PoissonMixin(LocalityMixin, HammingLoggerMixin):
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        loss = K.mean(keras.losses.poisson(self.encoder.output[:,0,...],
+                                           self.encoder.output[:,1,...]))
+        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
+        def poisson(x, y):
+            return loss
+        self.metrics.append(poisson)
+        return
+    
+# Zero-sup SAE ###############################################################
 
 class ConvolutionalGumbelAE(ConvolutionalMixin, GumbelAE):
     pass
@@ -728,6 +895,14 @@ class DetZeroSuppressConvolutionalGumbelAE(DetMixin, ZeroSuppressMixin, Convolut
 class DetZeroSuppressConvolutional2GumbelAE(DetMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
     pass
 
+# Transition SAE ################################################################
+
+class HammingTransitionAE(HammingMixin, ZeroSuppressMixin, ConvolutionalMixin, TransitionAE, GumbelAE):
+    pass
+class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConvolutionalMixin, TransitionAE, GumbelAE):
+    pass
+class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConvolutionalMixin, TransitionAE, GumbelAE):
+    pass
 
 # state/action discriminator ####################################################
 class Discriminator(Network):
