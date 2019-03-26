@@ -217,9 +217,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         print("parameters",self.parameters)
         print("train_shape",train_data.shape, "test_shape",test_data.shape)
 
-        if isinstance(self.loss,list):
-            train_data_to = [ train_data_to for l in self.loss ]
-            test_data_to = [ test_data_to for l in self.loss ]
         validation = (test_data,test_data_to) if test_data is not None else None
         try:
             self.max_epoch = epoch
