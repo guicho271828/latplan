@@ -38,8 +38,8 @@ trap exit SIGINT
 chmod -R +w noise-0.6-0.12-ama1
 
 #### job submission
-
-common="-mem 128g -queue x86_24h -proj $(date -Iminutes)"
+proj=$(date +%Y%m%d%H%M)
+common="-mem 128g -queue x86_24h -proj $proj"
 dir=$(dirname $(dirname $(readlink -ef $0)))
 export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1

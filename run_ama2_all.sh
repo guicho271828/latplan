@@ -4,7 +4,8 @@ ulimit -v 16000000000
 
 trap exit SIGINT
 
-common="jbsub -mem 8g -queue x86_1h -proj $(date -Iminutes)"
+proj=$(date +%Y%m%d%H%M)
+common="jbsub -mem 8g -queue x86_1h -proj $proj"
 
 dir=$(dirname $(dirname $(readlink -ef $0)))
 export PYTHONPATH=$dir:$PYTHONPATH
