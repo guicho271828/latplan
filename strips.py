@@ -194,11 +194,9 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
-    configs = p.generate_configs(width*height)
-    configs = np.array([ c for c in configs ])
-    assert len(configs) >= num_examples
-    print(len(configs))
-    random.shuffle(configs)
+    path = os.path.join("puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
+    with np.load(path) as data:
+        configs = data['configs']
     transitions = p.transitions(width,height,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     data = np.swapaxes(transitions,0,1)
@@ -234,11 +232,9 @@ def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=650
     print("this setting is tuned for conv")
     import latplan.puzzles.hanoi as p
     p.setup()
-    configs = p.generate_configs(disks,towers)
-    configs = np.array([ c for c in configs ])
-    assert len(configs) >= num_examples
-    print(len(configs))
-    random.shuffle(configs)
+    path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
+    with np.load(path) as data:
+        configs = data['configs']
     transitions = p.transitions(disks,towers,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     data = np.swapaxes(transitions,0,1)
@@ -273,11 +269,9 @@ def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_exa
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     p.setup()
-    configs = p.generate_configs(size)
-    configs = np.array([ c for c in configs ])
-    assert len(configs) >= num_examples
-    print(len(configs))
-    random.shuffle(configs)
+    path = os.path.join("puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
+    with np.load(path) as data:
+        configs = data['configs']
     transitions = p.transitions(size,configs[:num_examples],one_per_state=True)
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     data = np.swapaxes(transitions,0,1)
