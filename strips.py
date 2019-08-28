@@ -31,6 +31,7 @@ default_parameters = {
     'min_temperature' : 0.7,
     'M'               : 2,
     'optimizer'       : 'adam',
+    'argmax'          : True,
 }
 
 def select(data,num):
@@ -166,7 +167,7 @@ def show_summary(ae,train,test):
 
 ################################################################
 
-def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,num_examples=6500,zerosuppress=0.0,argmax=True):
+def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,num_examples=6500,zerosuppress=0.0):
     for name, value in locals().items():
         default_parameters[name] = value
     
@@ -203,7 +204,7 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
     dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
     dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
 
-def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=6500,zerosuppress=0.0,argmax=True):
+def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=6500,zerosuppress=0.0):
     for name, value in locals().items():
         default_parameters[name] = value
     parameters = {
@@ -241,7 +242,7 @@ def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=650
     dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),repeat=100)
     dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),repeat=100)
 
-def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_examples=6500,zerosuppress=0.0,argmax=True):
+def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_examples=6500,zerosuppress=0.0):
     for name, value in locals().items():
         default_parameters[name] = value
     parameters = {
