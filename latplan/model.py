@@ -274,28 +274,7 @@ The latter two are used for verifying the performance of the AE.
         self.encoder.load_weights(self.local("encoder.h5"))
         self.decoder.load_weights(self.local("decoder.h5"))
 
-    def report(self,train_data,
-               test_data=None,
-               train_data_to=None,
-               test_data_to=None,
-               batch_size=1000,
-               **kwargs):
-        test_data     = train_data if test_data is None else test_data
-        train_data_to = train_data if train_data_to is None else train_data_to
-        test_data_to  = test_data  if test_data_to is None else test_data_to
-        opts = {'verbose':0,'batch_size':batch_size}
-
-        performance = {}
-            
-        def test_both(query, fn):
-            result = fn(train_data)
-            reg(query+["train"], result, performance)
-            print(*query,"train", result)
-            if test_data is not None:
-                result = fn(test_data)
-                reg(query+["test"], result, performance)
-                print(*query,"test", result)
-        
+    def _report(self,test_both,**opts):
         self.autoencoder.compile(optimizer='adam', loss=self.eval)
         test_both([self.eval.__name__,"vanilla"],
                   lambda data: float(self.autoencoder.evaluate(data,data,**opts)))
@@ -324,6 +303,31 @@ The latter two are used for verifying the performance of the AE.
         test_both(["variance","gaussian"], lambda data: latent_variance_noise(data,gaussian))
         test_both(["variance","salt"    ], lambda data: latent_variance_noise(data,salt))
         test_both(["variance","pepper"  ], lambda data: latent_variance_noise(data,pepper))
+        return
+
+    def report(self,train_data,
+               test_data=None,
+               train_data_to=None,
+               test_data_to=None,
+               batch_size=1000,
+               **kwargs):
+        test_data     = train_data if test_data is None else test_data
+        train_data_to = train_data if train_data_to is None else train_data_to
+        test_data_to  = test_data  if test_data_to is None else test_data_to
+        opts = {'verbose':0,'batch_size':batch_size}
+
+        performance = {}
+            
+        def test_both(query, fn):
+            result = fn(train_data)
+            reg(query+["train"], result, performance)
+            print(*query,"train", result)
+            if test_data is not None:
+                result = fn(test_data)
+                reg(query+["test"], result, performance)
+                print(*query,"test", result)
+        
+        self._report(test_both,**opts)
 
         import json
         with open(self.local('performance.json'), 'w') as f:
