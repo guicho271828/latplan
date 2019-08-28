@@ -287,12 +287,12 @@ The latter two are used for verifying the performance of the AE.
 
         test_both(["activation"],
                   lambda data: float(self.encode(data,**opts).mean()))
-        test_both(["inactive","false"],
-                  lambda data: float(self.parameters['N']-np.sum(np.amax(self.encode(data,**opts),axis=0))))
-        test_both(["inactive","true"],
-                  lambda data: float(self.parameters['N']-np.sum(np.amax(1-self.encode(data,**opts),axis=0))))
-        test_both(["inactive","both"],
-                  lambda data: float(2*self.parameters['N']-np.sum(np.amax(1-self.encode(data,**opts),axis=0)) -np.sum(np.amax(self.encode(data,**opts),axis=0))))
+        test_both(["ever_1"],
+                  lambda data: float(np.sum(np.amax(self.encode(data,**opts),axis=0))))
+        test_both(["ever_0"],
+                  lambda data: float(np.sum(1-np.amin(self.encode(data,**opts),axis=0))))
+        test_both(["effective"],
+                  lambda data: float(np.sum((1-np.amin(self.encode(data,**opts),axis=0))*np.amax(self.encode(data,**opts),axis=0))))
 
         def latent_variance_noise(data,noise):
             encoded = [self.encode(noise(data),**opts).round() for i in range(10)]
