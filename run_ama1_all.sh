@@ -45,42 +45,42 @@ export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1
 
 parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
-         ::: $(ls -d samples/puzzle*mnist* | grep -v 1000 | grep -v convn ) \
+         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
+         ::: samples/puzzle*mnist* \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_mnist/* \
-         ::: blind
+         ::: blind ::: all_actions actions
 
 parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
-         ::: $(ls -d samples/puzzle*mandrill* | grep -v 1000 | grep -v convn ) \
+         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
+         ::: samples/puzzle*mandrill* \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_mandrill/* \
-         ::: blind
+         ::: blind ::: all_actions actions
 
 
 parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
-         ::: $(ls -d samples/puzzle*spider* | grep -v 1000 | grep -v convn ) \
+         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
+         ::: samples/puzzle*spider* \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_spider/* \
-         ::: blind
+         ::: blind ::: all_actions actions
 
 
 parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
-         ::: $(ls -d samples/lightsout*digital* | grep -v 1000 | grep -v convn ) \
+         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
+         ::: samples/lightsout*digital* \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.lightsout_digital/* \
-         ::: blind
+         ::: blind ::: all_actions actions
 
 
 parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
-         ::: $(ls -d samples/lightsout*twisted* | grep -v 1000 | grep -v convn ) \
+         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
+         ::: samples/lightsout*twisted* \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.lightsout_twisted/* \
-         ::: blind
+         ::: blind ::: all_actions actions
 
 
 # parallel --no-notice \
-#          "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
+#          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
 #          ::: samples/hanoi* \
 #          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.hanoi/* \
-#          ::: blind
+#          ::: blind ::: all_actions actions
 

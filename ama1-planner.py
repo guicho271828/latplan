@@ -13,9 +13,20 @@ import os.path
 import keras.backend as K
 import tensorflow as tf
 import math
+import time
+import json
 
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
+
+start = time.time()
+times = [(0,0,"init")]
+def log(message):
+    now = time.time()
+    wall = now-start
+    elap = wall-times[-1][0]
+    times.append((wall,elap,message))
+    print("@[{: =10.3f} +{: =10.3f}] {}".format(wall,elap,message))
 
 def echodo(cmd,*args,**kwargs):
     print(cmd,flush=True)
@@ -43,57 +54,12 @@ options = {
     "zopdb"  : "--search astar(zopdbs())",
 }
 
-option = "blind"
-action_type = "all_actions"
-
 def problem(path):
     return os.path.join(problem_dir,path)
 
 def network(path):
     root, ext = os.path.splitext(path)
     return "{}_{}{}".format(ensure_directory(network_dir).split("/")[-2], root, ext)
-
-def preprocess(bits):
-    np.savetxt(problem(network("ama1_ig.csv")),[bits],"%d")
-    echodo(["touch",problem("domain.pddl")]) # dummy file, just making planner-scripts work
-    echodo(["helper/sas.sh",
-            os.path.join(ensure_directory(network_dir),"{}.csv".format(action_type)),
-            problem(network("ama1_ig.csv")),
-            problem(network("{}.sas.gz".format(action_type)))])
-    echodo(["helper/sasp.sh",
-            problem(network("{}.sas.gz".format(action_type))),
-            problem(network("{}.sasp.gz".format(action_type)))])
-
-def latent_plan(init,goal,mode):
-    bits = np.concatenate((init,goal))
-    ###### preprocessing ################################################################
-
-    ## old code for caching...
-    # lock = problem(network("lock"))
-    # import fcntl
-    # try:
-    #     with open(lock) as f:
-    #         print("lockfile found!")
-    #         fcntl.flock(f, fcntl.LOCK_SH)
-    # except FileNotFoundError:
-    #     with open(lock,'wb') as f:
-    #         fcntl.flock(f, fcntl.LOCK_EX)
-    #         preprocess(bits)
-            
-    preprocess(bits)
-    
-    ###### do planning #############################################
-    sasp     = problem(network("{}.sasp.gz".format(action_type)))
-    plan_raw = problem(network("{}.sasp.gz.plan".format(action_type)))
-    plan     = problem(network("{}.{}.plan".format(action_type,mode)))
-    
-    echodo(["helper/fd-sasgz.sh",options[mode], sasp])
-    assert os.path.exists(plan_raw)
-    echodo(["mv",plan_raw,plan])
-    
-    out = echo_out(["lisp/parse-plan.bin",plan, *list(init.astype('str'))])
-    lines = out.splitlines()
-    return np.array([ [ int(s) for s in l.split() ] for l in lines ])
 
 def init_goal_misc(p, init_image, goal_image, init, goal):
     print("init:",init_image.min(),init_image.max(),)
@@ -140,17 +106,16 @@ def init_goal_misc(p, init_image, goal_image, init, goal):
         # sys.exit(3)
         print("But we continue anyways...")
 
-def main(_network_dir, _problem_dir, heuristics='blind'):
+def main(_network_dir, _problem_dir, heuristics='blind', action_type="all_actions"):
+
     global sae, problem_dir, network_dir
     problem_dir = _problem_dir
     network_dir = _network_dir
     p = latplan.util.puzzle_module(network_dir)
+    log("loaded puzzle")
     sae = latplan.model.get(get_ae_type(network_dir))(network_dir).load(allow_failure=True)
+    log("loaded sae")
 
-    def heur(path):
-        root, ext = os.path.splitext(path)
-        return "{}_{}{}".format(heuristics, root, ext)
-    
     from scipy import misc
     from latplan.puzzles.util import preprocess, normalize
     # is already enhanced, equalized
@@ -158,20 +123,63 @@ def main(_network_dir, _problem_dir, heuristics='blind'):
     goal_image = normalize(misc.imread(problem("goal.png")))
     init = sae.encode(np.expand_dims(init_image,0))[0].round().astype(int)
     goal = sae.encode(np.expand_dims(goal_image,0))[0].round().astype(int)
+    log("loaded init/goal")
+
     init_goal_misc(p, init_image, goal_image, init, goal)
-    plan = latent_plan(init, goal, heuristics)
-    print(plan)
+    log("visualized init/goal")
+    log("start planning")
+
+    bits = np.concatenate((init,goal))
+    ###### preprocessing ################################################################
+
+    np.savetxt(problem(network("{}_{}.csv".format(action_type,heuristics))),[bits],"%d")
+    echodo(["touch",problem("domain.pddl")]) # dummy file, just making planner-scripts work
+    echodo(["helper/sas.sh",
+            os.path.join(ensure_directory(network_dir),"{}.csv".format(action_type)),
+            problem(network("{}_{}.csv".format(action_type,heuristics))),
+            problem(network("{}.sas.gz".format(action_type)))])
+    log("sas.sh done")
+    echodo(["helper/sasp.sh",
+            problem(network("{}.sas.gz".format(action_type))),
+            problem(network("{}.sasp.gz".format(action_type)))])
+    log("sasp.sh done")
+    
+    ###### do planning #############################################
+    sasp     = problem(network("{}.sasp.gz".format(action_type)))
+    plan_raw = problem(network("{}.sasp.gz.plan".format(action_type)))
+    planfile = problem(network("{}_{}.plan".format(action_type,heuristics)))
+    
+    echodo(["helper/fd-sasgz.sh",options[heuristics], sasp])
+    log("fd-sasgz.sh done")
+    assert os.path.exists(plan_raw)
+    echodo(["mv",plan_raw,planfile])
+    
+    out = echo_out(["lisp/parse-plan.bin",planfile, *list(init.astype('str'))])
+    lines = out.splitlines()
+    plan = np.array([ [ int(s) for s in l.split() ] for l in lines ])
+    log("parsed the plan")
     plot_grid(sae.decode(plan),
-              path=problem(network(heur("path_{}.png".format(0)))),verbose=True)
+              path=problem(network("{}_{}.png".format(action_type,heuristics))),
+              verbose=True)
+    log("plotted the plan")
 
     validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
     print(validation)
     print(p.validate_states(sae.decode(plan)))
+    log("validated plan")
+    with open(problem(network("{}_{}.json".format(action_type,heuristics))),"w") as f:
+        json.dump({
+            "times":times,
+            "heuristics":heuristics,
+            "action_type":action_type,
+            "parameters":sae.parameters,
+            "valid":bool(np.all(validation)),
+        }, f)
     
     import subprocess
-    subprocess.call(["rm", "-f", problem(network(heur("path_{}.valid".format(0))))])
+    subprocess.call(["rm", "-f", problem(network("{}_{}.valid".format(action_type,heuristics)))])
     if np.all(validation):
-        subprocess.call(["touch", problem(network(heur("path_{}.valid".format(0))))])
+        subprocess.call(["touch", problem(network("{}_{}.valid".format(action_type,heuristics)))])
         sys.exit(0)
 
 
