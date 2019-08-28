@@ -18,7 +18,7 @@ trap exit SIGINT
 # Therefore, when a process is preprocessing an instance, other
 # instances solving the same instances are waited through a file lock.
 # 
-# Note that even when a fd-planner process is waiting, it consumes nearly 700MB
+# Note that even when a ama1-planner process is waiting, it consumes nearly 700MB
 # for already loaded NN image.
 
 # Desired usage of this script is "./run_ama1_all.sh | parallel -j <number of processes>"
@@ -45,41 +45,41 @@ export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1
 
 parallel --no-notice \
-         "jbsub $common './fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
+         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
          ::: $(ls -d samples/puzzle*mnist* | grep -v 1000 | grep -v convn ) \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_mnist/* \
          ::: blind
 
 parallel --no-notice \
-         "jbsub $common './fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
+         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
          ::: $(ls -d samples/puzzle*mandrill* | grep -v 1000 | grep -v convn ) \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_mandrill/* \
          ::: blind
 
 
 parallel --no-notice \
-         "jbsub $common './fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
+         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
          ::: $(ls -d samples/puzzle*spider* | grep -v 1000 | grep -v convn ) \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_spider/* \
          ::: blind
 
 
 parallel --no-notice \
-         "jbsub $common './fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
+         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
          ::: $(ls -d samples/lightsout*digital* | grep -v 1000 | grep -v convn ) \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.lightsout_digital/* \
          ::: blind
 
 
 parallel --no-notice \
-         "jbsub $common './fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
+         "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
          ::: $(ls -d samples/lightsout*twisted* | grep -v 1000 | grep -v convn ) \
          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.lightsout_twisted/* \
          ::: blind
 
 
 # parallel --no-notice \
-#          "jbsub $common './fd-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
+#          "jbsub $common './ama1-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama1.log 2> {2}/{1/}_{3}.ama1.err'" \
 #          ::: samples/hanoi* \
 #          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.hanoi/* \
 #          ::: blind
