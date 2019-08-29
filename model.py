@@ -77,11 +77,7 @@ This dict can be used while building the network, making it easier to perform a 
         self.custom_log_functions = {}
         self.metrics = []
         import datetime
-        self.bar_status_message = ""
-        self.bar_shift = 0
-        self.bar_epoch = 0
-        self.callbacks = [LambdaCallback(on_batch_end=self.bar_update_batch,
-                                         on_epoch_end=self.bar_update,
+        self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update,
                                          # on_epoch_begin=self.bar_update
                                          ),
                           keras.callbacks.TensorBoard(log_dir=self.local('logs/{}-{}'.format(path,datetime.datetime.now().isoformat())), write_graph=False)]
@@ -186,27 +182,29 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         ]
         self.bar = progressbar.ProgressBar(max_value=self.max_epoch, widgets=widgets)
         
-
-    msgwidth = 60
-    def bar_update_batch(self, batch, logs):
-        if not hasattr(self,'bar'):
-            self.initialize_bar()
-
-        self.bar.update(self.bar_epoch, status = self.bar_status_message)
-
     def bar_update(self, epoch, logs):
         "Used for updating the progress bar."
-        self.bar_epoch = epoch+1
         
         if not hasattr(self,'bar'):
             self.initialize_bar()
         
-        ologs = {}
+        tlogs = {}
         for k in self.custom_log_functions:
-            ologs[k] = self.custom_log_functions[k]()
+            tlogs[k] = self.custom_log_functions[k]()
         for k in logs:
-            ologs[k] = logs[k]
-        self.bar_status_message = "  ".join(["{}: {:6.3g}".format(key,value) for key, value in sorted(ologs.items())])
+            if "val" not in k:
+                tlogs[k] = logs[k]
+        vlogs = {}
+        for k in self.custom_log_functions:
+            vlogs[k] = self.custom_log_functions[k]()
+        for k in logs:
+            if "val" in k:
+                vlogs[k[4:]] = logs[k]
+        
+        if (epoch % 10) == 9:
+            self.bar.update(epoch+1, status = "[v] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(vlogs.items())]) + "\n")
+        else:
+            self.bar.update(epoch+1, status = "[t] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(tlogs.items())]))
         
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,test_data=None,save=True,report=True,
