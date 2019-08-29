@@ -552,14 +552,14 @@ class ZeroSuppressMixin:
 
         self.net.add_loss(K.in_train_phase(zerosuppress_loss * alpha.variable, 0.0))
         
-        def zerosuppress(x, y):
+        def activation(x, y):
             return zerosuppress_loss
         
-        def zerosuppress_alpha(x, y):
+        def zerosup_alpha(x, y):
             return alpha.variable
         
-        self.metrics.append(zerosuppress)
-        self.metrics.append(zerosuppress_alpha)
+        self.metrics.append(activation)
+        self.metrics.append(zerosup_alpha)
         return
 
 class ConvolutionalMixin:
