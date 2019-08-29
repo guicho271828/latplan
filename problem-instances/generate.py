@@ -78,7 +78,7 @@ def safe_chdir(path):
     os.chdir(path)
 
 def generate(p, ics, gcs, *args):
-    from scipy import misc
+    import imageio
     import subprocess
     import datetime
     inits = p.generate(np.array(ics),*args)
@@ -95,8 +95,8 @@ def generate(p, ics, gcs, *args):
                     pass
                 os.makedirs(d)
                 print(d)
-                misc.imsave(os.path.join(d,"init.png"),init)
-                misc.imsave(os.path.join(d,"goal.png"),goal)
+                imageio.imsave(os.path.join(d,"init.png"),init)
+                imageio.imsave(os.path.join(d,"goal.png"),goal)
 
 ################################################################
 

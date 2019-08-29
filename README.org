@@ -58,7 +58,7 @@ The applications installed by the script consists of:
 
 + =python3-pip python3-pil= --- python packages.
 
-+ =tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image= --- more python packages.
++ =tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image imageio= --- more python packages.
 
 + =bash-completion byobu htop mosh= These are not necessary :) but I just use this script also for setting up the environment in a new machine.
 

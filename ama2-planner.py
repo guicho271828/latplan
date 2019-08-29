@@ -335,11 +335,11 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(searcher, root, ext)
 
-    from scipy import misc
+    import imageio
     from latplan.puzzles.util import preprocess, normalize
     # is already enhanced, equalized
-    init_image = normalize(misc.imread(problem("init.png")))
-    goal_image = normalize(misc.imread(problem("goal.png")))
+    init_image = normalize(imageio.imread(problem("init.png")))
+    goal_image = normalize(imageio.imread(problem("goal.png")))
     print("init:",init_image.min(),init_image.max(),)
     print("goal:",goal_image.min(),goal_image.max(),)
     init = sae.encode(np.expand_dims(init_image,0))[0].round().astype(int)

@@ -36,7 +36,7 @@ sudo apt -y install python3-pip python3-pil parallel \
 pip3 install --user \
      tensorflow keras h5py matplotlib progressbar2 \
      keras-adabound keras-rectified-adam \
-     timeout_decorator ansicolors scipy scikit-image
+     timeout_decorator ansicolors scipy scikit-image imageio
 mkdir -p ~/.keras
 cp keras-tf.json ~/.keras/keras.json
 
