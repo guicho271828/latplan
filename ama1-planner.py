@@ -116,11 +116,11 @@ def main(_network_dir, _problem_dir, heuristics='blind', action_type="all_action
     sae = latplan.model.get(get_ae_type(network_dir))(network_dir).load(allow_failure=True)
     log("loaded sae")
 
-    from scipy import misc
+    import imageio
     from latplan.puzzles.util import preprocess, normalize
     # is already enhanced, equalized
-    init_image = normalize(misc.imread(problem("init.png")))
-    goal_image = normalize(misc.imread(problem("goal.png")))
+    init_image = normalize(imageio.imread(problem("init.png")))
+    goal_image = normalize(imageio.imread(problem("goal.png")))
     init = sae.encode(np.expand_dims(init_image,0))[0].round().astype(int)
     goal = sae.encode(np.expand_dims(goal_image,0))[0].round().astype(int)
     log("loaded init/goal")
