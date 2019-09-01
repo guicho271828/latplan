@@ -240,7 +240,7 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
             if (np.median(self.history) >= ub) and (self.epoch_start <= epoch) :
                 self.model.stop_training = True
                 self.stopped_epoch = epoch
-    
+
 def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return math.log(max/min) / epoch
