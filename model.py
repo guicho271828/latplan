@@ -758,6 +758,8 @@ class TransitionAE(GumbelAE):
         # [batch, 2, ...] -> [batch, ...]
         _encoder = self.build_encoder(input_shape[1:])
         _decoder = self.build_decoder(input_shape[1:])
+        self.encoder_net = _encoder
+        self.decoder_net = _decoder
 
         x = Input(shape=input_shape[1:])
         z = Sequential(_encoder)(x)
