@@ -1,4 +1,6 @@
+import keras.backend as K
 from keras.layers import *
+import numpy as np
 
 debug = False
 # debug = True
@@ -152,6 +154,67 @@ def take_true(name="take_true"):
     global take_true_counter
     take_true_counter += 1
     return Lambda(lambda x: x[:,:,0], name="{}_{}".format(name,take_true_counter))
+
+# sign function with straight-through estimator
+sign_counter = 0
+def sign(name="sign"):
+    global sign_counter
+    sign_counter += 1
+    import tensorflow as tf
+    def fn(x):
+        g = tf.get_default_graph()
+        with g.gradient_override_map({"Sign": "Identity"}):
+            return tf.sign(x)
+    return Lambda(fn,name="{}_{}".format(name,sign_counter))
+
+# heavyside step function with straight-through estimator
+heavyside_counter = 0
+def heavyside(name="heavyside"):
+    global heavyside_counter
+    heavyside_counter += 1
+    import tensorflow as tf
+    def fn(x):
+        g = tf.get_default_graph()
+        with g.gradient_override_map({"Sign": "Identity"}):
+            return (tf.sign(x)+1)/2
+    return Lambda(fn,name="{}_{}".format(name,heavyside_counter))
+
+# argmax function with straight-through estimator
+argmax_counter = 0
+def argmax(name="argmax"):
+    global argmax_counter
+    argmax_counter += 1
+    import tensorflow as tf
+    def fn(x):
+        g = tf.get_default_graph()
+        with g.gradient_override_map({"Sign": "Identity"}):
+            return (tf.sign(x-K.max(x,axis=-1,keepdims=True)+1e-20)+1)/2
+    return Lambda(fn,name="{}_{}".format(name,argmax_counter))
+
+# sigmoid that becomes a step function in the test time
+rounded_sigmoid_counter = 0
+def rounded_sigmoid(name="rounded_sigmoid"):
+    global rounded_sigmoid_counter
+    rounded_sigmoid_counter += 1
+    return Lambda(lambda x: K.in_train_phase(K.sigmoid(x), K.round(K.sigmoid(x))),
+                  name="{}_{}".format(name,rounded_sigmoid_counter))
+
+# softmax that becomes an argmax function in the test time
+rounded_softmax_counter = 0
+def rounded_softmax(name="rounded_softmax"):
+    global rounded_softmax_counter
+    rounded_softmax_counter += 1
+    return Lambda(lambda x: K.in_train_phase(K.softmax(x), K.one_hot(K.argmax( x ), K.int_shape(x)[-1])),
+                  name="{}_{}".format(name,rounded_softmax_counter))
+
+# is a maximum during the test time
+def smooth_max(*args):
+    return K.in_train_phase(K.logsumexp(K.stack(args,axis=0), axis=0)-K.log(2.0), K.maximum(*args))
+
+# is a minimum during the test time
+def smooth_min(*args):
+    return K.in_train_phase(-K.logsumexp(-K.stack(args,axis=0), axis=0)+K.log(2.0), K.minimum(*args))
+
 
 class Gaussian:
     count = 0
