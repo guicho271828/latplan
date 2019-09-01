@@ -22,6 +22,15 @@ np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatte
 mode     = 'learn_dump'
 sae_path = None
 
+from keras.optimizers import Adam
+from keras_adabound   import AdaBound
+from keras_radam      import RAdam
+
+import keras.optimizers
+
+setattr(keras.optimizers,"radam", RAdam)
+setattr(keras.optimizers,"adabound", AdaBound)
+
 # default values
 default_parameters = {
     'lr'              : 0.0001, # learning rate
