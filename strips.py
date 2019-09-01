@@ -6,7 +6,7 @@ import numpy.random as random
 import latplan
 import latplan.model
 from latplan.util        import curry
-from latplan.util.tuning import grid_search, nn_task
+from latplan.util.tuning import *
 from latplan.util.noise  import gaussian
 
 import keras.backend as K
@@ -33,14 +33,15 @@ setattr(keras.optimizers,"adabound", AdaBound)
 
 # default values
 default_parameters = {
-    'lr'              : 0.0001, # learning rate
-    'batch_size'      : 2000,
-    'epoch'           : 1000,   # training epoch. If epoch < full_epoch, it just stops there.
+    'epoch'           : 200,
+    'batch_size'      : 250,
+    'optimizer'       : "radam",
+    'lr'              : 0.01,
     'max_temperature' : 5.0,
     'min_temperature' : 0.7,
     'M'               : 2,
-    'optimizer'       : 'adam',
     'argmax'          : True,
+    'locality'        : 0.0,
 }
 
 def select(data,num):
@@ -49,7 +50,7 @@ def select(data,num):
 def plot_autoencoding_image(ae,test,train):
     if 'plot' not in mode:
         return
-    rz = np.random.randint(0,2,(6,ae.parameters['N']))
+    rz = np.random.randint(0,2,(6,*ae.zdim()))
     ae.plot_autodecode(rz,ae.local("autodecoding_random.png"),verbose=True)
     ae.plot(test[:6],ae.local("autoencoding_test.png"),verbose=True)
     ae.plot(train[:6],ae.local("autoencoding_train.png"),verbose=True)
@@ -157,13 +158,13 @@ def run(path,train,test,parameters,train_out=None,test_out=None,):
                       test_data_to  = test_out,)
             plot_autoencoding_image(ae,test,train)
             
-        ae, _, _ = grid_search(curry(nn_task, latplan.model.get(default_parameters["aeclass"]),
-                                     path,
-                                     train, train_out, test, test_out), # noise data is used for tuning metric
-                               default_parameters,
-                               parameters,
-                               shuffle     = False,
-                               report_best = fn,)
+        ae, _, _ = simple_genetic_search(
+            curry(nn_task, latplan.model.get(default_parameters["aeclass"]),
+                  path,
+                  train, train_out, test, test_out), # noise data is used for tuning metric
+            default_parameters,
+            parameters,
+            report_best = fn,)
         ae.save()
     else:
         ae = latplan.model.get(default_parameters["aeclass"])(path).load()
@@ -176,20 +177,24 @@ def show_summary(ae,train,test):
 
 ################################################################
 
-def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,num_examples=6500,zerosuppress=0.0,locality=0.0):
+def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,num_examples=6500,zerosuppress=0.0,comment=""):
     for name, value in locals().items():
         default_parameters[name] = value
     
     parameters = {
+        'N'          :[100,200,1000],
+        'M'          :[2,4,6],
         'layer'      :[1000],# [400,4000],
         'clayer'     :[16],# [400,4000],
         'dropout'    :[0.4], #[0.1,0.4],
         'noise'      :[0.4],
         'dropout_z'  :[False],
-        'epoch'      :[300],
-        'batch_size' :[250,],
-        'lr'         :[0.001,],
-        'activation' :['relu','tanh'],
+        'activation' :['relu'],
+        'aae_width'      :[100,300,600,],
+        'aae_depth'      :[0,1,2,4,6],
+        'aae_activation' :['relu','tanh'],
+        'aae_delay'      :[0,],
+        'num_actions'    :[100,300,600],
     }
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
@@ -207,12 +212,9 @@ def puzzle(aeclass="ConvolutionalGumbelAE",type='mnist',width=3,height=3,N=36,nu
     show_summary(ae, train, test)
     plot_autoencoding_image(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
-    dump_actions(ae,transitions)
-    dump_states (ae,states)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(width,height,configs),)
-    dump_all_states(ae,configs,        lambda configs: p.states(width,height,configs),)
+    ae.dump_actions()
 
-def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=6500,zerosuppress=0.0,locality=0.0):
+def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=6500,zerosuppress=0.0,comment=""):
     for name, value in locals().items():
         default_parameters[name] = value
     parameters = {
@@ -246,12 +248,9 @@ def hanoi(aeclass="ConvolutionalGumbelAE",disks=7,towers=4,N=36,num_examples=650
     show_summary(ae, train, test)
     plot_autoencoding_image(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
-    dump_actions(ae,transitions,repeat=100)
-    dump_states (ae,states,repeat=100)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(disks,towers,configs),repeat=100)
-    dump_all_states(ae,configs,        lambda configs: p.states(disks,towers,configs),repeat=100)
+    ae.dump_actions()
 
-def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_examples=6500,zerosuppress=0.0,locality=0.0):
+def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_examples=6500,zerosuppress=0.0,comment=""):
     for name, value in locals().items():
         default_parameters[name] = value
     parameters = {
@@ -282,10 +281,7 @@ def lightsout(aeclass="ConvolutionalGumbelAE",type='digital',size=4,N=36,num_exa
     show_summary(ae, train, test)
     plot_autoencoding_image(ae,test[:1000],train[:1000])
     plot_variance_image(ae,test[:1000],train[:1000])
-    dump_actions(ae,transitions)
-    dump_states (ae,states)
-    dump_all_actions(ae,configs,        lambda configs: p.transitions(size,configs),)
-    dump_all_states(ae,configs,        lambda configs: p.states(size,configs),)
+    ae.dump_actions()
 
 def main():
     global mode, sae_path

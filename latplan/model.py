@@ -18,7 +18,7 @@ from keras.datasets import mnist
 from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse, mae
-from keras.callbacks import LambdaCallback, LearningRateScheduler, Callback, CallbackList
+from keras.callbacks import LambdaCallback, LearningRateScheduler, Callback, CallbackList, ReduceLROnPlateau
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 from .util.noise import gaussian, salt, pepper
@@ -675,15 +675,22 @@ class ConvolutionalDecoderMixin:
         print(last_convolution,first_convolution,diff,crop)
 
         return [*([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
-                *[Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                *[Dense(self.parameters['layer'],
+                        activation=self.parameters['activation'],
+                        use_bias=False),
                   BN(),
                   Dropout(self.parameters['dropout']),],
-                *[Dense(np.prod(last_convolution) * self.parameters['clayer'], activation='relu', use_bias=False),
+                *[Dense(np.prod(last_convolution) * self.parameters['clayer'],
+                        activation=self.parameters['activation'],
+                        use_bias=False),
                   BN(),
                   Dropout(self.parameters['dropout']),],
                 Reshape((*last_convolution, self.parameters['clayer'])),
                 *[UpSampling2D((2,2)),
-                  Deconvolution2D(self.parameters['clayer'],(3,3), activation='relu',padding='same', use_bias=False),
+                  Deconvolution2D(self.parameters['clayer'],(3,3),
+                                  activation=self.parameters['activation'],
+                                  padding='same',
+                                  use_bias=False),
                   BN(),
                   Dropout(self.parameters['dropout']),],
                 *[UpSampling2D((2,2)),
@@ -693,42 +700,10 @@ class ConvolutionalDecoderMixin:
 
 # State Auto Encoder ################################################################
 
-class GumbelAE(AE):
+class StateAE(FullConnectedDecoderMixin, FullConnectedEncoderMixin, AE):
     """An AE whose latent layer is GumbelSofmax.
 Fully connected layers only, no convolutions.
 Note: references to self.parameters[key] are all hyperparameters."""
-    def build_encoder(self,input_shape):
-        return [flatten,
-                GaussianNoise(self.parameters['noise']),
-                BN(),
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
-                BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['N']*self.parameters['M']),
-                self.build_gs(),
-                take_true(),
-        ]
-    
-    def build_decoder(self,input_shape):
-        data_dim = np.prod(input_shape)
-        return [
-            flatten,
-            *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
-            BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(data_dim, activation='sigmoid'),
-            Reshape(input_shape),]
-
     def _build(self,input_shape):
         _encoder = self.build_encoder(input_shape)
         _decoder = self.build_decoder(input_shape)
@@ -931,7 +906,7 @@ class DetMixin:
 
 
 # The variant that takes transitions instead of states
-class TransitionAE(GumbelAE):
+class TransitionAE(ConvolutionalEncoderMixin, StateAE):
     def double_mode(self):
         self.mode(False)
     def single_mode(self):
@@ -987,18 +962,16 @@ class TransitionAE(GumbelAE):
 
     def _build(self,input_shape):
         # [batch, 2, ...] -> [batch, ...]
-        _encoder = self.build_encoder(input_shape[1:])
-        _decoder = self.build_decoder(input_shape[1:])
-        self.encoder_net = _encoder
-        self.decoder_net = _decoder
+        self.encoder_net = self.build_encoder(input_shape[1:])
+        self.decoder_net = self.build_decoder(input_shape[1:])
 
         x = Input(shape=input_shape[1:])
-        z = Sequential(_encoder)(x)
-        y = Sequential(_decoder)(z)
-         
+        z = Sequential(self.encoder_net)(x)
+        y = Sequential(self.decoder_net)(z)
+
         z2 = Input(shape=K.int_shape(z)[1:])
-        y2 = Sequential(_decoder)(z2)
-        w2 = Sequential(_encoder)(y2)
+        y2 = Sequential(self.decoder_net)(z2)
+        w2 = Sequential(self.encoder_net)(y2)
 
         self.s_encoder     = Model(x, z)
         self.s_decoder     = Model(z2, y2)
@@ -1006,26 +979,59 @@ class TransitionAE(GumbelAE):
         self.s_autodecoder = Model(z2, w2)
 
         x               = Input(shape=input_shape)
-        z, z_pre, z_suc = dapply(x, Sequential(_encoder))
-        y, _,     _     = dapply(z, Sequential(_decoder))
-        
-        z2       = Input(shape=K.int_shape(z)[1:])
-        y2, _, _ = dapply(z2, Sequential(_decoder))
-        w2, _, _ = dapply(y2, Sequential(_encoder))
-        
+        z, z_pre, z_suc = dapply(x, Sequential(self.encoder_net))
+        y, _,     _     = dapply(z, Sequential(self.decoder_net))
 
-        self.loss = BCE
-        self.eval = MSE
-        self.metrics.append(BCE)
-        self.metrics.append(MSE)
-        self.net = Model(x, y)
+        z2       = Input(shape=K.int_shape(z)[1:])
+        y2, _, _ = dapply(z2, Sequential(self.decoder_net))
+        w2, _, _ = dapply(y2, Sequential(self.encoder_net))
 
         self.d_encoder     = Model(x, z)
         self.d_decoder     = Model(z2, y2)
         self.d_autoencoder = Model(x, y)
         self.d_autodecoder = Model(z2, w2)
 
+        if "loss" in self.parameters:
+            specified = eval(self.parameters["loss"])
+            def loss(x,y):
+                return K.in_train_phase(specified(x,y), MSE(x,y))
+
+            self.loss = loss
+        else:
+            self.loss = MSE
+
+
+        max_delay = 0.0
+        for key in self.parameters:
+            if "delay" in key:
+                max_delay = max(max_delay, self.parameters[key])
+        self.parameters["earlystop_delay"] = max_delay + 0.1
+
+        self.callbacks.append(
+            ChangeEarlyStopping(
+                epoch_start=self.parameters["epoch"]*self.parameters["earlystop_delay"],
+                verbose=1,))
+
+        self.callbacks.append(
+            LinearEarlyStopping(
+                self.parameters["epoch"],
+                epoch_start = self.parameters["epoch"]*self.parameters["earlystop_delay"],
+                value_start = 1.0-self.parameters["earlystop_delay"],
+                verbose     = 1,))
+
+        self.net = self.d_autoencoder
+
         self.double_mode()
+        return
+
+    def dump_actions(self,pre,suc,**kwargs):
+        def save(name,data):
+            print("Saving to",self.local(name))
+            with open(self.local(name), 'wb') as f:
+                np.savetxt(f,data,"%d")
+
+        data = np.concatenate([pre,suc],axis=1)
+        save("actions.csv", data)
         return
 
 class HammingLoggerMixin:
@@ -1092,60 +1098,1202 @@ class PoissonMixin(LocalityMixin, HammingLoggerMixin):
             return loss
         self.metrics.append(poisson)
         return
-    
+
+# Transition AE + Action AE double wielding! #################################
+
+class BaseActionMixin:
+    def encode_action(self,data,**kwargs):
+        return self.action.predict(data,**kwargs)
+    def decode_action(self,data,**kwargs):
+        return self.apply.predict(data,**kwargs)
+    def plot(self,data,path,verbose=False):
+        import os.path
+        basename, ext = os.path.splitext(path)
+        pre_path = basename+"_pre"+ext
+        suc_path = basename+"_suc"+ext
+
+        x = data
+        z = self.encode(x)
+        y = self.decode(z)
+
+        x_pre, x_suc = x[:,0,...], x[:,1,...]
+        z_pre, z_suc = z[:,0,...], z[:,1,...]
+        y_pre, y_suc = y[:,0,...], y[:,1,...]
+
+        super().plot(x_pre,pre_path,verbose=verbose)
+        super().plot(x_suc,suc_path,verbose=verbose)
+
+        action    = self.encode_action(np.concatenate([z_pre,z_suc],axis=1))
+        z_suc_aae = self.decode_action([z_pre, action])
+        y_suc_aae = self.decode(z_suc_aae)
+
+        z_suc_min = np.minimum(z_suc, z_suc_aae)
+        y_suc_min = self.decode(z_suc_min)
+
+        from .util.plot import plot_grid, squarify
+
+        def diff(src,dst):
+            return (dst - src + 1)/2
+        def _plot(path,columns):
+            rows = []
+            for seq in zip(*columns):
+                rows.extend(seq)
+            plot_grid(rows, w=len(columns), path=path, verbose=verbose)
+
+        _z_pre     = squarify(z_pre)
+        _z_suc     = squarify(z_suc)
+        _z_suc_aae = squarify(z_suc_aae)
+        _z_suc_min = squarify(z_suc_min)
+
+        _plot(basename+"_transition"+ext,
+              [x_pre, x_suc,
+               _z_pre,
+               _z_suc,
+               _z_suc_aae,
+               diff(_z_pre, _z_suc),
+               diff(_z_pre, _z_suc_aae),
+               diff(_z_suc, _z_suc_aae),
+               y_pre,
+               y_suc,
+               y_suc_aae,
+               diff(x_pre,y_pre),
+               diff(x_suc,y_suc),
+               diff(x_suc,y_suc_aae),])
+
+        return
+
+    def add_metrics(self, x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae, l_pre=None, l_suc=None, l_suc_aae=None, w_suc_aae=None, v_suc_aae=None,):
+        # x: inputs
+        # l: logits to latent
+        # z: latent
+        # y: reconstruction
+
+        def mse_x1y1(true,pred):
+            return mse(x_pre,y_pre)
+        def mse_x2y2(true,pred):
+            return mse(x_suc,y_suc)
+        def mse_x2y3(true,pred):
+            return mse(x_suc,y_suc_aae)
+        def mse_y2y3(true,pred):
+            return mse(y_suc,y_suc_aae)
+        def mse_y2v3(true,pred):
+            return mse(y_suc,v_suc_aae)
+
+        def mae_z2z3(true, pred):
+            return K.mean(mae(K.round(z_suc), K.round(z_suc_aae)))
+        def mae_z2w3(true, pred):
+            return K.mean(mae(K.round(z_suc), K.round(w_suc_aae)))
+
+        def mse_l2l3(true, pred):
+            return K.mean(mse(l_suc, l_suc_aae))
+
+        def avg_z2(x, y):
+            return K.mean(z_suc)
+        def avg_z3(x, y):
+            return K.mean(z_suc_aae)
+
+        self.metrics.append(mse_x1y1)
+        self.metrics.append(mse_x2y2)
+        self.metrics.append(mse_x2y3)
+        self.metrics.append(mse_y2y3)
+        if (v_suc_aae is not None):
+            self.metrics.append(mse_y2v3)
+        self.metrics.append(mae_z2z3)
+        if (w_suc_aae is not None):
+            self.metrics.append(mae_z2w3)
+        if (l_suc is not None) and (l_suc_aae is not None):
+            self.metrics.append(mse_l2l3)
+
+        # self.metrics.append(avg_z2)
+        self.metrics.append(avg_z3)
+
+        return
+    def build_action_fc_unit(self):
+        return Sequential([
+            Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+        ])
+
+    def eff_reconstruction_loss(self,x):
+        # optional loss, unused
+        # _, x_pre, x_suc = dapply(x, lambda x: x)
+        # eff_reconstruction_loss = K.mean(bce(x_suc, y_suc_aae))
+        # self.net.add_loss(eff_reconstruction_loss)
+        return
+
+    def effect_minimization_loss(self):
+        # optional loss, unused
+        # self.net.add_loss(1*K.mean(K.sum(action_add,axis=-1)))
+        # self.net.add_loss(1*K.mean(K.sum(action_del,axis=-1)))
+
+        # depending on how effects are encoded, this is also used
+        # self.net.add_loss(1*K.mean(K.sum(action_eff,axis=-1)))
+        return
+
+    def _build(self,input_shape):
+        super()._build(input_shape)
+
+        x = self.net.input      # keras has a bug, we can't make a new Input here
+        _, x_pre, x_suc = dapply(x, lambda x: x)
+        z, z_pre, z_suc = dapply(self.d_encoder.output,     lambda x: x)
+        y, y_pre, y_suc = dapply(self.d_autoencoder.output, lambda x: x)
+
+        if self.parameters["stop_gradient"]:
+            z_pre = wrap(z_pre, K.stop_gradient(z_pre))
+            z_suc = wrap(z_suc, K.stop_gradient(z_suc))
+
+        action    = self._action(z_pre,z_suc)
+        z_suc_aae = self._apply(z_pre,z_suc,action)
+        y_suc_aae = Sequential(self.decoder_net)(z_suc_aae)
+
+        # denoising loop
+        v_suc_aae = y_suc_aae
+        for i in range(3):
+            w_suc_aae = Sequential(self.encoder_net)(v_suc_aae)
+            v_suc_aae = Sequential(self.decoder_net)(w_suc_aae)
+
+        self.net = Model(x, dmerge(y_pre, y_suc_aae))
+
+        self.add_metrics(x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae, v_suc_aae=v_suc_aae, w_suc_aae=w_suc_aae)
+        return
+
+    def _report(self,test_both,**opts):
+        super()._report(test_both,**opts)
+
+        from .util.np_distances import mse, mae
+
+        test_both(["aae","MSE","vanilla"],
+                  lambda data: mse(data[:,1,...], self.net.predict(data,          **opts)[:,1,...]))
+        test_both(["aae","MSE","gaussian"],
+                  lambda data: mse(data[:,1,...], self.net.predict(gaussian(data),**opts)[:,1,...]))
+        test_both(["aae","MSE","salt"],
+                  lambda data: mse(data[:,1,...], self.net.predict(salt(data),    **opts)[:,1,...]))
+        test_both(["aae","MSE","pepper"],
+                  lambda data: mse(data[:,1,...], self.net.predict(pepper(data),  **opts)[:,1,...]))
+
+        def true_num_actions(data):
+            z     = self.encode(data)
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            actions = self.encode_action(z2, **opts).round()
+            histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+            true_num_actions = np.count_nonzero(histogram)
+            return true_num_actions
+
+        test_both(["aae","true_num_actions"], true_num_actions)
+
+        def z_mae(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+            z_suc_aae = self.decode_action([z_pre,a], **opts)
+            return mae(z_suc, z_suc_aae)
+
+        test_both(["aae","z_MAE","vanilla"], z_mae)
+        test_both(["aae","z_MAE","gaussian"],lambda data: z_mae(gaussian(data)))
+        test_both(["aae","z_MAE","salt"],    lambda data: z_mae(salt(data)))
+        test_both(["aae","z_MAE","pepper"],  lambda data: z_mae(pepper(data)))
+
+        def z_prob_bitwise(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+            z_suc_aae = self.decode_action([z_pre,a], **opts)
+            z_match   = 1-np.abs(z_suc_aae-z_suc)
+            return np.prod(np.mean(z_match,axis=0))
+
+        test_both(["aae","z_prob_bitwise","vanilla"], z_prob_bitwise)
+        test_both(["aae","z_prob_bitwise","gaussian"],lambda data: z_prob_bitwise(gaussian(data)))
+        test_both(["aae","z_prob_bitwise","salt"],    lambda data: z_prob_bitwise(salt(data)))
+        test_both(["aae","z_prob_bitwise","pepper"],  lambda data: z_prob_bitwise(pepper(data)))
+
+        def z_allmatch(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+            z_suc_aae = self.decode_action([z_pre,a], **opts)
+            z_match   = 1-np.abs(z_suc_aae-z_suc)
+            return np.mean(np.prod(z_match,axis=1))
+
+        test_both(["aae","z_allmatch","vanilla"], z_allmatch)
+        test_both(["aae","z_allmatch","gaussian"],lambda data: z_allmatch(gaussian(data)))
+        test_both(["aae","z_allmatch","salt"],    lambda data: z_allmatch(salt(data)))
+        test_both(["aae","z_allmatch","pepper"],  lambda data: z_allmatch(pepper(data)))
+
+        def action_entropy(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+
+            A = self.parameters["num_actions"]
+
+            def entropy(j):
+                indices = np.nonzero(a[:,0,j])
+                z       = z_pre[indices[0]]                     # dimension: [b,N]
+                p       = np.mean(z, axis=0)                    # dimension: [N]
+                H       = -np.sum(p*np.log(p+1e-20)+(1-p)*np.log(1-p+1e-20)) # dimension: [] (singleton)
+                return H
+
+            _H_z_given_a = np.array([entropy(j) for j in range(A)])
+            H_z_given_a = np.mean(_H_z_given_a[~np.isnan(_H_z_given_a)])
+            return H_z_given_a
+
+        test_both(["H_z_a",], action_entropy)
+
+        return
+
+    def dump_actions(self,pre,suc,**kwargs):
+        # data: transition data
+        num_actions = self.parameters["num_actions"]
+        def to_id(actions):
+            return (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
+
+        def save(name,data):
+            print("Saving to",self.local(name))
+            with open(self.local(name), 'wb') as f:
+                np.savetxt(f,data,"%d")
+
+        N=pre.shape[1]
+        data = np.concatenate([pre,suc],axis=1)
+        actions = self.encode_action(data, **kwargs).round()
+
+        histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+        print(histogram)
+        true_num_actions = np.count_nonzero(histogram)
+        print(true_num_actions)
+        all_labels = np.zeros((true_num_actions, actions.shape[1], actions.shape[2]), dtype=int)
+        for i, a in enumerate(np.where(histogram > 0)[0]):
+            all_labels[i][0][a] = 1
+
+        save("available_actions.csv", np.where(histogram > 0)[0])
+
+        actions_byid = to_id(actions)
+
+        data_byid = np.concatenate((data,actions_byid), axis=1)
+
+        save("actions.csv", data)
+        save("actions+ids.csv", data_byid)
+
+        data_aae = np.concatenate([pre,self.decode_action([pre,actions], **kwargs)], axis=1)
+
+        data_aae_byid = np.concatenate((data_aae,actions_byid), axis=1)
+        save("actions_aae.csv", data_aae)
+        save("actions_aae+ids.csv", data_aae_byid)
+
+        save("actions_both.csv", np.concatenate([data,data_aae], axis=0))
+        save("actions_both+ids.csv", np.concatenate([data_byid,data_aae_byid], axis=0))
+
+        # def generate_aae_action(known_transisitons):
+        #     states = known_transisitons.reshape(-1, N)
+        #     from .util import set_difference
+        #     def repeat_over(array, repeats, axis=0):
+        #         array = np.expand_dims(array, axis)
+        #         array = np.repeat(array, repeats, axis)
+        #         return np.reshape(array,(*array.shape[:axis],-1,*array.shape[axis+2:]))
+        # 
+        #     print("start generating transitions")
+        #     # s1,s2,s3,s1,s2,s3,....
+        #     repeated_states  = repeat_over(states, len(all_labels), axis=0)
+        #     # a1,a1,a1,a2,a2,a2,....
+        #     repeated_actions = np.repeat(all_labels, len(states), axis=0)
+        # 
+        #     y = self.decode_action([repeated_states, repeated_actions], **kwargs).round().astype(np.int8)
+        #     y = np.concatenate([repeated_states, y], axis=1)
+        # 
+        #     print("remove known transitions")
+        #     y = set_difference(y, known_transisitons)
+        #     print("shuffling")
+        #     import numpy.random
+        #     numpy.random.shuffle(y)
+        #     return y
+        # 
+        # transitions = generate_aae_action(data)
+        # # note: transitions are already shuffled, and also do not contain any examples in data.
+        # actions      = self.encode_action(transitions, **kwargs).round()
+        # actions_byid = to_id(actions)
+        # 
+        # # ensure there are enough test examples
+        # separation = min(len(data)*10,len(transitions)-len(data))
+        # 
+        # # fake dataset is used only for the training.
+        # fake_transitions  = transitions[:separation]
+        # fake_actions_byid = actions_byid[:separation]
+        # 
+        # # remaining data are used only for the testing.
+        # test_transitions  = transitions[separation:]
+        # test_actions_byid = actions_byid[separation:]
+        # 
+        # print(fake_transitions.shape, test_transitions.shape)
+        # 
+        # save("fake_actions.csv",fake_transitions)
+        # save("fake_actions+ids.csv",np.concatenate((fake_transitions,fake_actions_byid), axis=1))
+        # 
+        # from .util import puzzle_module
+        # p = puzzle_module(self.path)
+        # print("decoding pre")
+        # pre_images = self.decode(test_transitions[:,:N],**kwargs)
+        # print("decoding suc")
+        # suc_images = self.decode(test_transitions[:,N:],**kwargs)
+        # print("validating transitions")
+        # valid    = p.validate_transitions([pre_images, suc_images],**kwargs)
+        # invalid  = np.logical_not(valid)
+        # 
+        # valid_transitions  = test_transitions [valid][:len(data)] # reduce the amount of data to reduce runtime
+        # valid_actions_byid = test_actions_byid[valid][:len(data)]
+        # invalid_transitions  = test_transitions [invalid][:len(data)] # reduce the amount of data to reduce runtime
+        # invalid_actions_byid = test_actions_byid[invalid][:len(data)]
+        # 
+        # save("valid_actions.csv",valid_transitions)
+        # save("valid_actions+ids.csv",np.concatenate((valid_transitions,valid_actions_byid), axis=1))
+        # save("invalid_actions.csv",invalid_transitions)
+        # save("invalid_actions+ids.csv",np.concatenate((invalid_transitions,invalid_actions_byid), axis=1))
+        return
+
+class NoSucBaseActionMixin:
+    def encode_action(self,data,**kwargs):
+        return self.action.predict(data,**kwargs)
+    def decode_action(self,data,**kwargs):
+        return self.apply.predict(data,**kwargs)
+    def plot(self,data,path,verbose=False):
+        import os.path
+        basename, ext = os.path.splitext(path)
+        pre_path = basename+"_pre"+ext
+        suc_path = basename+"_suc"+ext
+
+        x = data
+        z = self.encode(x)
+        y = self.decode(z)
+
+        x_pre, x_suc = x[:,0,...], x[:,1,...]
+        z_pre, z_suc = z[:,0,...], z[:,1,...]
+        y_pre, y_suc = y[:,0,...], y[:,1,...]
+
+        super().plot(x_pre,pre_path,verbose=verbose)
+        super().plot(x_suc,suc_path,verbose=verbose)
+
+        action    = self.encode_action(np.concatenate([z_pre,z_suc],axis=1))
+        z_suc_aae = self.decode_action([z_pre, action])
+        y_suc_aae = self.decode(z_suc_aae)
+
+        z_suc_min = np.minimum(z_suc, z_suc_aae)
+        y_suc_min = self.decode(z_suc_min)
+
+        from .util.plot import plot_grid, squarify
+
+        def diff(src,dst):
+            return (dst - src + 1)/2
+        def _plot(path,columns):
+            rows = []
+            for seq in zip(*columns):
+                rows.extend(seq)
+            plot_grid(rows, w=len(columns), path=path, verbose=verbose)
+
+        _z_pre     = squarify(z_pre)
+        _z_suc     = squarify(z_suc)
+        _z_suc_aae = squarify(z_suc_aae)
+        _z_suc_min = squarify(z_suc_min)
+
+        _plot(basename+"_transition"+ext,
+              [x_pre, x_suc,
+               _z_pre,
+               _z_suc,
+               _z_suc_aae,
+               diff(_z_pre, _z_suc),
+               diff(_z_pre, _z_suc_aae),
+               diff(_z_suc, _z_suc_aae),
+               y_pre,
+               y_suc,
+               y_suc_aae,
+               diff(x_pre,y_pre),
+               diff(x_suc,y_suc),
+               diff(x_suc,y_suc_aae),])
+
+        return
+
+    def add_metrics(self, x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae, l_pre=None, l_suc=None, l_suc_aae=None, w_suc_aae=None, v_suc_aae=None,):
+        # x: inputs
+        # l: logits to latent
+        # z: latent
+        # y: reconstruction
+
+        def mse_x1y1(true,pred):
+            return mse(x_pre,y_pre)
+        def mse_x2y2(true,pred):
+            return mse(x_suc,y_suc)
+        def mse_x2y3(true,pred):
+            return mse(x_suc,y_suc_aae)
+        def mse_y2y3(true,pred):
+            return mse(y_suc,y_suc_aae)
+        def mse_y2v3(true,pred):
+            return mse(y_suc,v_suc_aae)
+
+        def mae_z2z3(true, pred):
+            return K.mean(mae(K.round(z_suc), K.round(z_suc_aae)))
+        def mae_z2w3(true, pred):
+            return K.mean(mae(K.round(z_suc), K.round(w_suc_aae)))
+
+        def mse_l2l3(true, pred):
+            return K.mean(mse(l_suc, l_suc_aae))
+
+        def avg_z2(x, y):
+            return K.mean(z_suc)
+        def avg_z3(x, y):
+            return K.mean(z_suc_aae)
+
+        self.metrics.append(mse_x1y1)
+        self.metrics.append(mse_x2y2)
+        self.metrics.append(mse_x2y3)
+        self.metrics.append(mse_y2y3)
+        if (v_suc_aae is not None):
+            self.metrics.append(mse_y2v3)
+        self.metrics.append(mae_z2z3)
+        if (w_suc_aae is not None):
+            self.metrics.append(mae_z2w3)
+        if (l_suc is not None) and (l_suc_aae is not None):
+            self.metrics.append(mse_l2l3)
+
+        # self.metrics.append(avg_z2)
+        self.metrics.append(avg_z3)
+
+        return
+    def build_action_fc_unit(self):
+        return Sequential([
+            Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+        ])
+
+    def eff_reconstruction_loss(self,x):
+        # optional loss, unused
+        # _, x_pre, x_suc = dapply(x, lambda x: x)
+        # eff_reconstruction_loss = K.mean(bce(x_suc, y_suc_aae))
+        # self.net.add_loss(eff_reconstruction_loss)
+        return
+
+    def effect_minimization_loss(self):
+        # optional loss, unused
+        # self.net.add_loss(1*K.mean(K.sum(action_add,axis=-1)))
+        # self.net.add_loss(1*K.mean(K.sum(action_del,axis=-1)))
+
+        # depending on how effects are encoded, this is also used
+        # self.net.add_loss(1*K.mean(K.sum(action_eff,axis=-1)))
+        return
+
+    def _build(self,input_shape):
+        super()._build(input_shape)
+
+        x = self.net.input      # keras has a bug, we can't make a new Input here
+        _, x_pre, x_suc = dapply(x, lambda x: x)
+        z, z_pre, z_suc = dapply(self.d_encoder.output,     lambda x: x)
+        y, y_pre, y_suc = dapply(self.d_autoencoder.output, lambda x: x)
+
+        if self.parameters["stop_gradient"]:
+            z_pre = wrap(z_pre, K.stop_gradient(z_pre))
+            z_suc = wrap(z_suc, K.stop_gradient(z_suc))
+
+        action    = self._action(z_pre,z_suc)
+        z_suc_aae = self._apply(z_pre,z_suc,action)
+        y_suc_aae = Sequential(self.decoder_net)(wrap(z_suc, z_suc + 0.0 * z_suc_aae))
+
+        # denoising loop
+        v_suc_aae = y_suc_aae
+        for i in range(3):
+            w_suc_aae = Sequential(self.encoder_net)(v_suc_aae)
+            v_suc_aae = Sequential(self.decoder_net)(w_suc_aae)
+
+        # do not optimize the successor image
+        self.net = Model(x, dmerge(y_pre, y_suc_aae))
+
+        self.add_metrics(x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae, v_suc_aae=v_suc_aae, w_suc_aae=w_suc_aae)
+        return
+
+    def _report(self,test_both,**opts):
+        super()._report(test_both,**opts)
+
+        from .util.np_distances import mse, mae
+
+        test_both(["aae","MSE","vanilla"],
+                  lambda data: mse(data[:,1,...], self.net.predict(data,          **opts)[:,1,...]))
+        test_both(["aae","MSE","gaussian"],
+                  lambda data: mse(data[:,1,...], self.net.predict(gaussian(data),**opts)[:,1,...]))
+        test_both(["aae","MSE","salt"],
+                  lambda data: mse(data[:,1,...], self.net.predict(salt(data),    **opts)[:,1,...]))
+        test_both(["aae","MSE","pepper"],
+                  lambda data: mse(data[:,1,...], self.net.predict(pepper(data),  **opts)[:,1,...]))
+
+        def true_num_actions(data):
+            z     = self.encode(data)
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            actions = self.encode_action(z2, **opts).round()
+            histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+            true_num_actions = np.count_nonzero(histogram)
+            return true_num_actions
+
+        test_both(["aae","true_num_actions"], true_num_actions)
+
+        def z_mae(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+            z_suc_aae = self.decode_action([z_pre,a], **opts)
+            return mae(z_suc, z_suc_aae)
+
+        test_both(["aae","z_MAE","vanilla"], z_mae)
+        test_both(["aae","z_MAE","gaussian"],lambda data: z_mae(gaussian(data)))
+        test_both(["aae","z_MAE","salt"],    lambda data: z_mae(salt(data)))
+        test_both(["aae","z_MAE","pepper"],  lambda data: z_mae(pepper(data)))
+
+        def z_prob_bitwise(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+            z_suc_aae = self.decode_action([z_pre,a], **opts)
+            z_match   = 1-np.abs(z_suc_aae-z_suc)
+            return np.prod(np.mean(z_match,axis=0))
+
+        test_both(["aae","z_prob_bitwise","vanilla"], z_prob_bitwise)
+        test_both(["aae","z_prob_bitwise","gaussian"],lambda data: z_prob_bitwise(gaussian(data)))
+        test_both(["aae","z_prob_bitwise","salt"],    lambda data: z_prob_bitwise(salt(data)))
+        test_both(["aae","z_prob_bitwise","pepper"],  lambda data: z_prob_bitwise(pepper(data)))
+
+        def z_allmatch(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+            z_suc_aae = self.decode_action([z_pre,a], **opts)
+            z_match   = 1-np.abs(z_suc_aae-z_suc)
+            return np.mean(np.prod(z_match,axis=1))
+
+        test_both(["aae","z_allmatch","vanilla"], z_allmatch)
+        test_both(["aae","z_allmatch","gaussian"],lambda data: z_allmatch(gaussian(data)))
+        test_both(["aae","z_allmatch","salt"],    lambda data: z_allmatch(salt(data)))
+        test_both(["aae","z_allmatch","pepper"],  lambda data: z_allmatch(pepper(data)))
+
+        def action_entropy(data):
+            z     = self.encode(data)
+            z_pre = z[:,0,...]
+            z_suc = z[:,1,...]
+            z2    = z.reshape((-1,2*z.shape[-1]))
+            a     = self.encode_action(z2,**opts)
+
+            A = self.parameters["num_actions"]
+
+            def entropy(j):
+                indices = np.nonzero(a[:,0,j])
+                z       = z_pre[indices[0]]                     # dimension: [b,N]
+                p       = np.mean(z, axis=0)                    # dimension: [N]
+                H       = -np.sum(p*np.log(p+1e-20)+(1-p)*np.log(1-p+1e-20)) # dimension: [] (singleton)
+                return H
+
+            _H_z_given_a = np.array([entropy(j) for j in range(A)])
+            H_z_given_a = np.mean(_H_z_given_a[~np.isnan(_H_z_given_a)])
+            return H_z_given_a
+
+        test_both(["H_z_a",], action_entropy)
+
+        return
+
+    def dump_actions(self,pre,suc,**kwargs):
+        # data: transition data
+        num_actions = self.parameters["num_actions"]
+        def to_id(actions):
+            return (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
+
+        def save(name,data):
+            print("Saving to",self.local(name))
+            with open(self.local(name), 'wb') as f:
+                np.savetxt(f,data,"%d")
+
+        N=pre.shape[1]
+        data = np.concatenate([pre,suc],axis=1)
+        actions = self.encode_action(data, **kwargs).round()
+
+        histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+        print(histogram)
+        true_num_actions = np.count_nonzero(histogram)
+        print(true_num_actions)
+        all_labels = np.zeros((true_num_actions, actions.shape[1], actions.shape[2]), dtype=int)
+        for i, a in enumerate(np.where(histogram > 0)[0]):
+            all_labels[i][0][a] = 1
+
+        save("available_actions.csv", np.where(histogram > 0)[0])
+
+        actions_byid = to_id(actions)
+
+        data_byid = np.concatenate((data,actions_byid), axis=1)
+
+        save("actions.csv", data)
+        save("actions+ids.csv", data_byid)
+
+        data_aae = np.concatenate([pre,self.decode_action([pre,actions], **kwargs)], axis=1)
+
+        data_aae_byid = np.concatenate((data_aae,actions_byid), axis=1)
+        save("actions_aae.csv", data_aae)
+        save("actions_aae+ids.csv", data_aae_byid)
+
+        save("actions_both.csv", np.concatenate([data,data_aae], axis=0))
+        save("actions_both+ids.csv", np.concatenate([data_byid,data_aae_byid], axis=0))
+
+        # def generate_aae_action(known_transisitons):
+        #     states = known_transisitons.reshape(-1, N)
+        #     from .util import set_difference
+        #     def repeat_over(array, repeats, axis=0):
+        #         array = np.expand_dims(array, axis)
+        #         array = np.repeat(array, repeats, axis)
+        #         return np.reshape(array,(*array.shape[:axis],-1,*array.shape[axis+2:]))
+        # 
+        #     print("start generating transitions")
+        #     # s1,s2,s3,s1,s2,s3,....
+        #     repeated_states  = repeat_over(states, len(all_labels), axis=0)
+        #     # a1,a1,a1,a2,a2,a2,....
+        #     repeated_actions = np.repeat(all_labels, len(states), axis=0)
+        # 
+        #     y = self.decode_action([repeated_states, repeated_actions], **kwargs).round().astype(np.int8)
+        #     y = np.concatenate([repeated_states, y], axis=1)
+        # 
+        #     print("remove known transitions")
+        #     y = set_difference(y, known_transisitons)
+        #     print("shuffling")
+        #     import numpy.random
+        #     numpy.random.shuffle(y)
+        #     return y
+        # 
+        # transitions = generate_aae_action(data)
+        # # note: transitions are already shuffled, and also do not contain any examples in data.
+        # actions      = self.encode_action(transitions, **kwargs).round()
+        # actions_byid = to_id(actions)
+        # 
+        # # ensure there are enough test examples
+        # separation = min(len(data)*10,len(transitions)-len(data))
+        # 
+        # # fake dataset is used only for the training.
+        # fake_transitions  = transitions[:separation]
+        # fake_actions_byid = actions_byid[:separation]
+        # 
+        # # remaining data are used only for the testing.
+        # test_transitions  = transitions[separation:]
+        # test_actions_byid = actions_byid[separation:]
+        # 
+        # print(fake_transitions.shape, test_transitions.shape)
+        # 
+        # save("fake_actions.csv",fake_transitions)
+        # save("fake_actions+ids.csv",np.concatenate((fake_transitions,fake_actions_byid), axis=1))
+        # 
+        # from .util import puzzle_module
+        # p = puzzle_module(self.path)
+        # print("decoding pre")
+        # pre_images = self.decode(test_transitions[:,:N],**kwargs)
+        # print("decoding suc")
+        # suc_images = self.decode(test_transitions[:,N:],**kwargs)
+        # print("validating transitions")
+        # valid    = p.validate_transitions([pre_images, suc_images],**kwargs)
+        # invalid  = np.logical_not(valid)
+        # 
+        # valid_transitions  = test_transitions [valid][:len(data)] # reduce the amount of data to reduce runtime
+        # valid_actions_byid = test_actions_byid[valid][:len(data)]
+        # invalid_transitions  = test_transitions [invalid][:len(data)] # reduce the amount of data to reduce runtime
+        # invalid_actions_byid = test_actions_byid[invalid][:len(data)]
+        # 
+        # save("valid_actions.csv",valid_transitions)
+        # save("valid_actions+ids.csv",np.concatenate((valid_transitions,valid_actions_byid), axis=1))
+        # save("invalid_actions.csv",invalid_transitions)
+        # save("invalid_actions+ids.csv",np.concatenate((invalid_transitions,invalid_actions_byid), axis=1))
+        return
+
+
+# action mapping variations
+
+class DetActionMixin:
+    "Deterministic mapping from a state pair to an action"
+    def build_action_encoder(self):
+        return [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                        Dense(self.parameters['num_actions']),
+                        self.build_gs(N=1,
+                                      M=self.parameters['num_actions'],
+                                      offset=self.parameters["aae_delay"],
+                                      alpha=-1.0),
+            ]),
+        ]
+    def _action(self,z_pre,z_suc):
+        self.action_encoder_net = self.build_action_encoder()
+
+        N = self.parameters['N']
+        transition = Input(shape=(N*2,))
+        pre2 = wrap(transition, transition[:,:N])
+        suc2 = wrap(transition, transition[:,N:])
+        self.action = Model(transition, ConditionalSequential(self.action_encoder_net, pre2, axis=1)(suc2))
+
+        return ConditionalSequential(self.action_encoder_net, z_pre, axis=1)(z_suc)
+
+
+# effect mapping variations
+
+class DirectLossMixin:
+    def _build(self,input_shape):
+        super()._build(input_shape)
+
+        self.direct_alpha = StepSchedule(schedule={
+            0:0,
+            (self.parameters["epoch"]*self.parameters["direct_delay"]):self.parameters["direct"],
+        })
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.direct_alpha.update))
+
+        return
+    def apply_direct_loss(self,true,pred):
+        dummy = Lambda(lambda x: x)
+
+        loss = K.mean(mae(true, pred))
+        def direct(x, y):
+            return loss
+
+        self.metrics.append(direct)
+
+        # direct loss should be treated as the real loss
+        dummy.add_loss(K.in_train_phase(loss * self.direct_alpha.variable, loss))
+        return dummy(pred)
+
+class ActionDumpMixin:
+    def dump_actions(self,pre,suc,**kwargs):
+        # data: transition data
+        num_actions = self.parameters["num_actions"]
+        def to_id(actions):
+            return (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
+
+        def save(name,data):
+            print("Saving to",self.local(name))
+            with open(self.local(name), 'wb') as f:
+                np.savetxt(f,data,"%d")
+
+        N=pre.shape[1]
+        data = np.concatenate([pre,suc],axis=1)
+        actions = self.encode_action(data, **kwargs).round()
+
+        histogram = np.squeeze(actions.sum(axis=0,dtype=int))
+        print(histogram)
+        true_num_actions = np.count_nonzero(histogram)
+        print(true_num_actions)
+        all_labels = np.zeros((true_num_actions, actions.shape[1], actions.shape[2]), dtype=int)
+        for i, a in enumerate(np.where(histogram > 0)[0]):
+            all_labels[i][0][a] = 1
+
+        save("available_actions.csv", np.where(histogram > 0)[0])
+
+        actions_byid = to_id(actions)
+
+        data_byid = np.concatenate((data,actions_byid), axis=1)
+
+        save("actions.csv", data)
+        save("actions+ids.csv", data_byid)
+
+        data_aae = np.concatenate([pre,self.decode_action([pre,actions], **kwargs)], axis=1)
+
+        data_aae_byid = np.concatenate((data_aae,actions_byid), axis=1)
+        save("actions_aae.csv", data_aae)
+        save("actions_aae+ids.csv", data_aae_byid)
+
+        save("actions_both.csv", np.concatenate([data,data_aae], axis=0))
+        save("actions_both+ids.csv", np.concatenate([data_byid,data_aae_byid], axis=0))
+
+        all_actions_byid = to_id(all_labels)
+
+        # effects obtained directly from the effect vector XXX no longer valid
+        # add_effect = self.add_decoder.predict(all_labels,**kwargs).round().astype(int).reshape((true_num_actions,-1))
+        # del_effect = self.del_decoder.predict(all_labels,**kwargs).round().astype(int).reshape((true_num_actions,-1))
+        # 
+        # save("action_add1.csv",add_effect)
+        # save("action_del1.csv",del_effect)
+        # save("action_add1+ids.csv",np.concatenate((add_effect,all_actions_byid), axis=1))
+        # save("action_del1+ids.csv",np.concatenate((del_effect,all_actions_byid), axis=1))
+
+        def extract_effect_from_transitions(transitions):
+            pre = transitions[:,:N]
+            suc = transitions[:,N:]
+            data_diff = suc - pre
+            data_add  = np.maximum(0, data_diff)
+            data_del  = -np.minimum(0, data_diff)
+
+            add_effect = np.zeros((true_num_actions, N))
+            del_effect = np.zeros((true_num_actions, N))
+
+            for i, a in enumerate(np.where(histogram > 0)[0]):
+                indices = np.where(actions_byid == a)[0]
+                add_effect[i] = np.amax(data_add[indices], axis=0)
+                del_effect[i] = np.amax(data_del[indices], axis=0)
+
+            return add_effect, del_effect, data_diff
+
+        # effects obtained from the latent vectors
+        add_effect2, del_effect2, diff2 = extract_effect_from_transitions(data)
+
+        save("action_add2.csv",add_effect2)
+        save("action_del2.csv",del_effect2)
+        save("action_add2+ids.csv",np.concatenate((add_effect2,all_actions_byid), axis=1))
+        save("action_del2+ids.csv",np.concatenate((del_effect2,all_actions_byid), axis=1))
+        save("diff2+ids.csv",np.concatenate((diff2,actions_byid), axis=1))
+
+        data_aae = np.concatenate([pre,self.decode_action([pre,actions], **kwargs)], axis=1)
+
+        # effects obtained from the latent vectors, but the successor uses the ones coming from the AAE
+        add_effect3, del_effect3, diff3 = extract_effect_from_transitions(data_aae)
+
+        save("action_add3.csv",add_effect3)
+        save("action_del3.csv",del_effect3)
+        save("action_add3+ids.csv",np.concatenate((add_effect3,all_actions_byid), axis=1))
+        save("action_del3+ids.csv",np.concatenate((del_effect3,all_actions_byid), axis=1))
+        save("diff3+ids.csv",np.concatenate((diff3,actions_byid), axis=1))
+
+        return
+
+class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect depends on both the current state and the action labels."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.action_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())),
+                rounded_sigmoid(),
+                Reshape(self.zdim()),
+            ])
+        ]
+
+        z_suc_aae = ConditionalSequential(self.action_decoder_net, z_pre, axis=1)(flatten(action))
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        self.apply  = Model([pre2,act2], ConditionalSequential(self.action_decoder_net, pre2, axis=1)(flatten(act2)))
+
+        return z_suc_aae
+
+class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect only depends on the action labels. Add/delete effects are directly modeled as binary min/max."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.eff_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())*3),
+                Reshape((*self.zdim(),3)),
+                rounded_softmax(),
+                Reshape((*self.zdim(),3)),
+            ])
+        ]
+
+        z_eff     = Sequential(self.eff_decoder_net)(flatten(action))
+        z_add     = wrap(z_eff, z_eff[...,0])
+        z_del     = wrap(z_eff, z_eff[...,1])
+        z_suc_aae = wrap(z_pre, K.minimum(1-z_del, K.maximum(z_add, z_pre)))
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
+        add2     = wrap(eff2, eff2[...,0])
+        del2     = wrap(eff2, eff2[...,1])
+        self.apply  = Model([pre2,act2], wrap(pre2, K.minimum(1-del2, K.maximum(add2, pre2))))
+        self.add_decoder = Model(act2, add2)
+        self.del_decoder = Model(act2, del2)
+
+        return z_suc_aae
+
+class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect only depends on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.eff_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())*3),
+                Reshape((*self.zdim(),3)),
+                rounded_softmax(),
+                Reshape((*self.zdim(),3)),
+            ])
+        ]
+
+        z_eff     = Sequential(self.eff_decoder_net)(flatten(action))
+        z_add     = wrap(z_eff, z_eff[...,0])
+        z_del     = wrap(z_eff, z_eff[...,1])
+        z_suc_aae = wrap(z_pre, smooth_min(1-z_del, smooth_max(z_add, z_pre)))
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
+        add2     = wrap(eff2, eff2[...,0])
+        del2     = wrap(eff2, eff2[...,1])
+        self.apply  = Model([pre2,act2], wrap(pre2, smooth_min(1-del2, smooth_max(add2, pre2))))
+        self.add_decoder = Model(act2, add2)
+        self.del_decoder = Model(act2, del2)
+
+        return z_suc_aae
+
+class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect only depends on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.eff_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())*3),
+                Reshape((*self.zdim(),3)),
+                rounded_softmax(),
+                Reshape((*self.zdim(),3)),
+            ])
+        ]
+
+        z_eff     = Sequential(self.eff_decoder_net)(flatten(action))
+        z_add     = wrap(z_eff, z_eff[...,0])
+        z_del     = wrap(z_eff, z_eff[...,1])
+        z_suc_aae = wrap(z_pre, rounded_sigmoid()(z_pre - 0.5 + z_add - z_del))
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
+        add2     = wrap(eff2, eff2[...,0])
+        del2     = wrap(eff2, eff2[...,1])
+        self.apply  = Model([pre2,act2], wrap(pre2, rounded_sigmoid()(pre2 - 0.5 + add2 - del2)))
+        self.add_decoder = Model(act2, add2)
+        self.del_decoder = Model(act2, del2)
+
+        return z_suc_aae
+
+class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.eff_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())),
+                BN(),
+            ])
+        ]
+        self.scaling = BN()
+
+        l_eff     = Sequential(self.eff_decoder_net)(flatten(action))
+        l_pre = self.scaling(z_pre)
+        l_suc_aae = add([l_pre,l_eff])
+        z_suc_aae = rounded_sigmoid()(l_suc_aae)
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
+        lpre2 = self.scaling(pre2)
+        lsuc2 = add([lpre2,eff2])
+        suc2 = rounded_sigmoid()(lsuc2)
+
+        add2 = wrap(eff2, heavyside()( eff2-1))
+        del2 = wrap(eff2, heavyside()(-eff2-1))
+
+        self.apply  = Model([pre2,act2], suc2)
+        self.add_decoder = Model(act2, add2)
+        self.del_decoder = Model(act2, del2)
+
+        return z_suc_aae
+
+class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.eff_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())),
+            ])
+        ]
+        self.scaling = Lambda(lambda x: 2*x - 1) # same scale as the final batchnorm
+
+        l_eff     = Sequential(self.eff_decoder_net)(flatten(action))
+        l_pre = self.scaling(z_pre)
+        l_suc_aae = add([l_pre,l_eff])
+        z_suc_aae = rounded_sigmoid()(l_suc_aae)
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
+        lpre2 = self.scaling(pre2)
+        lsuc2 = add([lpre2,eff2])
+        suc2 = rounded_sigmoid()(lsuc2)
+
+        add2 = wrap(eff2, heavyside()( eff2-1))
+        del2 = wrap(eff2, heavyside()(-eff2-1))
+
+        self.apply  = Model([pre2,act2], suc2)
+        self.add_decoder = Model(act2, add2)
+        self.del_decoder = Model(act2, del2)
+
+        return z_suc_aae
+
+# WIP
+
+
+class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.eff_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())),
+                BN(),
+            ])
+        ]
+        self.scaling = Lambda(lambda x: 2*x - 1)
+
+        l_eff     = Sequential(self.eff_decoder_net)(flatten(action))
+        l_pre = self.scaling(z_pre)
+        l_suc_aae = add([l_pre,l_eff])
+        z_suc_aae = rounded_sigmoid()(l_suc_aae)
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
+        lpre2 = self.scaling(pre2)
+        lsuc2 = add([lpre2,eff2])
+        suc2 = rounded_sigmoid()(lsuc2)
+
+        add2 = wrap(eff2, heavyside()( eff2-1))
+        del2 = wrap(eff2, heavyside()(-eff2-1))
+
+        self.apply  = Model([pre2,act2], suc2)
+        self.add_decoder = Model(act2, add2)
+        self.del_decoder = Model(act2, del2)
+
+        return z_suc_aae
+
+# same as NormalizedLogitAddEffectMixin; just the inheritance
+class NoSucNormalizedLogitAddEffectMixin(ActionDumpMixin,NoSucBaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    def _apply(self,z_pre,z_suc,action):
+
+        self.eff_decoder_net = [
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            Sequential([
+                Dense(np.prod(self.zdim())),
+                BN(),
+            ])
+        ]
+        self.scaling = BN()
+
+        l_eff     = Sequential(self.eff_decoder_net)(flatten(action))
+        l_pre = self.scaling(z_pre)
+        l_suc_aae = add([l_pre,l_eff])
+        z_suc_aae = rounded_sigmoid()(l_suc_aae)
+        z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+
+        pre2 = Input(shape=self.zdim())
+        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
+        lpre2 = self.scaling(pre2)
+        lsuc2 = add([lpre2,eff2])
+        suc2 = rounded_sigmoid()(lsuc2)
+
+        add2 = wrap(eff2, heavyside()( eff2-1))
+        del2 = wrap(eff2, heavyside()(-eff2-1))
+
+        self.apply  = Model([pre2,act2], suc2)
+        self.add_decoder = Model(act2, add2)
+        self.del_decoder = Model(act2, del2)
+
+        return z_suc_aae
+
 # Zero-sup SAE ###############################################################
 
-class ConvolutionalGumbelAE(ConvolutionalMixin, GumbelAE):
+class ConvolutionalStateAE(ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class Convolutional2GumbelAE(Convolutional2Mixin, GumbelAE):
+class Convolutional2StateAE(ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGGumbelAE(NGMixin, GumbelAE):
+class NGStateAE(NGMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGConvolutionalGumbelAE(NGMixin, ConvolutionalMixin, GumbelAE):
+class NGConvolutionalStateAE(NGMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGConvolutional2GumbelAE(NGMixin, Convolutional2Mixin, GumbelAE):
+class NGConvolutional2StateAE(NGMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NoKLGumbelAE(NoKLMixin, GumbelAE):
+class NoKLStateAE(NoKLMixin, ConcreteLatentMixin, StateAE):
     pass
-class NoKLConvolutionalGumbelAE(NoKLMixin, ConvolutionalMixin, GumbelAE):
+class NoKLConvolutionalStateAE(NoKLMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NoKLConvolutional2GumbelAE(NoKLMixin, Convolutional2Mixin, GumbelAE):
+class NoKLConvolutional2StateAE(NoKLMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
 
 
-class ZeroSuppressGumbelAE(ZeroSuppressMixin, GumbelAE):
+class ZeroSuppressStateAE(ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
     pass
-class ZeroSuppressConvolutionalGumbelAE(ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+class ZeroSuppressConvolutionalStateAE(ZeroSuppressMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class ZeroSuppressConvolutional2GumbelAE(ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+class ZeroSuppressConvolutional2StateAE(ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGZeroSuppressGumbelAE(NGMixin, ZeroSuppressMixin, GumbelAE):
+class NGZeroSuppressStateAE(NGMixin, ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGZeroSuppressConvolutionalGumbelAE(NGMixin, ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+class NGZeroSuppressConvolutionalStateAE(NGMixin, ZeroSuppressMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGZeroSuppressConvolutional2GumbelAE(NGMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+class NGZeroSuppressConvolutional2StateAE(NGMixin, ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NoKLZeroSuppressGumbelAE(NoKLMixin, ZeroSuppressMixin, GumbelAE):
+class NoKLZeroSuppressStateAE(NoKLMixin, ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
     pass
-class NoKLZeroSuppressConvolutionalGumbelAE(NoKLMixin, ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+class NoKLZeroSuppressConvolutionalStateAE(NoKLMixin, ZeroSuppressMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NoKLZeroSuppressConvolutional2GumbelAE(NoKLMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+class NoKLZeroSuppressConvolutional2StateAE(NoKLMixin, ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class DetZeroSuppressGumbelAE(DetMixin, ZeroSuppressMixin, GumbelAE):
+class DetZeroSuppressStateAE(DetMixin, ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
     pass
-class DetZeroSuppressConvolutionalGumbelAE(DetMixin, ZeroSuppressMixin, ConvolutionalMixin, GumbelAE):
+class DetZeroSuppressConvolutionalStateAE(DetMixin, ZeroSuppressMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class DetZeroSuppressConvolutional2GumbelAE(DetMixin, ZeroSuppressMixin, Convolutional2Mixin, GumbelAE):
+class DetZeroSuppressConvolutional2StateAE(DetMixin, ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
 
 # Transition SAE ################################################################
 
-class HammingTransitionAE(HammingMixin, ZeroSuppressMixin, ConvolutionalMixin, TransitionAE, GumbelAE):
+class VanillaTransitionAE(ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
-class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConvolutionalMixin, TransitionAE, GumbelAE):
+class VanillaTransitionAE2(ConvolutionalDecoderMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
-class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConvolutionalMixin, TransitionAE, GumbelAE):
+class HammingTransitionAE(HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
+class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+
+class ConcreteDetConditionalEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, ConditionalEffectMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class ConcreteDetBoolMinMaxEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, BoolMinMaxEffectMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class ConcreteDetBoolSmoothMinMaxEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class ConcreteDetBoolAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, BoolAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class ConcreteDetLogitAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, LogitAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class ConcreteDetLogitAddEffect2TransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, LogitAddEffect2Mixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class ConcreteDetNormalizedLogitAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, NormalizedLogitAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+class ConcreteDetNoSucNormalizedLogitAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, NoSucNormalizedLogitAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+    pass
+
+
 
 # state/action discriminator ####################################################
 class Discriminator(Network):
