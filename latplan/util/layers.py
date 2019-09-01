@@ -191,7 +191,7 @@ Each subclasses should implement a method for it."""
 class GumbelSoftmax(ScheduledVariable):
     count = 0
     
-    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, alpha=1.,
+    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, alpha=1., offset=0,
                  train_gumbel=True, test_gumbel=True, test_softmax=True, ):
         self.N = N
         self.M = M
@@ -200,7 +200,8 @@ class GumbelSoftmax(ScheduledVariable):
         self.train_gumbel = train_gumbel
         self.test_gumbel = test_gumbel
         self.test_softmax = test_softmax
-        self.anneal_rate = annealer(full_epoch,min,max)
+        self.anneal_rate = annealer(full_epoch-offset,min,max)
+        self.offset = offset
         self.alpha = alpha
         super(GumbelSoftmax, self).__init__("temperature")
         
@@ -238,10 +239,10 @@ class GumbelSoftmax(ScheduledVariable):
     def __call__(self,prev):
         GumbelSoftmax.count += 1
         c = GumbelSoftmax.count-1
-        logits = Reshape((self.N,self.M))(prev)
 
         layer = Lambda(self.call,name="gumbel_{}".format(c))
 
+        logits = Reshape((self.N,self.M))(prev)
         q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
         loss = K.mean(q * log_q) * self.alpha
@@ -252,7 +253,7 @@ class GumbelSoftmax(ScheduledVariable):
 
     def value(self,epoch):
         return np.max([self.min,
-                       self.max * np.exp(- self.anneal_rate * epoch)])
+                       self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
 
 class BaseSchedule(ScheduledVariable):
     def __init__(self,schedule={0:0}):
