@@ -197,7 +197,10 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
               **kwargs):
         """Main method for training.
  This method may be overloaded by the subclass into a specific training method, e.g. GAN training."""
-        o = getattr(keras.optimizers,optimizer)(lr)
+        if isinstance(optimizer, str):
+            o = getattr(keras.optimizers,optimizer)(lr)
+        else:
+            o = optimizer
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
