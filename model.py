@@ -117,7 +117,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         import json
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
-                       "input_shape":self.net.input_shape[1:]}, f)
+                       "input_shape":self.net.input_shape[1:]}, f , skipkeys=True)
 
     def save_epoch(self, freq=10):
         def fn(epoch, logs):
