@@ -783,12 +783,12 @@ class TransitionAE(GumbelAE):
             return y, y1, y2
         
         x               = Input(shape=input_shape)
-        z, z_pre, z_suc = dapply(x, lambda x: Sequential(_encoder)(x))
-        y, _,     _     = dapply(z, lambda x: Sequential(_decoder)(x))
+        z, z_pre, z_suc = dapply(x, Sequential(_encoder))
+        y, _,     _     = dapply(z, Sequential(_decoder))
         
         z2       = Input(shape=K.int_shape(z)[1:])
-        y2, _, _ = dapply(z2, lambda x: Sequential(_decoder)(x))
-        w2, _, _ = dapply(y2, lambda x: Sequential(_encoder)(x))
+        y2, _, _ = dapply(z2, Sequential(_decoder))
+        w2, _, _ = dapply(y2, Sequential(_encoder))
         
 
         self.loss = BCE
