@@ -48,9 +48,12 @@ def flatten(x):
         return x
 
 def set_trainable (model, flag):
-    if hasattr(model, "layers"):
-        for l in model.layers:
+    from collections.abc import Iterable
+    if isinstance(model, Iterable):
+        for l in model:
             set_trainable(l, flag)
+    elif hasattr(model, "layers"):
+        set_trainable(model.layers,flag)
     else:
         model.trainable = flag
 
