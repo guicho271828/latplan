@@ -215,6 +215,16 @@ def smooth_max(*args):
 def smooth_min(*args):
     return K.in_train_phase(-K.logsumexp(-K.stack(args,axis=0), axis=0)+K.log(2.0), K.minimum(*args))
 
+def dmerge(x1, x2):
+    return concatenate([wrap(x1, x1[:,None,...]),wrap(x2, x2[:,None,...])],axis=1)
+
+def dapply(x,fn):
+    x1 = wrap(x,x[:,0,...])
+    x2 = wrap(x,x[:,1,...])
+    y1 = fn(x1)
+    y2 = fn(x2)
+    y = dmerge(y1, y2)
+    return y, y1, y2
 
 class Gaussian:
     count = 0
