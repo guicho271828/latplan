@@ -774,14 +774,6 @@ class TransitionAE(GumbelAE):
         self.s_autoencoder = Model(x, y)
         self.s_autodecoder = Model(z2, w2)
 
-        def dapply(x,fn):
-            x1 = wrap(x,x[:,0,...])
-            x2 = wrap(x,x[:,1,...])
-            y1 = fn(x1)
-            y2 = fn(x2)
-            y = concatenate([wrap(y1, y1[:,None,...]),wrap(y2, y2[:,None,...])],axis=1)
-            return y, y1, y2
-        
         x               = Input(shape=input_shape)
         z, z_pre, z_suc = dapply(x, Sequential(_encoder))
         y, _,     _     = dapply(z, Sequential(_decoder))
