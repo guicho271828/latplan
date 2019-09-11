@@ -32,51 +32,60 @@ def _select(list):
     import random
     return list[random.randint(0,len(list)-1)]
 
-def _update_best(artifact, eval, local_parameters, results, best, report, report_best):
-    results.append((eval, local_parameters))
+def _update_best(artifact, eval, config, results, best, report, report_best):
+    results.append((eval, config))
     if report:
         report(artifact)
-    print("Evaluation result for:\n{}\neval = {}".format(local_parameters,eval))
+    print("Evaluation result for:\n{}\neval = {}".format(config,eval))
     print("Current results:")
     results.sort(key=lambda result: result[0])
     [ print(r) for r in results]
     if best['eval'] is None or eval < best['eval']:
-        print("Found a better parameter:\n{}\neval:{} old-best:{}".format(local_parameters,eval,best['eval']))
+        print("Found a better parameter:\n{}\neval:{} old-best:{}".format(config,eval,best['eval']))
         if report_best:
             report_best(artifact)
         del best['artifact']
-        best['params'] = local_parameters
+        best['params'] = config
         best['eval'] = eval
         best['artifact'] = artifact
     else:
         del artifact
 
-def grid_search(task, default_parameters, parameters,
+def _random_configs(parameters,shuffle):
+    import itertools
+    names  = [ k for k, _ in parameters.items()]
+    values = [ v for _, v in parameters.items()]
+    all_config_values = list(itertools.product(*values))
+    if shuffle:
+        random.shuffle(all_config_values)
+    for config_values in all_config_values:
+        yield { k:v for k,v in zip(names,config_values) }
+
+def _final_report(best,results):
+    from colors import bold
+    print(bold("*** Best parameter: ***\n{}\neval: {}".format(best['params'],best['eval'])))
+    print(results)
+    return
+
+def grid_search(task, default_config, parameters,
                 report=None, report_best=None,
                 shuffle=True,
                 limit=float('inf')):
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
     results       = []
-    import itertools
-    names  = [ k for k, _ in parameters.items()]
-    values = [ v for _, v in parameters.items()]
-    all_params = list(itertools.product(*values))
-    if shuffle:
-        random.shuffle(all_params)
-    [ print(r) for r in all_params]
+    all_configs = list(_random_configs(parameters, shuffle))
+    list(map(print, all_configs))
     try:
-        for i,params in enumerate(all_params):
+        for i,config in enumerate(all_configs):
             if i > limit:
                 break
-            local_parameters = { k:v for k,v in zip(names,params) }
-            print("{}/{} {}".format(i, len(all_params), local_parameters))
-            artifact, eval = task(merge_hash(default_parameters,local_parameters))
-            _update_best(artifact, eval, local_parameters, results, best, report, report_best)
+            print("{}/{} {}".format(i, len(all_configs), config))
+            artifact, eval = task(merge_hash(default_config,config))
+            _update_best(artifact, eval, config, results, best, report, report_best)
     finally:
-        from colors import bold
-        print(bold("*** Best parameter: ***\n{}\neval: {}".format(best['params'],best['eval'])))
-        print(results)
+        _final_report(best,results)
     return best['artifact'],best['params'],best['eval']
+
 
 def greedy_search(task, default_parameters, parameters,
                   initial_population=3, limit=10,
