@@ -86,65 +86,59 @@ def grid_search(task, default_config, parameters,
         _final_report(best,results)
     return best['artifact'],best['params'],best['eval']
 
+def _neighbors(parent,parameters):
+    "Returns all dist-1 neighbors"
+    results = []
+    for k, _ in parent.items():
+        for v in parameters[k]:
+            if parent[k] is not v:
+                other = parent.copy()
+                other[k] = v
+                results.append(other)
+    return results
 
-def greedy_search(task, default_parameters, parameters,
-                  initial_population=3, limit=10,
-                  report=None, report_best=None,):
-    import itertools
-    names  = [ k for k, _ in parameters.items()]
-    values = [ v for _, v in parameters.items()]
-    all_params = list(itertools.product(*values))
-    random.shuffle(all_params)
-    [ print(r) for r in all_params]
+def _key(config):
+    return tuple( v for _, v in sorted(config.items()))
+
+def lazy_greedy_best_first_search(task, default_config, parameters,
+                                  initial_population=5,
+                                  limit=float('inf'),
+                                  report=None, report_best=None,):
+    "Initialize the queue by evaluating the fixed number of nodes. Expand the best node based on the parent's evaluation. Randomly select, evaluate, queue a child. The parent is requeued until it expands all children."
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
+    results       = []
+    list(map(print, _random_configs(parameters, False)))
 
     import queue
     open_list  = queue.PriorityQueue()
     close_list = {}
-    results       = []          # for displaying
 
-    def random_configs():
-        import random
-        while True:
-            yield { k : _select(v) for k, v in parameters.items() }
-
-    def neighbors(parent):
-        import random
-        results = []
-        for k in names:
-            for kv in parameters[k]:
-                if parent[k] is not kv:
-                    other = parent.copy()
-                    other[k] = kv
-                    results.append(other)
-        return results
-
-    def _key(local_parameters):
-        return tuple( local_parameters[k] for k in names )
-    
-    def _iter(local_parameters):
-        artifact, eval = task(merge_hash(default_parameters,local_parameters))
-        _update_best(artifact, eval, local_parameters, results, best, report, report_best)
-        # 
-        close_list[_key(local_parameters)] = eval # tuples are hashable
-        open_list.put((eval, local_parameters))
+    def _iter(config):
+        artifact, eval = task(merge_hash(default_config,config))
+        _update_best(artifact, eval, config, results, best, report, report_best)
+        close_list[_key(config)] = eval # tuples are hashable
+        open_list.put((eval, config))
         
     try:
-        for i,local_parameters in zip(range(initial_population),random_configs()):
-            _iter(local_parameters)
-        for i in range(initial_population, limit):
+        for i,config in zip(range(initial_population),_random_configs(parameters, True)):
+            _iter(config)
+        i = initial_population
+        while i < limit:
+            i += 1
             if open_list.empty():
                 break
-            _, parent = open_list.get()
-            children = neighbors(parent)
+            peval, parent = open_list.get()
+            children = _neighbors(parent, parameters)
 
             open_children = []
             for c in children:
                 if _key(c) not in close_list:
                     open_children.append(c)
             
-            _iter(_select(open_children))
+            if len(open_children) > 0:
+                open_list.put((peval, parent))
+                _iter(_select(open_children))
     finally:
-        print("Best parameter:\n{}\neval: {}".format(best['params'],best['eval']))
-        print(results)
+        _final_report(best,results)
     return best['artifact'],best['params'],best['eval']
+
