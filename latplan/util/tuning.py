@@ -1,6 +1,10 @@
 from timeout_decorator import timeout, TimeoutError
 import numpy.random as random
 
+class InvalidHyperparameterError(Exception):
+    """Raised when the hyperparameter is not valid"""
+    pass
+
 def nn_task(network, path, train_in, train_out, test_in, test_out, parameters):
     net = network(path,parameters=parameters)
     try:
@@ -80,8 +84,11 @@ def grid_search(task, default_config, parameters,
             if i > limit:
                 break
             print("{}/{} {}".format(i, len(all_configs), config))
-            artifact, eval = task(merge_hash(default_config,config))
-            _update_best(artifact, eval, config, results, best, report, report_best)
+            try:
+                artifact, eval = task(merge_hash(default_config,config))
+                _update_best(artifact, eval, config, results, best, report, report_best)
+            except InvalidHyperparameterError as e:
+                print(e)
     finally:
         _final_report(best,results)
     return best['artifact'],best['params'],best['eval']
@@ -114,10 +121,13 @@ def lazy_greedy_best_first_search(task, default_config, parameters,
     close_list = {}
 
     def _iter(config):
-        artifact, eval = task(merge_hash(default_config,config))
-        _update_best(artifact, eval, config, results, best, report, report_best)
-        close_list[_key(config)] = eval # tuples are hashable
-        open_list.put((eval, config))
+        try:
+            artifact, eval = task(merge_hash(default_config,config))
+            _update_best(artifact, eval, config, results, best, report, report_best)
+            close_list[_key(config)] = eval # tuples are hashable
+            open_list.put((eval, config))
+        except InvalidHyperparameterError as e:
+            print(e)
         
     try:
         for i,config in zip(range(initial_population),_random_configs(parameters, True)):
@@ -142,3 +152,142 @@ def lazy_greedy_best_first_search(task, default_config, parameters,
         _final_report(best,results)
     return best['artifact'],best['params'],best['eval']
 
+def _crossover(parent1,parent2):
+    child = {}
+    for k,v1 in parent1.items():
+        v2 = parent2[k]
+        if random.random() < 0.5:
+            child[k] = v1
+        else:
+            child[k] = v2
+    return child
+
+def _top_k(open_list, k):
+    top_k = []
+    for i in range(k):
+        if open_list.empty():
+            raise Exception("open list exhausted!")
+        top_k.append(open_list.get())
+    for parent in top_k:
+        open_list.put(parent)
+    return top_k
+
+def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters):
+    top_k = _top_k(open_list,k)
+    for tried in range(max_trial):
+        peval1, parent1 = _select(top_k)
+        peval2, parent2 = _select(top_k)
+        while parent1 == parent2:
+            peval2, parent2 = _select(top_k)
+
+        child = _crossover(parent1, parent2)
+        if _key(child) not in close_list:
+            print("parent1: ", parent1)
+            print("peval1 : ", peval1)
+            print("parent2: ", parent2)
+            print("peval2 : ", peval2)
+            print("child  : ", child)
+            print("attempted trials : ", tried)
+            return child
+    print("Simple GA: crossover failed after {} trials".format(max_trial))
+    print("Simple GA: falling back to mutation")
+    return _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters)
+
+def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters):
+    top_k = _top_k(open_list,k)
+    for tried in range(max_trial):
+        peval, parent = _select(top_k)
+        children = _neighbors(parent, parameters)
+        open_children = []
+        for c in children:
+            if _key(c) not in close_list:
+                open_children.append(c)
+        if len(open_children) > 0:
+            child = _select(open_children)
+            print("parent: ", parent)
+            print("peval : ", peval)
+            print("child : ", child)
+            print("attempted trials : ", tried)
+            return child
+    print("Simple GA: mutation failed after {} trials".format(max_trial))
+    print("Simple GA: Reached a local minima")
+    raise Exception()
+
+def simple_genetic_search(task, default_config, parameters,
+                          initial_population=10,
+                          population=10,
+                          mutation_ratio=0.3,
+                          limit=float('inf'),
+                          report=None, report_best=None,):
+    "Initialize the queue by evaluating the N nodes. Select 2 parents randomly from top N nodes and perform the uniform crossover. Fall back to LGBFS on a fixed ratio (as a mutation)."
+    best = {'eval'    :None, 'params'  :None, 'artifact':None}
+    results       = []
+    list(map(print, _random_configs(parameters, False)))
+
+    # assert initial_population <= limit
+    if not (initial_population <= limit):
+        print({"initial_population":initial_population},"is superceded by",{"limit":limit},". limit must be larger than equal to the initial population",)
+        initial_population = limit
+    
+    # assert population <= initial_population
+    if not (population <= initial_population):
+        print({"population":population},"is superceded by",{"initial_population":initial_population},". initial_population must be larger than equal to the population",)
+        population = initial_population
+
+    import queue
+    open_list  = queue.PriorityQueue()
+    close_list = {}
+
+    def _iter(config):
+        artifact, eval = task(merge_hash(default_config,config))
+        _update_best(artifact, eval, config, results, best, report, report_best)
+        close_list[_key(config)] = eval # tuples are hashable
+        open_list.put((eval, config))
+
+    try:
+        print("Simple GA: Generating the initial population")
+        
+        try:
+            gen_i      = iter(range(initial_population))
+            gen_config = _random_configs(parameters, True)
+            
+            i      = next(gen_i)
+            config = next(gen_config)
+            while True:
+                try:
+                    _iter(config)
+                    i = next(gen_i)
+                except InvalidHyperparameterError as e:
+                    pass
+                config = next(gen_config)
+        except StopIteration:
+            pass
+        i = initial_population
+        print("Simple GA: Generated the initial population")
+        while i < limit:
+            done = False
+            while not done:
+                try:
+                    if random.random() < mutation_ratio:
+                        print("Simple GA: mutation was selected")
+                        child = _generate_child_by_mutation(open_list, close_list, population, 10000, parameters)
+                    else:
+                        print("Simple GA: crossover was selected")
+                        child = _generate_child_by_crossover(open_list, close_list, population, 10000, parameters)
+                    done = True
+                except Exception as e:
+                    print(e)
+                    print("Simple GA: Increasing populations {} -> {}".format(population,population*2))
+                    population = population*2
+                    if population > len(close_list.items()):
+                        print("Simple GA: Search space exhausted.")
+                        return best['artifact'],best['params'],best['eval']
+            
+            try:
+                _iter(child)
+                i += 1
+            except InvalidHyperparameterError as e:
+                pass
+    finally:
+        _final_report(best,results)
+    return best['artifact'],best['params'],best['eval']
