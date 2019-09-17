@@ -16,7 +16,7 @@ def Sequential (array):
             print("applying {}({})".format(f,arg))
         result = f(arg)
         if debug:
-            print(K.int_shape(result))
+            print(K.int_shape(result), K.shape(result))
         return result
     return lambda x: reduce(apply1, array, x)
 
@@ -43,7 +43,11 @@ def wrap(x,y,**kwargs):
 
 def flatten(x):
     if K.ndim(x) >= 3:
-        return Flatten()(x)
+        try:
+            # it sometimes fails to infer shapes
+            return Reshape((int(np.prod(K.int_shape(x)[1:])),))(x)
+        except:
+            return Flatten()(x)
     else:
         return x
 
