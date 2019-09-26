@@ -69,7 +69,7 @@ This dict can be used while building the network, making it easier to perform a 
                                          ),
                           keras.callbacks.TensorBoard(log_dir=self.local('logs/{}-{}'.format(path,datetime.datetime.now().isoformat())), write_graph=False)]
         
-    def build(self,input_shape):
+    def build(self,*args,**kwargs):
         """An interface for building a network. Input-shape: list of dimensions.
 Users should not overload this method; Define _build() for each subclass instead.
 This function calls _build bottom-up from the least specialized class.
@@ -78,13 +78,13 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             if self.verbose:
                 print("Avoided building {} twice.".format(self))
             return
-        self._build(input_shape)
+        self._build(*args,**kwargs)
         self.built = True
         if not hasattr(self,"eval"):
             self.eval = self.loss
         return self
     
-    def _build(self,input_shape):
+    def _build(self,*args,**kwargs):
         """An interface for building a network.
 This function is called by build() only when the network is not build yet.
 Users may define a method for each subclass for adding a new build-time feature.
