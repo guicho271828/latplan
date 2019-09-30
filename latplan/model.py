@@ -833,10 +833,11 @@ class LocalityMixin:
         })
         self.callbacks.append(LambdaCallback(on_epoch_end=self.locality_alpha.update))
         
-        def locality_alpha(x, y):
-            return self.locality_alpha.variable
-        
-        self.metrics.append(locality_alpha)
+        # def locality_alpha(x, y):
+        #     return self.locality_alpha.variable
+        # 
+        # self.metrics.append(locality_alpha)
+        return
 
 class HammingMixin(LocalityMixin, HammingLoggerMixin):
     def _build(self,input_shape):
