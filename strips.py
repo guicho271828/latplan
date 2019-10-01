@@ -155,7 +155,7 @@ def run(path,train,test,parameters,train_out=None,test_out=None,):
                       test_data     = test,
                       train_data_to = train_out,
                       test_data_to  = test_out,)
-            # plot_autoencoding_image(ae,test,train)
+            plot_autoencoding_image(ae,test,train)
             
         ae, _, _ = grid_search(curry(nn_task, latplan.model.get(default_parameters["aeclass"]),
                                      path,
