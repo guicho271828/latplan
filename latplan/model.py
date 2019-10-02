@@ -161,8 +161,8 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         import progressbar
         widgets = [
             progressbar.Timer(format='%(elapsed)s'),
-            ' ', progressbar.Counter(), 
-            progressbar.Bar(),
+            ' ', progressbar.Counter(), ' | ',
+            # progressbar.Bar(),
             progressbar.AbsoluteETA(format='%(eta)s'), ' ',
             DynamicMessage("status")
         ]
@@ -174,16 +174,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         if not hasattr(self,'bar'):
             self.initialize_bar()
 
-        msg = self.bar_status_message
-        
-        self.bar_shift = self.bar_shift+1
-        if len(msg) > Network.msgwidth:
-            b = self.bar_shift % len(msg)
-        else:
-            b = 0
-
-        self.bar.update(self.bar_epoch,
-                        status = "   ".join([msg,msg])[b:b+Network.msgwidth])
+        self.bar.update(self.bar_epoch, status = self.bar_status_message)
 
     def bar_update(self, epoch, logs):
         "Used for updating the progress bar."
