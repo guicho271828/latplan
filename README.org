@@ -13,7 +13,7 @@ This repository contains the source code of LatPlan.
 
 + Asai, M.: 2019. Unsupervised Grounding of Plannable First-Order Logic Representation from Images (code not yet available)
   + *Accepted* in ICAPS-2019, Learning and Planning Track. https://arxiv.org/abs/1902.08093
-+ Asai, M.; Kajino, F: 2019. Towards Stable Symbol Grounding with Zero-Suppressed State AutoEncoder (code not yet available)
++ Asai, M.; Kajino, F: 2019. Towards Stable Symbol Grounding with Zero-Suppressed State AutoEncoder
   + *Accepted* in ICAPS-2019, Learning and Planning Track. https://arxiv.org/abs/1903.11277
 + Asai, M.; Fukunaga, A: 2018. Classical Planning in Deep Latent Space: Breaking the Subsymbolic-Symbolic Boundary.
   + *Accepted* in AAAI-2018. https://arxiv.org/abs/1705.00154
