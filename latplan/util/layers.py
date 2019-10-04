@@ -140,8 +140,11 @@ def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return math.log(max/min) / epoch
 
-def take_true():
-    return Lambda(lambda x: x[:,:,0], name="take_true")
+take_true_counter = 0
+def take_true(name="take_true"):
+    global take_true_counter
+    take_true_counter += 1
+    return Lambda(lambda x: x[:,:,0], name="{}_{}".format(name,take_true_counter))
 
 class Gaussian:
     count = 0
