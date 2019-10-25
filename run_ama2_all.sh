@@ -11,38 +11,40 @@ dir=$(dirname $(dirname $(readlink -ef $0)))
 export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1
 
+probdir=problem-instances
+
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
          ::: $(ls -d samples/puzzle*mnist* ) \
-         ::: noise-0.6-0.12-ama2/*/latplan.puzzles.puzzle_mnist/* \
+         ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
          ::: Astar
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
          ::: $(ls -d samples/puzzle*mandrill* ) \
-         ::: noise-0.6-0.12-ama2/*/latplan.puzzles.puzzle_mandrill/* \
+         ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
          ::: Astar
 
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
          ::: $(ls -d samples/puzzle*spider* ) \
-         ::: noise-0.6-0.12-ama2/*/latplan.puzzles.puzzle_spider/* \
+         ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
          ::: Astar
 
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
          ::: $(ls -d samples/lightsout*digital* ) \
-         ::: noise-0.6-0.12-ama2/*/latplan.puzzles.lightsout_digital/* \
+         ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
          ::: Astar
 
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
          ::: $(ls -d samples/lightsout*twisted* ) \
-         ::: noise-0.6-0.12-ama2/*/latplan.puzzles.lightsout_twisted/* \
+         ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
          ::: Astar
 
 
 # parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
 #          ::: samples/hanoi* \
-#          ::: noise-0.6-0.12-ama2/*/latplan.puzzles.hanoi/* \
+#          ::: $probdir/*/latplan.puzzles.hanoi/* \
 #          ::: Astar
 
 

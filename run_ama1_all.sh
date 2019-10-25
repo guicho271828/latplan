@@ -44,43 +44,45 @@ dir=$(dirname $(dirname $(readlink -ef $0)))
 export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1
 
+probdir=problem-instances
+
 parallel --no-notice \
          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
          ::: samples/puzzle*mnist* \
-         ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_mnist/* \
+         ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
          ::: blind ::: all_actions actions
 
 parallel --no-notice \
          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
          ::: samples/puzzle*mandrill* \
-         ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_mandrill/* \
+         ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
          ::: blind ::: all_actions actions
 
 
 parallel --no-notice \
          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
          ::: samples/puzzle*spider* \
-         ::: noise-0.6-0.12-ama1/*/latplan.puzzles.puzzle_spider/* \
+         ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
          ::: blind ::: all_actions actions
 
 
 parallel --no-notice \
          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
          ::: samples/lightsout*digital* \
-         ::: noise-0.6-0.12-ama1/*/latplan.puzzles.lightsout_digital/* \
+         ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
          ::: blind ::: all_actions actions
 
 
 parallel --no-notice \
          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
          ::: samples/lightsout*twisted* \
-         ::: noise-0.6-0.12-ama1/*/latplan.puzzles.lightsout_twisted/* \
+         ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
          ::: blind ::: all_actions actions
 
 
 # parallel --no-notice \
 #          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
 #          ::: samples/hanoi* \
-#          ::: noise-0.6-0.12-ama1/*/latplan.puzzles.hanoi/* \
+#          ::: $probdir/*/latplan.puzzles.hanoi/* \
 #          ::: blind ::: all_actions actions
 
