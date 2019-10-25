@@ -50,39 +50,39 @@ export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1
 export PATH=VAL:$PATH
 
-command="jbsub $common 'helper/ama3-planner.sh {1} {2} {3}'"
+command="jbsub -hold $common 'helper/ama3-planner.sh {1} {2} {3}'"
 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*mnist*100_20000_0.7*/${key}*.pddl \
+         ::: samples/puzzle*mnist*169_10000_0.7_0.0*/${key}*.pddl \
          ::: noise-0.6-0.12-ama3/*/latplan.puzzles.puzzle_mnist/* \
-         ::: blind ff
+         ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*mandrill*100_20000_0.7*/${key}*.pddl \
+         ::: samples/puzzle*mandrill*169_10000_0.7_0.0*/${key}*.pddl \
          ::: noise-0.6-0.12-ama3/*/latplan.puzzles.puzzle_mandrill/* \
-         ::: blind ff
+         ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*spider*100_20000_0.7*/${key}*.pddl \
+         ::: samples/puzzle*spider*169_10000_0.7_0.0*/${key}*.pddl \
          ::: noise-0.6-0.12-ama3/*/latplan.puzzles.puzzle_spider/* \
-         ::: blind ff
+         ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/lightsout*digital*100_20000_0.7*/${key}*.pddl \
+         ::: samples/lightsout*digital*169_10000_0.7_0.0*/${key}*.pddl \
          ::: noise-0.6-0.12-ama3/*/latplan.puzzles.lightsout_digital/* \
-         ::: blind ff
+         ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/lightsout*twisted*100_20000_0.7*/${key}*.pddl \
+         ::: samples/lightsout*twisted*169_10000_0.7_0.0*/${key}*.pddl \
          ::: noise-0.6-0.12-ama3/*/latplan.puzzles.lightsout_twisted/* \
-         ::: blind ff
+         ::: blind 
 
 # parallel -j 1 --no-notice \
 #          "jbsub $common './ama3-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama3.log 2> {2}/{1/}_{3}.ama3.err'" \
 #          ::: samples/hanoi* \
 #          ::: noise-0.6-0.12-ama3/*/latplan.puzzles.hanoi/* \
-#          ::: blind ff \
+#          ::: blind  \
          # ::: remlic-1-1-0 remlic-2-2-0 remlic-4-4-0  actionlearner rf-2-others1b-t rf-5-others1b-t rf-10-others1b-t
 
 

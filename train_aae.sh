@@ -13,5 +13,5 @@ common="jbsub -mem 64g -cores 1+1 -queue x86_24h -proj $proj"
 parallel $common PYTHONPATH=$dir:$PYTHONPATH PYTHONUNBUFFERED=1 {} \
          ::: ./action_autoencoder.py \
          ::: \
-         samples/* \
+         samples/*_1000_* \
          ::: learn_test_dump

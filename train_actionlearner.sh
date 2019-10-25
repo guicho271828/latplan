@@ -20,7 +20,7 @@ actionlearner (){
 export -f actionlearner
 
 common="jbsub -mem 9g -cores 1 -queue x86_1h -proj $proj"
-parallel $common ::: actionlearner ::: samples/*/
+# parallel $common ::: actionlearner ::: samples/*/
 
 dsama-effect (){
     dir=$1
@@ -37,11 +37,11 @@ dsama-effect (){
              ::: $(seq $actions) \
              ::: binary-random-forest-classifier diff-random-forest-classifier \
              ::: :n-tree \
-             ::: 20 \
+             ::: 5 \
              ::: :bagging-ratio \
              ::: 0.34 \
              ::: :max-depth \
-             ::: 169
+             ::: 10
     true
 }
 
@@ -59,11 +59,11 @@ dsama-precondition (){
              ::: $(seq $actions) \
              ::: binary-random-forest-classifier pu-random-forest-classifier \
              ::: :n-tree \
-             ::: 20 \
+             ::: 5 \
              ::: :bagging-ratio \
              ::: 0.34 \
              ::: :max-depth \
-             ::: 169
+             ::: 10
     true
 }
 
@@ -72,10 +72,10 @@ export -f dsama-effect dsama-precondition
 common="jbsub -mem 9g -cores 16 -queue x86_1h -proj $proj"
 
 parallel $common dsama-effect \
-         ::: samples/*/
+         ::: samples/*_1000_*/
 
 common="jbsub -mem 9g -cores 16 -queue x86_1h -proj $proj"
 
 parallel $common dsama-precondition \
-         ::: samples/*/
+         ::: samples/*_1000_*/
 

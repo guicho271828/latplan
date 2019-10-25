@@ -22,4 +22,4 @@ to-pddl (){
 export -f to-pddl
 
 common="jbsub -mem 9g -cores 1 -queue x86_1h -proj $proj"
-parallel $common ::: to-pddl ::: samples/*/
+parallel $common ::: to-pddl ::: samples/*_169_*/
