@@ -17,7 +17,7 @@ from keras.datasets import mnist
 from keras.activations import softmax
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse, mae
-from keras.callbacks import LambdaCallback, LearningRateScheduler, Callback
+from keras.callbacks import LambdaCallback, LearningRateScheduler, Callback, CallbackList
 from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 from .util.noise import gaussian, salt, pepper
@@ -48,6 +48,12 @@ def load(directory,allow_failure=False):
         classobj = get(get_ae_type(directory))
     return classobj(directory).load(allow_failure=allow_failure)
 
+def ensure_list(x):
+    if type(x) is not list:
+        return [x]
+    else:
+        return x
+
 class Network:
     """Base class for various neural networks including GANs, AEs and Classifiers.
 Provides an interface for saving / loading the trained weights as well as hyperparameters.
@@ -66,6 +72,7 @@ This dict can be used while building the network, making it easier to perform a 
         subprocess.call(["mkdir","-p",path])
         self.path = path
         self.built = False
+        self.compiled = False
         self.loaded = False
         self.verbose = True
         self.parameters = parameters
@@ -76,6 +83,8 @@ This dict can be used while building the network, making it easier to perform a 
         
         self.custom_log_functions = {}
         self.metrics = []
+        self.nets    = [None]
+        self.losses  = [None]
         import datetime
         self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update,
                                          # on_epoch_begin=self.bar_update
@@ -93,8 +102,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             return
         self._build(*args,**kwargs)
         self.built = True
-        if not hasattr(self,"eval"):
-            self.eval = self.loss
         return self
     
     def _build(self,*args,**kwargs):
@@ -105,6 +112,22 @@ Each method should call the _build() method of the superclass in turn.
 Users are not expected to call this method directly. Call build() instead.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         pass
+    
+    def compile(self,*args,**kwargs):
+        """An interface for compiling a network."""
+        if self.compiled:
+            if self.verbose:
+                print("Avoided compiling {} twice.".format(self))
+            return
+        self._compile(*args,**kwargs)
+        self.compiled = True
+        return self
+    
+    def _compile(self,optimizers):
+        """An interface for compileing a network."""
+        # default method.
+        for net, o, loss in zip(self.nets, optimizers, self.losses):
+            net.compile(optimizer=o, loss=loss, metrics=self.metrics)
     
     def local(self,path):
         """A convenient method for converting a relative path to the learned result directory
@@ -127,6 +150,9 @@ Users may define a method for each subclass for adding a new save-time feature.
 Each method should call the _save() method of the superclass in turn.
 Users are not expected to call this method directly. Call save() instead.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
+        for i, net in enumerate(self.nets):
+            net.save_weights(self.local("net{}.h5".format(i)))
+
         import json
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
@@ -168,9 +194,9 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             data = json.load(f)
             self.parameters = data["parameters"]
             self.build(tuple(data["input_shape"]))
-        self.net.compile(Adam(0.0001),bce)
+        for i, net in enumerate(self.nets):
+            net.load_weights(self.local("net{}.h5".format(i)))
         
-
     def initialize_bar(self):
         import progressbar
         widgets = [
@@ -205,7 +231,25 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             self.bar.update(epoch+1, status = "[v] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(vlogs.items())]) + "\n")
         else:
             self.bar.update(epoch+1, status = "[t] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(tlogs.items())]))
-        
+
+    @property
+    def net(self):
+        return self.nets[0]
+
+    @net.setter
+    def net(self,net):
+        self.nets[0] = net
+        return net
+    
+    @property
+    def loss(self):
+        return self.losses[0]
+
+    @loss.setter
+    def loss(self,loss):
+        self.losses[0] = loss
+        return loss
+    
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,test_data=None,save=True,report=True,
               train_data_to=None,
@@ -213,33 +257,110 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
               **kwargs):
         """Main method for training.
  This method may be overloaded by the subclass into a specific training method, e.g. GAN training."""
-        if isinstance(optimizer, str):
-            o = getattr(keras.optimizers,optimizer)(lr)
-        else:
-            o = optimizer
-        test_data     = train_data if test_data is None else test_data
-        train_data_to = train_data if train_data_to is None else train_data_to
-        test_data_to  = test_data  if test_data_to is None else test_data_to
 
-        self.build(train_data.shape[1:])
-        if debug:
-            self.summary()
+        if test_data     is None:
+            test_data     = train_data
+        if train_data_to is None:
+            train_data_to = train_data
+        if test_data_to  is None:
+            test_data_to  = test_data
+
+        self.max_epoch = epoch
+        self.build(train_data.shape[1:]) # depends on self.optimizer
         print("parameters",self.parameters)
-        print("train_shape",train_data.shape, "test_shape",test_data.shape)
 
-        validation = (test_data,test_data_to) if test_data is not None else None
+        def replicate(thing):
+            if isinstance(thing, tuple):
+                thing = list(thing)
+            if isinstance(thing, list):
+                assert len(thing) == len(self.nets)
+                return thing
+            else:
+                return [thing for _ in self.nets]
+          
+        train_data    = replicate(train_data)
+        train_data_to = replicate(train_data_to)
+        test_data     = replicate(test_data)
+        test_data_to  = replicate(test_data_to)
+        optimizer     = replicate(optimizer)
+        lr            = replicate(lr)
+        
+        def get_optimizer(optimizer,lr):
+            return getattr(keras.optimizers,optimizer)(lr)
+
+        self.compile(list(map(get_optimizer, optimizer, lr)))
+
+        def assert_length(data):
+            l = None
+            for subdata in data:
+                if not ((l is None) or (len(subdata) == l)):
+                    return False
+                l = len(subdata)
+            return True
+        
+        assert assert_length(train_data   )
+        assert assert_length(train_data_to)
+        assert assert_length(test_data    )
+        assert assert_length(test_data_to )
+    
+        def make_batch(subdata):
+            # len: 15, batch: 5 -> 3 : 19//5 = 3
+            # len: 14, batch: 5 -> 3 : 18//5 = 3
+            # len: 16, batch: 5 -> 4 : 20//5 = 4
+            for i in range((len(subdata)+batch_size-1)//batch_size):
+                yield subdata[i*batch_size:min((i+1)*batch_size,len(subdata))]
+
+        index_array = np.arange(len(train_data[0]))
+        np.random.shuffle(index_array)
+        
+        clist = CallbackList(callbacks=self.callbacks)
+        clist.set_model(self.nets[0])
+        clist.set_params({
+            'batch_size': batch_size,
+            'epochs': epoch,
+            'steps': None,
+            'samples': len(train_data[0]),
+            'verbose': 0,
+            'do_validation': False,
+            'metrics': [],
+        })
+
+        def generate_logs(data,data_to):
+            logs   = {}
+            losses = []
+            for i, (net, subdata, subdata_to) in enumerate(zip(self.nets, data, data_to)):
+                evals = net.evaluate(subdata,
+                                     subdata_to,
+                                     batch_size=batch_size,
+                                     verbose=0)
+                logs = { k:v for k,v in zip(net.metrics_names, ensure_list(evals)) }
+                losses.append(logs["loss"])
+            if len(losses) > 2:
+                for i, loss in enumerate(losses):
+                    logs["loss"+str(i)] = loss
+            logs["loss"] = np.sum(losses)
+            return logs
+        
         try:
-            self.max_epoch = epoch
-            self.net.compile(optimizer=o, loss=self.loss, metrics=self.metrics)
-            self.net.fit(
-                train_data, train_data_to,
-                epochs=epoch, batch_size=batch_size,
-                shuffle=True, validation_data=validation, verbose=False,
-                callbacks=self.callbacks)
+            clist.on_train_begin()
+            logs = {}
+            indices_cache       = [ indices for indices in make_batch(index_array) ]
+            train_data_cache    = [[ train_subdata   [indices] for train_subdata    in train_data    ] for indices in indices_cache ]
+            train_data_to_cache = [[ train_subdata_to[indices] for train_subdata_to in train_data_to ] for indices in indices_cache ]
+            for epoch in range(epoch):
+                clist.on_epoch_begin(epoch,logs)
+                for train_subdata_cache,train_subdata_to_cache in zip(train_data_cache,train_data_to_cache):
+                    for net,train_subdata_batch_cache,train_subdata_to_batch_cache in zip(self.nets, train_subdata_cache,train_subdata_to_cache):
+                        net.train_on_batch(train_subdata_batch_cache, train_subdata_to_batch_cache)
+
+                logs = generate_logs(train_data, train_data_to)
+                for k,v in generate_logs(test_data,  test_data_to).items():
+                    logs["val_"+k] = v
+                clist.on_epoch_end(epoch,logs)
+            clist.on_train_end()
+        
         except KeyboardInterrupt:
             print("learning stopped\n")
-        finally:
-            self.net.compile(optimizer=o, loss=self.eval)
         self.loaded = True
         if report:
             self.report(train_data,
@@ -251,6 +372,14 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             self.save()
         return self
     
+    def evaluate(self,*args,**kwargs):
+
+        return np.sum([
+            { k:v for k,v in zip(net.metrics_names,
+                                 ensure_list(net.evaluate(*args,**kwargs)))}["loss"]
+            for net in self.nets
+        ])
+
     def report(self,train_data,
                batch_size=1000,
                test_data=None,
@@ -274,26 +403,18 @@ class AE(Network):
 Additionally, provides ENCODE / DECODE / AUTOENCODE / AUTODECODE methods.
 The latter two are used for verifying the performance of the AE.
 """
-    def _save(self):
-        super()._save()
-        self.encoder.save_weights(self.local("encoder.h5"))
-        self.decoder.save_weights(self.local("decoder.h5"))
-        
-    def _load(self):
-        super()._load()
-        self.encoder.load_weights(self.local("encoder.h5"))
-        self.decoder.load_weights(self.local("decoder.h5"))
-
     def _report(self,test_both,**opts):
-        self.autoencoder.compile(optimizer='adam', loss=self.eval)
-        test_both([self.eval.__name__,"vanilla"],
-                  lambda data: float(self.autoencoder.evaluate(data,data,**opts)))
-        test_both([self.eval.__name__,"gaussian"],
-                  lambda data: float(self.autoencoder.evaluate(gaussian(data),data,**opts)))
-        test_both([self.eval.__name__,"salt"],
-                  lambda data: float(self.autoencoder.evaluate(salt(data),data,**opts)))
-        test_both([self.eval.__name__,"pepper"],
-                  lambda data: float(self.autoencoder.evaluate(pepper(data),data,**opts)))
+
+        from .util.np_distances import mse
+
+        test_both(["MSE","vanilla"],
+                  lambda data: mse(data, self.autoencode(data,**opts)))
+        test_both(["MSE","gaussian"],
+                  lambda data: mse(data, self.autoencode(gaussian(data),**opts)))
+        test_both(["MSE","salt"],
+                  lambda data: mse(data, self.autoencode(salt(data),**opts)))
+        test_both(["MSE","pepper"],
+                  lambda data: mse(data, self.autoencode(pepper(data),**opts)))
 
         test_both(["activation"],
                   lambda data: float(self.encode(data,**opts).mean()))
@@ -615,7 +736,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         w2 = Sequential(_encoder)(y2)
 
         self.loss = BCE
-        self.eval = MSE
         self.metrics.append(BCE)
         self.metrics.append(MSE)
         self.encoder     = Model(x, z)
@@ -1040,12 +1160,6 @@ class Discriminator(Network):
         self.loss = bce
         self.net = Model(x, y)
         
-    def _save(self):
-        super()._save()
-        self.net.save_weights(self.local("net.h5"))
-    def _load(self):
-        super()._load()
-        self.net.load_weights(self.local("net.h5"))
     def report(self,train_data,
                epoch=200,
                batch_size=1000,optimizer=Adam(0.001),

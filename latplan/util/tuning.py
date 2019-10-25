@@ -99,7 +99,7 @@ def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
               val_data_to=val_out,
               save=False,
               **parameters,)
-    error = net.net.evaluate(val_in,val_out,batch_size=100,verbose=0)
+    error = net.evaluate(val_in,val_out,batch_size=100,verbose=0)
     return net, error
 
 def merge_hash(a, b):
