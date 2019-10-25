@@ -24,7 +24,7 @@ from .util.noise import gaussian, salt, pepper
 from .util.distances import *
 from .util.layers    import *
 from .util.perminv   import *
-
+from .util.tuning    import InvalidHyperparameterError
 
 # utilities ###############################################################
 
@@ -397,6 +397,175 @@ The latter two are used for verifying the performance of the AE.
             
         return fn(**kwargs)
 
+# Latent Activations ################################################################
+
+class ConcreteLatentMixin:
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        # this is not necessary for shape consistency but it helps pruning some hyperparameters
+        if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
+            if self.parameters['M'] != 2:
+                raise InvalidHyperparameterError()
+    def zdim(self):
+        return (self.parameters['N'],)
+    def zindim(self):
+        return (self.parameters['N'],self.parameters['M'],)
+    def activation(self):
+        return Sequential([
+            self.build_gs(),
+            take_true(),
+        ])
+
+class QuantizedLatentMixin:
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        # this is not necessary for shape consistency but it helps pruning some hyperparameters
+        if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
+            if self.parameters['M'] != 2:
+                raise InvalidHyperparameterError()
+    def zdim(self):
+        return (self.parameters['N'],)
+    def zindim(self):
+        return (self.parameters['N'],)
+    def activation(self):
+        return heavyside()
+
+class SigmoidLatentMixin:
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        # this is not necessary for shape consistency but it helps pruning some hyperparameters
+        if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
+            if self.parameters['M'] != 2:
+                raise InvalidHyperparameterError()
+    def zdim(self):
+        return (self.parameters['N'],)
+    def zindim(self):
+        return (self.parameters['N'],)
+    def activation(self):
+        return rounded_sigmoid()
+
+class GumbelSoftmaxLatentMixin:
+    def zdim(self):
+        return (self.parameters['N']*self.parameters['M'],)
+    def zindim(self):
+        return (self.parameters['N']*self.parameters['M'],)
+    def activation(self):
+        return Sequential([
+            self.build_gs(),
+            flatten,
+        ])
+
+class SoftmaxLatentMixin:
+    def zdim(self):
+        return (self.parameters['N']*self.parameters['M'],)
+    def zindim(self):
+        return (self.parameters['N']*self.parameters['M'],)
+    def activation(self):
+        return Sequential([
+            Reshape((self.parameters['N'],self.parameters['M'],)),
+            rounded_softmax(),
+            flatten,
+        ])
+
+# Encoder / Decoder ################################################################
+
+class FullConnectedEncoderMixin:
+    def build_encoder(self,input_shape):
+        return [flatten,
+                GaussianNoise(self.parameters['noise']),
+                BN(),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                BN(),
+                Dropout(self.parameters['dropout']),
+                Dense(np.prod(self.zindim())),
+                self.activation(),
+        ]
+
+class FullConnectedDecoderMixin:
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        return [
+            flatten,
+            *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            BN(),
+            Dropout(self.parameters['dropout']),
+            Dense(data_dim, activation='sigmoid'),
+            Reshape(input_shape),]
+
+class ConvolutionalEncoderMixin:
+    """A mixin that uses convolutions in the encoder."""
+    def build_encoder(self,input_shape):
+        return [Reshape((*input_shape,1)),
+                GaussianNoise(self.parameters['noise']),
+                BN(),
+                *[Convolution2D(self.parameters['clayer'],(3,3),
+                                activation=self.parameters['activation'],padding='same', use_bias=False),
+                  Dropout(self.parameters['dropout']),
+                  BN(),
+                  MaxPooling2D((2,2)),],
+                *[Convolution2D(self.parameters['clayer'],(3,3),
+                                activation=self.parameters['activation'],padding='same', use_bias=False),
+                  Dropout(self.parameters['dropout']),
+                  BN(),
+                  MaxPooling2D((2,2)),],
+                flatten,
+                Sequential([
+                    Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
+                    BN(),
+                    Dropout(self.parameters['dropout']),
+                    Dense(np.prod(self.zindim())),
+                ]),
+                self.activation(),
+        ]
+
+class ConvolutionalDecoderMixin:
+    """A mixin that uses convolutions also in the decoder. Somehow it does not converge."""
+    def build_decoder(self,input_shape):
+        "this function did not converge well. sigh"
+        data_dim = np.prod(input_shape)
+        last_convolution = 1 + np.array(input_shape) // 4
+        first_convolution = last_convolution * 4
+        diff = tuple(first_convolution - input_shape)
+        crop = [[0,0],[0,0]]
+        for i in range(2):
+            if diff[i] % 2 == 0:
+                for j in range(2):
+                    crop[i][j] = diff[i] // 2
+            else:
+                crop[i][0] = diff[i] // 2
+                crop[i][1] = diff[i] // 2 + 1
+        crop = ((crop[0][0],crop[0][1]),(crop[1][0],crop[1][1]))
+        print(last_convolution,first_convolution,diff,crop)
+
+        return [*([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
+                *[Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                  BN(),
+                  Dropout(self.parameters['dropout']),],
+                *[Dense(np.prod(last_convolution) * self.parameters['clayer'], activation='relu', use_bias=False),
+                  BN(),
+                  Dropout(self.parameters['dropout']),],
+                Reshape((*last_convolution, self.parameters['clayer'])),
+                *[UpSampling2D((2,2)),
+                  Deconvolution2D(self.parameters['clayer'],(3,3), activation='relu',padding='same', use_bias=False),
+                  BN(),
+                  Dropout(self.parameters['dropout']),],
+                *[UpSampling2D((2,2)),
+                  Deconvolution2D(1,(3,3), activation='sigmoid',padding='same'),],
+                Cropping2D(crop),
+                Reshape(input_shape),]
+
+# State Auto Encoder ################################################################
+
 class GumbelAE(AE):
     """An AE whose latent layer is GumbelSofmax.
 Fully connected layers only, no convolutions.
@@ -559,69 +728,6 @@ class ZeroSuppressMixin:
         self.metrics.append(activation)
         self.metrics.append(zerosup_alpha)
         return
-
-class ConvolutionalMixin:
-    """A mixin that uses convolutions in the encoder."""
-    def build_encoder(self,input_shape):
-        return [Reshape((*input_shape,1)),
-                GaussianNoise(self.parameters['noise']),
-                BN(),
-                *[Convolution2D(self.parameters['clayer'],(3,3),
-                                activation=self.parameters['activation'],padding='same', use_bias=False),
-                  Dropout(self.parameters['dropout']),
-                  BN(),
-                  MaxPooling2D((2,2)),],
-                *[Convolution2D(self.parameters['clayer'],(3,3),
-                                activation=self.parameters['activation'],padding='same', use_bias=False),
-                  Dropout(self.parameters['dropout']),
-                  BN(),
-                  MaxPooling2D((2,2)),],
-                flatten,
-                Sequential([
-                    Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
-                    BN(),
-                    Dropout(self.parameters['dropout']),
-                    Dense(self.parameters['N']*self.parameters['M']),
-                ]),
-                self.build_gs(),
-                take_true(),
-        ]
-
-class Convolutional2Mixin:
-    """A mixin that uses convolutions also in the decoder. Somehow it does not converge."""
-    def build_decoder(self,input_shape):
-        "this function did not converge well. sigh"
-        data_dim = np.prod(input_shape)
-        last_convolution = 1 + np.array(input_shape) // 4
-        first_convolution = last_convolution * 4
-        diff = tuple(first_convolution - input_shape)
-        crop = [[0,0],[0,0]]
-        for i in range(2):
-            if diff[i] % 2 == 0:
-                for j in range(2):
-                    crop[i][j] = diff[i] // 2
-            else:
-                crop[i][0] = diff[i] // 2
-                crop[i][1] = diff[i] // 2 + 1
-        crop = ((crop[0][0],crop[0][1]),(crop[1][0],crop[1][1]))
-        print(last_convolution,first_convolution,diff,crop)
-        
-        return [*([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
-                *[Dense(self.parameters['layer'], activation='relu', use_bias=False),
-                  BN(),
-                  Dropout(self.parameters['dropout']),],
-                *[Dense(np.prod(last_convolution) * self.parameters['clayer'], activation='relu', use_bias=False),
-                  BN(),
-                  Dropout(self.parameters['dropout']),],
-                Reshape((*last_convolution, self.parameters['clayer'])),
-                *[UpSampling2D((2,2)),
-                  Deconvolution2D(self.parameters['clayer'],(3,3), activation='relu',padding='same', use_bias=False),
-                  BN(),
-                  Dropout(self.parameters['dropout']),],
-                *[UpSampling2D((2,2)),
-                  Deconvolution2D(1,(3,3), activation='sigmoid',padding='same'),],
-                Cropping2D(crop),
-                Reshape(input_shape),]
 
 # The original Gumbel Softmax formulation that minimizes the KL divergence
 # between the latent and the the Bernoulli(0.5)
