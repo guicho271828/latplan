@@ -6,6 +6,7 @@
 + *NEWS* Initial release: Published after AAAI18.
 + *NEWS* Updates on version 2: Mainly the refactoring. AAAI18 experiments still works.
 + *NEWS* Updates on version 2.1: Version 2 was not really working and I could finally have time to fix it. Added ZSAE experiments.
++ *NEWS* Updates on version 2.2: Backported more minor improvements from the private repository
 
 # [[https://travis-ci.org/guicho271828/latplan][https://travis-ci.org/guicho271828/latplan.svg?branch=master]]
 
@@ -71,8 +72,8 @@ The applications installed by the script consists of:
 + state_discriminator3.py :: The program for training an SD.
 + action_autoencoder.py :: The program for training an AAE.
 + action_discriminator.py :: The program for training an AD.
-+ fd-planner.py :: Latplan using AMA1.
-+ trivial-planner.py :: Latplan using AMA2.
++ ama1-planner.py :: Latplan using AMA1.
++ ama2-planner.py :: Latplan using AMA2.
 + run_ama1_all.sh, run_ama2_all.sh :: Run all experiments.
 + various sh files :: supporting scripts.
 + util/ :: contains general-purpose utility functions for python code.
