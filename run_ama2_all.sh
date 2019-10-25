@@ -12,30 +12,30 @@ export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
-         ::: $(ls -d samples/puzzle*mnist* | grep -v 1000 | grep -v convn ) \
+         ::: $(ls -d samples/puzzle*mnist* ) \
          ::: noise-0.6-0.12-ama2/*/latplan.puzzles.puzzle_mnist/* \
          ::: Astar
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
-         ::: $(ls -d samples/puzzle*mandrill* | grep -v 1000 | grep -v convn ) \
+         ::: $(ls -d samples/puzzle*mandrill* ) \
          ::: noise-0.6-0.12-ama2/*/latplan.puzzles.puzzle_mandrill/* \
          ::: Astar
 
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
-         ::: $(ls -d samples/puzzle*spider* | grep -v 1000 | grep -v convn ) \
+         ::: $(ls -d samples/puzzle*spider* ) \
          ::: noise-0.6-0.12-ama2/*/latplan.puzzles.puzzle_spider/* \
          ::: Astar
 
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
-         ::: $(ls -d samples/lightsout*digital* | grep -v 1000 | grep -v convn ) \
+         ::: $(ls -d samples/lightsout*digital* ) \
          ::: noise-0.6-0.12-ama2/*/latplan.puzzles.lightsout_digital/* \
          ::: Astar
 
 
 parallel   "[ -f {2}/{1/}_{3}_path_0.valid ] || $common './ama2-planner.py {1} {2} {3}  > {2}/{1/}_{3}.log'" \
-         ::: $(ls -d samples/lightsout*twisted* | grep -v 1000 | grep -v convn ) \
+         ::: $(ls -d samples/lightsout*twisted* ) \
          ::: noise-0.6-0.12-ama2/*/latplan.puzzles.lightsout_twisted/* \
          ::: Astar
 
