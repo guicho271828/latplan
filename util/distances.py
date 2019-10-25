@@ -1,8 +1,15 @@
 
 import keras.backend as K
 
+from keras.objectives import categorical_crossentropy as cce
 from keras.objectives import binary_crossentropy as bce
 from keras.objectives import mse, mae
+
+def bcce(true, pred):
+    if K.ndim(true) == 3:
+        return cce(K.clip(true, 1e-8, 1-1e-8), K.clip(pred, 1e-8, 1-1e-8))
+    else:
+        return bce(K.clip(true, 1e-8, 1-1e-8), K.clip(pred, 1e-8, 1-1e-8))
 
 def BCE(x, y):
     return bce(K.batch_flatten(x),
