@@ -82,7 +82,7 @@ except:
                               default_parameters,
                               parameters)
         error = np.mean(np.abs(aae.autoencode(val)-val))
-        if error < 0.001:
+        if error < (1.0 / data.shape[1]): # i.e. below 1 bit
             break
     aae.save()
 
