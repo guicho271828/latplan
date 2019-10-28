@@ -50,7 +50,7 @@ else:
     data = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
 
 print(data.shape)
-
+N = data.shape[1]//2
 
 try:
     if 'learn' in mode:
@@ -80,12 +80,12 @@ except:
         aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae, train, train, val, val,),
                               default_parameters,
                               parameters)
-        error = np.mean(np.abs(aae.autoencode(val)-val))
-        if error < (1.0 / (data.shape[1] / 2)): # i.e. below 1 bit
+        val_diff = np.abs(aae.autoencode(val)-val)[:,N:]
+        val_mae  = np.mean(val_diff)
+        
+        if val_mae < (1.0 / N): # i.e. below 1 bit
             break
     aae.save()
-
-N = data.shape[1]//2
 
 actions = aae.encode_action(data, batch_size=1000).round()
 histogram = np.squeeze(actions.sum(axis=0,dtype=int))
@@ -123,35 +123,27 @@ if 'test' in mode:
     with Timer("loading csv..."):
         all_actions = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
 
-    with Timer("shuffling"):
-        random.shuffle(all_actions)
-    all_actions = all_actions[:10000]
+    # note: unlike rf, product of bitwise match probability is not grouped by actions
+    performance = {}
+    performance["mae"]           = {} # average bitwise match
+    performance["prob_bitwise"]  = {} # product of bitwise match probabilty
+    performance["prob_allmatch"] = {} # probability of complete match
+    
+    def metrics(data,track):
+        data_match           = 1-np.abs(aae.autoencode(data)-data)[:,N:]
+        performance["mae"][track]           = float(np.mean(data_match))                 # average bitwise match
+        performance["prob_bitwise"][track]  = float(np.prod(np.mean(data_match,axis=0))) # product of bitwise match probabilty
+        performance["prob_allmatch"][track] = float(np.mean(np.prod(data_match,axis=1))) # probability of complete match
 
-    count = 0
-    try:
-        pre_states = all_actions[:,:N]
-        suc_states = all_actions[:,N:]
-        pre_images = ae.decode(pre_states,batch_size=1000)
-        suc_images = ae.decode(suc_states,batch_size=1000)
+    metrics(val,"val")
+    metrics(train,"train")
+    metrics(all_actions,"all")
 
-        for pre_state,suc_state,pre_image,suc_image in zip(pre_states,suc_states,pre_images,suc_images):
-            
-            generated_transitions = aae.decode([
-                np.repeat([pre_state],effective_labels,axis=0),
-                all_labels,
-            ],batch_size=1000)
-            generated_suc_states = generated_transitions[:,N:]
-            generated_suc_images = ae.decode(generated_suc_states,batch_size=1000)
+    performance["effective_labels"] = int(effective_labels)
 
-            from latplan.util import bce
-            errors = bce(generated_suc_images, np.repeat([suc_image],effective_labels,axis=0), axis=(1,2))
-            min_error = np.amin(errors)
-            if min_error < 0.01:
-                count += 1
-    finally:
-        import json
-        with open(aae.local("performance.json"),"w") as f:
-            json.dump({"count": count, "total":len(all_actions)}, f)
+    import json
+    with open(aae.local("performance.json"),"w") as f:
+        json.dump(performance, f)
 
 if "dump" in mode:
     # one-hot to id
