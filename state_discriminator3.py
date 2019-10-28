@@ -9,6 +9,15 @@ from latplan.model import combined_discriminate, combined_discriminate2
 from latplan.util        import curry, prepare_binary_classification_data, set_difference, union, bce
 from latplan.util.tuning import grid_search, nn_task
 
+from keras.optimizers import Adam
+from keras_adabound   import AdaBound
+from keras_radam      import RAdam
+
+import keras.optimizers
+
+setattr(keras.optimizers,"radam", RAdam)
+setattr(keras.optimizers,"adabound", AdaBound)
+
 import keras.backend as K
 import tensorflow as tf
 
@@ -109,14 +118,15 @@ combined = None
 def learn(method):
     global cae, discriminator
     default_parameters = {
-        'lr'              : 0.0001,
-        'batch_size'      : 2000,
-        'full_epoch'      : 1000,
+        'lr'              : 0.001,
+        'batch_size'      : 1000,
         'epoch'           : 1000,
         'max_temperature' : 2.0,
         'min_temperature' : 0.1,
         'M'               : 2,
         'min_grad'        : 0.0,
+        'optimizer'       : 'radam',
+        'dropout'         : 0.4,
     }
     data_valid = np.loadtxt(sae.local("states.csv"),dtype=np.int8)
     train_in, train_out, test_in, test_out, data_valid, data_mixed = prepare(data_valid,sae)
@@ -130,15 +140,10 @@ def learn(method):
                                               train_in2, train_out, test_in2, test_out,),
                                         default_parameters,
                                         {
-                                            'num_layers' :[1],
-                                            'layer'      :[50],
+                                            'num_layers' :[1,2],
+                                            'layer'      :[300,1000],
                                             'clayer'     :[16],
-                                            'dropout'    :[0.8],
-                                            'batch_size' :[1000],
-                                            'full_epoch' :[1000],
-                                            'activation' :['relu'],
-                                            'epoch'      :[3000],
-                                            'lr'         :[0.0001],
+                                            'activation' :['relu','tanh'],
                                         })
     if method == "cae":
         # decode into image, learn a separate cae and learn from it
@@ -148,15 +153,10 @@ def learn(method):
                                     train_image, train_image, test_image, test_image),
                               default_parameters,
                               {
-                                  'num_layers' :[2],
-                                  'layer'      :[500],
+                                  'num_layers' :[1,2],
+                                  'layer'      :[300,1000],
                                   'clayer'     :[16],
-                                  'dropout'    :[0.4],
-                                  'batch_size' :[4000],
-                                  'full_epoch' :[1000],
-                                  'activation' :['relu'],
-                                  'epoch'      :[30],
-                                  'lr'         :[0.001],
+                                  'activation' :['relu','tanh'],
                               })
         cae.save()
         train_in2, test_in2 = cae.encode(train_image), cae.encode(test_image)
@@ -164,15 +164,10 @@ def learn(method):
                                               train_in2, train_out, test_in2, test_out,),
                                         default_parameters,
                                         {
-                                            'num_layers' :[1],
-                                            'layer'      :[50],
+                                            'num_layers' :[1,2],
+                                            'layer'      :[300,1000],
                                             'clayer'     :[16],
-                                            'dropout'    :[0.8],
-                                            'batch_size' :[1000],
-                                            'full_epoch' :[1000],
-                                            'activation' :['relu'],
-                                            'epoch'      :[3000],
-                                            'lr'         :[0.0001],
+                                            'activation' :['relu','tanh'],
                                         })
     if method == "direct":
         # learn directly from the latent encoding
@@ -180,15 +175,9 @@ def learn(method):
                                               train_in, train_out, test_in, test_out,),
                                         default_parameters,
                                         {
-                                            'layer'      :[300],# [400,4000],
-                                            'dropout'    :[0.1], #[0.1,0.4],
-                                            'num_layers' :[2],
-                                            'batch_size' :[1000],
-                                            'full_epoch' :[1000],
-                                            'activation' :['tanh'],
-                                            # quick eval
-                                            'epoch'      :[200],
-                                            'lr'         :[0.0001],
+                                            'num_layers' :[1,2],
+                                            'layer'      :[300,1000],# [400,4000],
+                                            'activation' :['relu','tanh'],
                                         })
     if method == "image":
         # learn directly from the image
@@ -197,15 +186,9 @@ def learn(method):
                                               train_image, train_out, test_image, test_out,),
                                         default_parameters,
                                         {
-                                            'layer'      :[300],# [400,4000],
-                                            'dropout'    :[0.1], #[0.1,0.4],
-                                            'num_layers' :[2],
-                                            'batch_size' :[1000],
-                                            'full_epoch' :[1000],
-                                            'activation' :['tanh'],
-                                            # quick eval
-                                            'epoch'      :[200],
-                                            'lr'         :[0.0001],
+                                            'num_layers' :[1,2],
+                                            'layer'      :[300,1000],# [400,4000],
+                                            'activation' :['relu','tanh'],
                                         })
     discriminator.parameters["method"] = method
     discriminator.save()
@@ -308,6 +291,7 @@ def main(directory, mode="test", method='feature'):
     from latplan.util import get_ae_type
     global sae
     sae = latplan.model.get(get_ae_type(directory))(directory).load()
+    sae.single_mode()
     import subprocess
     subprocess.call(["mkdir","-p", sae.local("_sd3/")])
 
