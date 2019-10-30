@@ -3,6 +3,7 @@ import warnings
 import config
 import sys
 import numpy as np
+import numpy.random as random
 import latplan
 import latplan.model
 from latplan.model       import combined_sd
@@ -61,7 +62,7 @@ def generate_random(data,sae,batch=None):
     if batch is None:
         batch = data.shape[0]
     N     = data.shape[1]
-    data_invalid = np.random.randint(0,2,(batch,N),dtype=np.int8)
+    data_invalid = random.randint(0,2,(batch,N),dtype=np.int8)
     data_invalid = regenerate_many(sae, data_invalid)
     data_invalid = prune_unreconstructable(sae, data_invalid)
     data_invalid = set_difference(data_invalid.round(), data.round())
@@ -106,7 +107,7 @@ def prepare(data_valid, sae):
 
 def prepare_random(data_valid, sae, inflation=1):
     batch = data_valid.shape[0]
-    data_mixed = np.random.randint(0,2,data_valid.shape,dtype=np.int8)
+    data_mixed = random.randint(0,2,data_valid.shape,dtype=np.int8)
     train_in, train_out, test_in, test_out = prepare_binary_classification_data(data_valid, data_mixed)
     return train_in, train_out, test_in, test_out, data_valid, data_mixed
 
@@ -206,61 +207,62 @@ def load(method):
     assert method == discriminator.parameters["method"]
 
 def test(method):
-    states_valid = np.loadtxt(sae.local("all_states.csv"),dtype=np.int8)
-    print("valid",states_valid.shape)
+    valid = np.loadtxt(sae.local("all_states.csv"),dtype=np.int8)
+    random.shuffle(valid)
 
-    from latplan.util.plot import plot_grid
-    performance = {}
-
-    ################################################################
-    # type 1 error
-    type1_d = combined_sd(states_valid,sae,cae,discriminator,batch_size=1000)
-    type1_error = np.sum(1- type1_d)
-    performance["type1"] = type1_error/len(states_valid) * 100
-    print("type1 error:",type1_error,"/",len(states_valid),
-          "Error ratio:", type1_error/len(states_valid) * 100, "%")
-
-    type1_error_images = sae.decode(states_valid[np.where(type1_d < 0.1)[0]])[:120]
-    if len(type1_error_images) == 0:
-        print("We observed ZERO type1-error! Hooray!")
-    else:
-        plot_grid(type1_error_images,
-                  w=20,
-                  path=discriminator.local("type1_error.png"))
-
-    ################################################################
-    # type 2 error
-    _,_,_,_, _, states_mixed = prepare(states_valid[:50000],sae)
-    print(len(states_mixed),"reconstructable states generated.")
-    performance["reconstructable_states"] = len(states_mixed)
+    _,_,_,_, _, mixed = prepare(valid[:50000],sae)
 
     p = latplan.util.puzzle_module(sae.path)
-    is_valid = p.validate_states(sae.decode(states_mixed))
-    states_invalid = states_mixed[np.logical_not(is_valid)]
-    states_invalid = states_invalid[:30000]
-    print(len(states_invalid),"invalid states generated.")
-    performance["invalid_states"] = len(states_invalid)
+    answers = p.validate_states(sae.decode(mixed))
+    invalid = mixed[np.logical_not(answers)]
+    random.shuffle(invalid)
 
-    if len(states_invalid) == 0:
-        performance["type2"] = float('nan')
-        print("We observed ZERO invalid states.")
-    else:
-        plot_grid(sae.decode(states_invalid)[:120],
-              w=20,
-              path=discriminator.local("surely_invalid_states.png"))
-        type2_d = combined_sd(states_invalid,sae,cae,discriminator,batch_size=1000)
-        type2_error = np.sum(type2_d)
-        performance["type2"] = type2_error/len(states_invalid) * 100
-        print("type2 error:",type2_error,"/",len(states_invalid),
-              "Error ratio:", type2_error/len(states_invalid) * 100, "%")
-
-        type2_error_images = sae.decode(states_invalid[np.where(type2_d > 0.9)[0]])[:120]
-        if len(type2_error_images) == 0:
-            print("We observed ZERO type2-error! Hooray!")
+    performance = {}
+    def reg(names,value,d=performance):
+        name = names[0]
+        if len(names)>1:
+            try:
+                tmp = d[name]
+            except KeyError:
+                tmp={}
+                d[name]=tmp
+            reg(names[1:], value, tmp)
         else:
-            plot_grid(type2_error_images,
-                      w=20,
-                      path=discriminator.local("type2_error.png"))
+            d[name] = float(value)
+            print(name,": ", value)
+    
+    reg(["valid"],   len(valid))
+    reg(["mixed"],   len(mixed))
+    reg(["invalid"], len(invalid))
+
+    def measure(valid, invalid, suffix):
+        minlen=min(len(valid),len(invalid))
+        
+        valid_tmp   = valid  [:minlen]
+        invalid_tmp = invalid[:minlen]
+        
+        tp = np.clip(combined_sd(valid_tmp  ,sae,cae,discriminator,batch_size=1000).round(), 0,1) # true positive
+        fp = np.clip(combined_sd(invalid_tmp,sae,cae,discriminator,batch_size=1000).round(), 0,1) # false positive
+        tn = 1-fp
+        fn = 1-tp
+    
+        reg([suffix,"minlen"     ],minlen)
+        recall      = np.mean(tp) # recall / sensitivity / power / true positive rate out of condition positive
+        specificity = np.mean(tn) # specificity / true negative rate out of condition negative
+        reg([suffix,"recall"     ],recall)
+        reg([suffix,"specificity"],specificity)
+        reg([suffix,"f"],(2*recall*specificity)/(recall+specificity))
+        try:
+            reg([suffix,"precision"  ],np.sum(tp)/(np.sum(tp)+np.sum(fp)))
+        except ZeroDivisionError:
+            reg([suffix,"precision"  ],float('nan'))
+        try:
+            reg([suffix,"accuracy"   ],(np.sum(tp)+np.sum(tn))/(2*minlen))
+        except ZeroDivisionError:
+            reg([suffix,"accuracy"   ],float('nan'))
+        return
+    
+    measure(valid,invalid,"raw")
     
     import json
     with open(discriminator.local('performance.json'), 'w') as f:
