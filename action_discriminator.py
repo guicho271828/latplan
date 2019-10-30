@@ -282,35 +282,70 @@ def load():
 def test():
     valid = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
     random.shuffle(valid)
-    N = valid.shape[1] // 2
-    print("valid",len(valid))
 
-    performance = {}
+    mixed = generate_oae_action(valid[:1000]) # 1000 * A transitions (max)
+    random.shuffle(mixed)
     
-    prediction = np.clip(discriminator.discriminate(valid,batch_size=1000).round(), 0,1)
-    performance["type1"] = 100 * np.mean(1-prediction)
-    print("type1 error: ",100 * np.mean(1-prediction), "%")
-
-    mixed = generate_oae_action(valid[:1000]) # x2x128 max
-    p = latplan.util.puzzle_module(sae.local(""))
+    N = valid.shape[1] // 2
     pre_images = sae.decode(mixed[:,:N],batch_size=1000)
     suc_images = sae.decode(mixed[:,N:],batch_size=1000)
+    
+    p = latplan.util.puzzle_module(sae.local(""))
     answers = np.array(p.validate_transitions([pre_images, suc_images],batch_size=1000))
     invalid = mixed[np.logical_not(answers)]
+    random.shuffle(invalid)
+   
+    performance = {}
+    def reg(names,value,d=performance):
+        name = names[0]
+        if len(names)>1:
+            try:
+                tmp = d[name]
+            except KeyError:
+                tmp={}
+                d[name]=tmp
+            reg(names[1:], value, tmp)
+        else:
+            d[name] = float(value)
+            print(name,": ", value)
+    
+    reg(["valid"],   len(valid))
+    reg(["mixed"],   len(mixed))
+    reg(["invalid"], len(invalid))
 
-    print("mixed",len(mixed), "invalid", len(invalid))
+    def measure(valid, invalid, suffix):
+        minlen=min(len(valid),len(invalid))
+        
+        valid_tmp   = valid  [:minlen]
+        invalid_tmp = invalid[:minlen]
+        
+        tp = np.clip(discriminator.discriminate(  valid_tmp,batch_size=1000).round(), 0,1) # true positive
+        fp = np.clip(discriminator.discriminate(invalid_tmp,batch_size=1000).round(), 0,1) # false positive
+        tn = 1-fp
+        fn = 1-tp
+    
+        valid_tmp_s   = valid_tmp  [:,N:]
+        invalid_tmp_s = invalid_tmp[:,N:]
+    
+        reg([suffix,"minlen"     ],minlen)
+        recall      = np.mean(tp) # recall / sensitivity / power / true positive rate out of condition positive
+        specificity = np.mean(tn) # specificity / true negative rate out of condition negative
+        reg([suffix,"recall"     ],recall)
+        reg([suffix,"specificity"],specificity)
+        reg([suffix,"f"],(2*recall*specificity)/(recall+specificity))
+        try:
+            reg([suffix,"precision"  ],np.sum(tp)/(np.sum(tp)+np.sum(fp)))
+        except ZeroDivisionError:
+            reg([suffix,"precision"  ],float('nan'))
+        try:
+            reg([suffix,"accuracy"   ],(np.sum(tp)+np.sum(tn))/(2*minlen))
+        except ZeroDivisionError:
+            reg([suffix,"accuracy"   ],float('nan'))
+        return
 
-    prediction = np.clip(discriminator.discriminate(invalid,batch_size=1000).round(), 0,1)
-    performance["type2"] = 100 * np.mean(prediction)
-    print("type2 error: ",100 * np.mean(prediction), "%")
-
-    ind = np.where(np.squeeze(combined_sd(invalid[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]
-    performance["type2/sd"] = 100 * np.mean(prediction[ind])
-    print("type2 error (w/o invalid states by sd3): ",100 * np.mean(prediction[ind]), "%")
-
-    ind = p.validate_states(sae.decode(invalid[:,N:],batch_size=1000),verbose=False,batch_size=1000)
-    performance["type2/v"] = 100 * np.mean(prediction[ind])
-    print("type2 error (w/o invalid states by validator): ",100 * np.mean(prediction[ind]), "%")
+    measure(valid,invalid,"raw")
+    measure(valid,invalid[np.where(np.squeeze(combined_sd(invalid[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]],     "sd")
+    measure(valid,invalid[p.validate_states(sae.decode(invalid[:,N:],batch_size=1000),verbose=False,batch_size=1000)],"validated")
     
     import json
     with open(discriminator.local('performance.json'), 'w') as f:
