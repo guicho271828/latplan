@@ -266,7 +266,7 @@ def test(method):
     with open(discriminator.local('performance.json'), 'w') as f:
         json.dump(performance, f)
 
-def main(directory, mode="test", method='feature'):
+def main(directory, mode="test", method='direct'):
     from latplan.util import get_ae_type
     global sae
     sae = latplan.model.get(get_ae_type(directory))(directory).load()
