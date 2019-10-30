@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import latplan
 import latplan.model
+from latplan.model       import combined_sd
 from latplan.util        import curry, set_difference, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
 import numpy.random as random
@@ -21,14 +22,6 @@ oae = None
 cae = None
 sd3 = None
 discriminator = None
-
-def combined(states):
-    from latplan.util import get_ae_type
-    from latplan.model import combined_discriminate, combined_discriminate2
-    if cae:
-        return combined_discriminate(states,sae,cae,sd3,batch_size=1000)
-    else:
-        return combined_discriminate2(states,sae,sd3,batch_size=1000)
 
 ################################################################
 # random action generators
@@ -193,7 +186,7 @@ def prepare_oae_PU3(known_transisitons):
     y = generate_oae_action(known_transisitons)
 
     print("removing invalid successors (sd3)")
-    ind = np.where(np.squeeze(combined(y[:,N:])) > 0.5)[0]
+    ind = np.where(np.squeeze(combined_sd(y[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]
     
     y = y[ind]
     if len(known_transisitons) > 100:
@@ -311,7 +304,7 @@ def test():
     performance["type2"] = 100 * np.mean(prediction)
     print("type2 error: ",100 * np.mean(prediction), "%")
 
-    ind = np.where(np.squeeze(combined(invalid[:,N:])) > 0.5)[0]
+    ind = np.where(np.squeeze(combined_sd(invalid[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]
     performance["type2/sd"] = 100 * np.mean(prediction[ind])
     print("type2 error (w/o invalid states by sd3): ",100 * np.mean(prediction[ind]), "%")
 
@@ -356,7 +349,7 @@ def prepare_oae_PU4(known_transisitons):
     
     y = generate_oae_action(known_transisitons)
 
-    ind = np.where(np.squeeze(combined(y[:,N:])) > 0.5)[0]
+    ind = np.where(np.squeeze(combined_sd(y[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]
     
     y = y[ind]
 
@@ -377,7 +370,7 @@ def prepare_oae_PU5(known_transisitons):
        
     y = generate_oae_action(known_transisitons)
     
-    ind = np.where(np.squeeze(combined(y[:,N:])) > 0.5)[0]
+    ind = np.where(np.squeeze(combined_sd(y[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]
     
     y = y[ind]
 
@@ -413,7 +406,7 @@ def test_oae_pre_label():
     # print("BCE:", bce(predictions, answers))
     # print("type2 error:", 100-mae(predictions.round(), answers)*100, "%")
 
-    ind = np.where(np.squeeze(combined(y[:,N:])) > 0.5)[0]
+    ind = np.where(np.squeeze(combined_sd(y[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("type2 error (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 
@@ -444,7 +437,7 @@ def test_oae_pre_suc_label():
     # print("BCE:", bce(predictions, answers))
     # print("type2 error:", 100-mae(predictions.round(), answers)*100, "%")
 
-    ind = np.where(np.squeeze(combined(y[:,N:])) > 0.5)[0]
+    ind = np.where(np.squeeze(combined_sd(y[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]
     print("BCE (w/o invalid states by sd3):", bce(predictions[ind], answers[ind]))
     print("type2 error (w/o invalid states by sd3):", 100-mae(predictions[ind].round(), answers[ind])*100, "%")
 

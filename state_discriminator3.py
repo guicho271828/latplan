@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import latplan
 import latplan.model
-from latplan.model import combined_discriminate, combined_discriminate2
+from latplan.model       import combined_sd
 from latplan.util        import curry, prepare_binary_classification_data, set_difference, union, bce
 from latplan.util.tuning import grid_search, nn_task
 
@@ -113,7 +113,6 @@ def prepare_random(data_valid, sae, inflation=1):
 sae = None
 cae = None
 discriminator = None
-combined = None
 
 def learn(method):
     global cae, discriminator
@@ -206,26 +205,6 @@ def load(method):
         discriminator = latplan.model.get('PUDiscriminator')(sae.local("_sd3/")).load()
     assert method == discriminator.parameters["method"]
 
-def load2(method):
-    global combined
-    if method == "feature":
-        def d (states):
-            return combined_discriminate2(states,sae,discriminator,batch_size=1000).round()
-        combined = d
-    if method == "cae":
-        def d (states):
-            return combined_discriminate(states,sae,cae,discriminator,batch_size=1000).round()
-        combined = d
-    if method == "direct":
-        def d (states):
-            return discriminator.discriminate(states,batch_size=1000).round()
-        combined = d
-    if method == "image":
-        def d (states):
-            images = sae.decode(data,batch_size=1000)
-            return discriminator.discriminate(images,batch_size=1000).round()
-        combined = d
-
 def test(method):
     states_valid = np.loadtxt(sae.local("all_states.csv"),dtype=np.int8)
     print("valid",states_valid.shape)
@@ -235,7 +214,7 @@ def test(method):
 
     ################################################################
     # type 1 error
-    type1_d = combined(states_valid)
+    type1_d = combined_sd(states_valid,sae,cae,discriminator,batch_size=1000)
     type1_error = np.sum(1- type1_d)
     performance["type1"] = type1_error/len(states_valid) * 100
     print("type1 error:",type1_error,"/",len(states_valid),
@@ -269,7 +248,7 @@ def test(method):
         plot_grid(sae.decode(states_invalid)[:120],
               w=20,
               path=discriminator.local("surely_invalid_states.png"))
-        type2_d = combined(states_invalid)
+        type2_d = combined_sd(states_invalid,sae,cae,discriminator,batch_size=1000)
         type2_error = np.sum(type2_d)
         performance["type2"] = type2_error/len(states_invalid) * 100
         print("type2 error:",type2_error,"/",len(states_invalid),
@@ -299,8 +278,6 @@ def main(directory, mode="test", method='feature'):
         learn(method)
     else:
         load(method)
-
-    load2(method)
 
     if 'test' in mode:
         test(method)

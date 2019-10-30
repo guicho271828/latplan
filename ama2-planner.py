@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import latplan
 import latplan.model
-from latplan.model import ActionAE, Discriminator, PUDiscriminator
+from latplan.model import ActionAE, Discriminator, PUDiscriminator, combined_sd
 from latplan.util import get_ae_type, bce, mae, mse, ensure_directory
 from latplan.util.plot import plot_grid
 import os.path
@@ -24,7 +24,6 @@ ad2  = None
 sd2  = None
 sd3 = None
 cae = None
-combined_discriminator = None
 
 available_actions = None
 inflation = 5
@@ -97,7 +96,7 @@ def state_discriminator_filtering(y):
 
 def state_discriminator3_filtering(y):
     N = y.shape[1]//2
-    return y[np.where(np.squeeze(combined_discriminator(y[:,N:])) > 0.5)[0]]
+    return y[np.where(np.squeeze(combined_sd(y[:,N:],sae,cae,sd3)) > 0.5)[0]]
 
 def cheating_validation_filtering(y):
     N = y.shape[1]//2
@@ -277,7 +276,7 @@ def blind(state,goal):
     return 0
 
 def main(network_dir, problem_dir, searcher, first_solution=False):
-    global sae, oae, ad, ad2, sd, sd2, sd3, cae, combined_discriminator, available_actions
+    global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
     
     p = latplan.util.puzzle_module(network_dir)
 
@@ -291,11 +290,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     # ad2 = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
     # sd2 = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
     sd3 = PUDiscriminator(sae.local("_sd3/")).load()
-    try:
-        cae = latplan.model.get('SimpleCAE')(sae.local("_cae/")).load()
-        combined_discriminator = latplan.model.get('CombinedDiscriminator')(sae,cae,sd3)
-    except:
-        combined_discriminator = latplan.model.get('CombinedDiscriminator2')(sae,sd3)
+    cae = latplan.model.get('SimpleCAE')(sae.local("_cae/")).load(allow_failure=True)
 
     # Ad-hoc improvement: if the state discriminator type-1 error is very high
     # (which is not cheating because it can be verified from the training
@@ -305,7 +300,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     global pruning_methods
     print("verifying SD type-1 error")
     states_valid = np.loadtxt(sae.local("all_states.csv"),dtype=np.int8)
-    type1_d = combined_discriminator(states_valid)
+    type1_d = combined_sd(states_valid,sae,cae,sd3)
     type1_error = np.sum(1- type1_d) / len(states_valid)
     if type1_error > 0.25:
         pruning_methods = [
@@ -415,7 +410,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
         print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
 
         print(p.validate_states(sae.decode(plan)))
-        print(combined_discriminator(plan).flatten())
+        print(combined_sd(plan,sae,cae,sd3).flatten())
         import subprocess
         subprocess.call(["rm", "-f", problem(network(search("path_{}.valid".format(i))))])
         if np.all(validation):

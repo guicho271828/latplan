@@ -1060,39 +1060,28 @@ class SimpleCAE(AE):
                test_data_to=None,):
         pass
 
-def combined_discriminate(data,sae,cae,discriminator,**kwargs):
-    images = sae.decode(data,**kwargs)
-    data2  = cae.encode(images,**kwargs)
-    return discriminator.discriminate(data2,**kwargs)
-
-def combined_discriminate2(data,sae,discriminator,**kwargs):
-    _data        = Input(shape=data.shape[1:])
-    _images      = sae.decoder(_data)
-    _features    = sae.features(_images)
-    _results     = discriminator.net(_features)
-    m            = Model(_data, _results)
-    return m.predict(data,**kwargs)
-
-class CombinedDiscriminator:
-    def __init__(self,sae,cae,discriminator):
-        _data        = Input(shape=(sae.parameters['N'],))
-        _images      = sae.decoder(_data)
-        _features    = cae.encoder(_images)
-        _results     = discriminator.net(_features)
-        m            = Model(_data, _results)
-        self.model = m
-    
-    def __call__(self,data,**kwargs):
-        return self.model.predict(data,**kwargs)
-
-class CombinedDiscriminator2(CombinedDiscriminator):
-    def __init__(self,sae,discriminator):
-        _data        = Input(shape=(sae.parameters['N'],))
-        _images      = sae.decoder(_data)
-        _features    = sae.features(_images)
-        _results     = discriminator.net(_features)
-        m            = Model(_data, _results)
-        self.model = m
+_combined = None
+def combined_sd(states,sae,cae,sd3,**kwargs):
+    global _combined
+    if _combined is None:
+        x = Input(shape=states.shape[1:])
+        tmp = x
+        if sd3.parameters["method"] == "direct":
+            tmp = sd3.net(tmp)
+        if sd3.parameters["method"] == "feature":
+            tmp = sae.decoder(tmp)
+            tmp = sae.features(tmp)
+            tmp = sd3.net(tmp)
+        if sd3.parameters["method"] == "cae":
+            tmp = sae.decoder(tmp)
+            tmp = cae.encoder(tmp)
+            tmp = sd3.net(tmp)
+        if sd3.parameters["method"] == "image":
+            tmp = sae.decoder(tmp)
+            tmp = cae.encoder(tmp)
+            tmp = sd3.net(tmp)
+        _combined = Model(x, tmp)
+    return _combined.predict(states, **kwargs)
 
 # action autoencoder ################################################################
 
