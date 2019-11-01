@@ -51,6 +51,8 @@ else:
 
 print(data.shape)
 N = data.shape[1]//2
+train = data[:int(len(data)*0.9)]
+val   = data[int(len(data)*0.9):]
 
 try:
     if 'learn' in mode:
@@ -58,8 +60,6 @@ try:
     aae = ActionAE(directory_aae).load()
     num_actions = aae.parameters["M"]
 except:
-    train = data[:int(len(data)*0.9)]
-    val   = data[int(len(data)*0.9):]
     for num_actions in range(min_num_actions,max_num_actions,inc_num_actions):
         parameters = {
             'N'          :[1],
