@@ -1145,7 +1145,7 @@ We again use gumbel-softmax for representing A."""
                 for i in range(self.parameters['decoder_layers'])
             ],
             Sequential([
-                Dense(data_dim, activation='sigmoid'),
+                Dense(data_dim, activation=Lambda(lambda x: K.in_train_phase(K.sigmoid(x), K.round(K.sigmoid(x))))),
                 Reshape(input_shape),]),]
    
     def _build(self,input_shape):
