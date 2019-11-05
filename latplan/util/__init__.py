@@ -7,11 +7,9 @@ from . import noise
 
 def get_ae_type(directory):
     import os.path
-    d, n = os.path.split(directory)
-    if n == '':
-        return d.split("/")[-1].split("_")[1]
-    else:
-        return n.split("_")[1]
+    import json
+    with open(os.path.join(directory,"aux.json"),"r") as f:
+        return json.load(f)["parameters"]["aeclass"]
 
 def ensure_directory(directory):
     if directory[-1] is "/":
