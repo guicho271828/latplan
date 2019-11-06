@@ -19,9 +19,6 @@ np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatte
 sae = None
 oae = None
 ad  = None
-sd  = None
-ad2  = None
-sd2  = None
 sd3 = None
 cae = None
 
@@ -276,7 +273,7 @@ def blind(state,goal):
     return 0
 
 def main(network_dir, problem_dir, searcher, first_solution=False):
-    global sae, oae, ad, ad2, sd, sd2, sd3, cae, available_actions
+    global sae, oae, ad, sd3, cae, available_actions
     
     p = latplan.util.puzzle_module(network_dir)
 
@@ -286,9 +283,6 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
         ad  = PUDiscriminator(sae.local("_ad/")).load(allow_failure=True)
     except:
         ad  = Discriminator(sae.local("_ad/")).load(allow_failure=True)
-    # sd  = Discriminator(sae.local("_sd/")).load(allow_failure=True)
-    # ad2 = Discriminator(sae.local("_ad2/")).load(allow_failure=True)
-    # sd2 = Discriminator(sae.local("_sd2/")).load(allow_failure=True)
     sd3 = PUDiscriminator(sae.local("_sd3/")).load()
     cae = latplan.model.get('SimpleCAE')(sae.local("_cae/")).load(allow_failure=True)
 
@@ -397,8 +391,6 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     for i, pos in enumerate(np.where(histogram > 0)[0]):
         available_actions[i][0][pos] = 1
 
-    # available_actions = available_actions.repeat(inflation,axis=0)
-        
     for i, found_goal_state in enumerate(eval(searcher)().search(init,goal,goalcount)):
         plan = np.array( found_goal_state.path())
         print(plan)
