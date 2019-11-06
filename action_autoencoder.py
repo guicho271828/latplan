@@ -42,8 +42,7 @@ directory = sys.argv[1]
 directory_aae = "{}/_aae/".format(directory)
 mode = sys.argv[2]
 
-from latplan.util import get_ae_type
-ae = latplan.model.get(get_ae_type(directory))(directory).load()
+ae = latplan.model.load(directory)
 
 if "hanoi" in ae.path:
     data = np.loadtxt(ae.local("all_actions.csv"),dtype=np.int8)

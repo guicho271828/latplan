@@ -260,7 +260,6 @@ def mae(x,y):
     return m.evaluate(x,y,batch_size=1000,verbose=0)
 
 def learn(input_type):
-    global discriminator
     if "hanoi" in sae.path:
         data = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
     else:
@@ -271,13 +270,7 @@ def learn(input_type):
                                     default_parameters,
                                     parameters)
     discriminator.save()
-    
-def load():
-    global discriminator
-    try:
-        discriminator = latplan.model.get('PUDiscriminator')(sae.local("_ad/")).load()
-    except:
-        discriminator = latplan.model.get('Discriminator')(sae.local("_ad/")).load()
+    return discriminator
 
 def test():
     valid = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
@@ -352,17 +345,16 @@ def test():
         json.dump(performance, f)
 
 def main(directory, mode="test", input_type="prepare_oae_PU3"):
-    from latplan.util import get_ae_type
-    global sae, oae, sd3
-    sae = latplan.model.get(get_ae_type(directory))(directory).load()
-    oae = latplan.model.get('ActionAE')(sae.local("_aae/")).load()
-    cae = latplan.model.get('SimpleCAE')(sae.local("_cae/")).load(allow_failure=True)
-    sd3 = latplan.model.get('PUDiscriminator')(sae.local("_sd3/")).load()
+    global sae, oae, sd3, discriminator
+    sae = latplan.model.load(directory)
+    oae = latplan.model.load(sae.local("_aae/"))
+    cae = latplan.model.load(sae.local("_cae/"),allow_failure=True)
+    sd3 = latplan.model.load(sae.local("_sd3/"))
 
     if 'learn' in mode:
-        learn(eval(input_type))
+        discriminator = learn(eval(input_type))
     else:
-        load()
+        discriminator = latplan.model.load(sae.local("_ad/"))
 
     if 'test' in mode:
         test()
