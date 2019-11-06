@@ -12,20 +12,10 @@ import os.path
 import keras.backend as K
 import tensorflow as tf
 import math
-import time
 import json
 
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
-
-start = time.time()
-times = [(0,0,"init")]
-def log(message):
-    now = time.time()
-    wall = now-start
-    elap = wall-times[-1][0]
-    times.append((wall,elap,message))
-    print("@[{: =10.3f} +{: =10.3f}] {}".format(wall,elap,message))
 
 class PlanException(BaseException):
     pass

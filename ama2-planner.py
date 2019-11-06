@@ -155,8 +155,6 @@ class Searcher:
             "expanded":0,
             "reopened":0,
         }
-        import time
-        self.starttime = time.time()
 
     def successors(self,state):
         self.stats["expanded"] += 1
@@ -191,9 +189,6 @@ class Searcher:
     def report(self,path):
         for k, v in self.stats.items():
             print(k, v)
-        import time
-        self.endtime = time.time()
-        self.states["time"] = self.endtime-self.starttime
         import json
         with open(path,"w") as f:
             json.dump(self.stats, f)
@@ -237,9 +232,6 @@ class Astar(Searcher,StateBasedGoalDetection):
                 print("new h = {}".format(h))
 
             if self.goalp(state.state, goal):
-                import time
-                self.endtime = time.time()
-                print("time", self.endtime-self.starttime)
                 yield state
             else:
                 for c in self.successors(state):
@@ -279,9 +271,6 @@ class GBFS(Searcher,StateBasedGoalDetection):
                 print("new h = {}".format(h))
 
             if self.goalp(state.state, goal):
-                import time
-                self.endtime = time.time()
-                print("time", self.endtime-self.starttime)
                 yield state
             else:
                 for c in self.successors(state):
@@ -313,6 +302,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
         return "{}_{}{}".format(searcher, root, ext)
 
     p = latplan.util.puzzle_module(network_dir)
+    log("loaded puzzle")
 
     sae = latplan.model.load(network_dir,allow_failure=True)
     aae = latplan.model.load(sae.local("_aae/"),allow_failure=True)
@@ -320,10 +310,12 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     sd3 = latplan.model.load(sae.local("_sd3/"),allow_failure=True)
     cae = latplan.model.load(sae.local("_cae/"),allow_failure=True)
     setup_planner_utils(sae, problem_dir, network_dir, "ama2")
+    log("loaded sae")
 
     decide_pruning_method()
     
     init, goal = init_goal_misc(p)
+    log("loaded init/goal")
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
     actions = aae.encode_action(known_transisitons, batch_size=1000).round()
@@ -340,21 +332,26 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
 
     for i, pos in enumerate(np.where(histogram > 0)[0]):
         available_actions[i][0][pos] = 1
+    log("initialized actions")
 
+    log("start planning")
     _searcher = eval(searcher)()
     try:
         for i, found_goal_state in enumerate(_searcher.search(init,goal,goalcount)):
+            log("plan found")
             plan = np.array( found_goal_state.path())
             print(plan)
             plot_grid(sae.decode(plan),
                       path=problem(ama(network(search("path_{}.png".format(i))))),
                       verbose=True)
+            log("plotted the plan")
             
             validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
             print(validation)
             print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
             print(p.validate_states(sae.decode(plan)))
             print(combined_sd(plan,sae,cae,sd3).flatten())
+            log("validated plan")
             if np.all(validation):
                 _searcher.stats["valid"] = True
                 return

@@ -19,14 +19,6 @@ import json
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
 
-start = time.time()
-times = [(0,0,"init")]
-def log(message):
-    now = time.time()
-    wall = now-start
-    elap = wall-times[-1][0]
-    times.append((wall,elap,message))
-    print("@[{: =10.3f} +{: =10.3f}] {}".format(wall,elap,message))
 
 class PlanException(BaseException):
     pass
@@ -61,6 +53,8 @@ def main(domainfile, problem_dir, heuristics):
     init, goal = init_goal_misc(p)
     log("loaded init/goal")
 
+    log("start planning")
+    
     bits = np.concatenate((init,goal))
 
     ###### files ################################################################

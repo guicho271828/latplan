@@ -93,3 +93,14 @@ def echodo(cmd,*args,**kwargs):
 def echo_out(cmd):
     print(cmd)
     return subprocess.check_output(cmd)
+
+import time
+start = time.time()
+times = [(0,0,"init")]
+def log(message):
+    now = time.time()
+    wall = now-start
+    elap = wall-times[-1][0]
+    times.append((wall,elap,message))
+    print("@[{: =10.3f} +{: =10.3f}] {}".format(wall,elap,message))
+
