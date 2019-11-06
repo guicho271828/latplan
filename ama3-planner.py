@@ -117,7 +117,7 @@ def main(domainfile, _problem_dir, heuristics):
     print(problem_dir,network_dir)
     p = latplan.util.puzzle_module(network_dir)
     log("loaded puzzle")
-    sae = latplan.model.get(get_ae_type(network_dir))(network_dir).load(allow_failure=True)
+    sae = latplan.model.load(network_dir,allow_failure=True)
     log("loaded sae")
 
     def heur(path):
