@@ -58,7 +58,7 @@ def init_goal_misc(p):
                # r(goal_image).round(),r(goal_rec).round(),r(goal_image).round()-r(goal_rec).round(),(r(goal_image).round()-r(goal_rec).round()).round(),
                ],
               w=4,
-              path=ama(problem(network("init_goal_reconstruction.png"))),verbose=True)
+              path=problem(ama(network("init_goal_reconstruction.png"))),verbose=True)
 
     import sys
     print("init BCE:",bce(init_image,init_rec))

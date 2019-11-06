@@ -12,3 +12,4 @@ then
     end=`date +%s`
     echo $((end-start)) > $2.time
 fi
+ln -b -s $(basename $2) $3
