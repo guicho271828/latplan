@@ -4,13 +4,7 @@ from . import mnist
 from . import tuning
 from . import timer
 from . import noise
-
-def ensure_directory(directory):
-    if directory[-1] is "/":
-        return directory
-    else:
-        return directory+"/"
-    
+from . import planner
 
 def curry(fn,*args1,**kwargs1):
     return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
@@ -52,7 +46,7 @@ def union(a, b):
 
 def puzzle_module(directory):
     import importlib
-    from latplan.util import ensure_directory
+    from .planner import ensure_directory
     args = ensure_directory(directory).split("/")[-2].split("_")
     if args[0] == "hanoi":
         p = importlib.import_module('latplan.puzzles.hanoi')
