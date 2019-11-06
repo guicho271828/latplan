@@ -5,12 +5,6 @@ from . import tuning
 from . import timer
 from . import noise
 
-def get_ae_type(directory):
-    import os.path
-    import json
-    with open(os.path.join(directory,"aux.json"),"r") as f:
-        return json.load(f)["parameters"]["aeclass"]
-
 def ensure_directory(directory):
     if directory[-1] is "/":
         return directory
