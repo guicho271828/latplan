@@ -5,9 +5,9 @@ import sys
 import numpy as np
 import latplan
 import latplan.model
-from latplan.model import ActionAE, Discriminator, PUDiscriminator, combined_sd
-from latplan.util import get_ae_type, bce, mae, mse, ensure_directory
-from latplan.util.plot import plot_grid
+from latplan.model import combined_sd
+from latplan.util import *
+from latplan.util.plot import *
 import os.path
 import keras.backend as K
 import tensorflow as tf
@@ -277,14 +277,11 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     
     p = latplan.util.puzzle_module(network_dir)
 
-    sae = latplan.model.get(get_ae_type(network_dir))(network_dir).load(allow_failure=True)
-    oae = ActionAE(sae.local("_aae/")).load(allow_failure=True)
-    try:
-        ad  = PUDiscriminator(sae.local("_ad/")).load(allow_failure=True)
-    except:
-        ad  = Discriminator(sae.local("_ad/")).load(allow_failure=True)
-    sd3 = PUDiscriminator(sae.local("_sd3/")).load()
-    cae = latplan.model.get('SimpleCAE')(sae.local("_cae/")).load(allow_failure=True)
+    sae = latplan.model.load(network_dir,allow_failure=True)
+    oae = latplan.model.load(sae.local("_aae/"),allow_failure=True)
+    ad  = latplan.model.load(sae.local("_ad/"),allow_failure=True)
+    sd3 = latplan.model.load(sae.local("_sd3/"),allow_failure=True)
+    cae = latplan.model.load(sae.local("_cae/"),allow_failure=True)
 
     # Ad-hoc improvement: if the state discriminator type-1 error is very high
     # (which is not cheating because it can be verified from the training
