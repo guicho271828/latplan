@@ -43,6 +43,13 @@ options = {
 
 def main(network_dir, problem_dir, heuristics='blind', action_type="all_actions"):
 
+    def action(path):
+        root, ext = os.path.splitext(path)
+        return "{}_{}{}".format(action_type, root, ext)
+    def heur(path):
+        root, ext = os.path.splitext(path)
+        return "{}_{}{}".format(heuristics, root, ext)
+
     p = latplan.util.puzzle_module(network_dir)
     log("loaded puzzle")
     sae = latplan.model.load(network_dir,allow_failure=True)
@@ -54,45 +61,44 @@ def main(network_dir, problem_dir, heuristics='blind', action_type="all_actions"
     log("start planning")
 
     bits = np.concatenate((init,goal))
-    ###### preprocessing ################################################################
 
-    np.savetxt(problem(network("{}_{}.csv".format(action_type,heuristics))),[bits],"%d")
+    ###### files ################################################################
+    transitions = sae.local("{}.csv".format(action_type))
+    ig       = problem(ama(network("ig.csv")))
+    sas      = problem(ama(network(action("sas.gz"))))
+    sasp     = problem(ama(network(action("sasp.gz"))))
+    sasp2    = problem(ama(network(action(heur("sasp.gz")))))
+    planfile = problem(ama(network(action(heur("sasp.gz.plan")))))
+    pngfile  = problem(ama(network(action(heur("plan.png")))))
+    jsonfile = problem(ama(network(action(heur("plan.json")))))
+    
+    ###### preprocessing ################################################################
+    os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
     echodo(["touch",problem("domain.pddl")]) # dummy file, just making planner-scripts work
-    echodo(["helper/sas.sh",
-            os.path.join(ensure_directory(network_dir),"{}.csv".format(action_type)),
-            problem(network("{}_{}.csv".format(action_type,heuristics))),
-            problem(network("{}.sas.gz".format(action_type)))])
+    echodo(["helper/sas.sh", transitions, ig, sas])
     log("sas.sh done")
-    echodo(["helper/sasp.sh",
-            problem(network("{}.sas.gz".format(action_type))),
-            problem(network("{}.sasp.gz".format(action_type)))])
+    echodo(["helper/sasp.sh", sas, sasp, sasp2])
     log("sasp.sh done")
     
     ###### do planning #############################################
-    sasp     = problem(network("{}.sasp.gz".format(action_type)))
-    plan_raw = problem(network("{}.sasp.gz.plan".format(action_type)))
-    planfile = problem(network("{}_{}.plan".format(action_type,heuristics)))
     
-    echodo(["helper/fd-sasgz.sh",options[heuristics], sasp])
+    echodo(["helper/fd-sasgz.sh",options[heuristics], sasp2])
     log("fd-sasgz.sh done")
-    assert os.path.exists(plan_raw)
-    echodo(["mv",plan_raw,planfile])
+    assert os.path.exists(planfile)
     
     ###### parse the plan #############################################
     out = echo_out(["lisp/parse-plan.bin",planfile, *list(init.astype('str'))])
     lines = out.splitlines()
     plan = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     log("parsed the plan")
-    plot_grid(sae.decode(plan),
-              path=problem(network("{}_{}.png".format(action_type,heuristics))),
-              verbose=True)
+    plot_grid(sae.decode(plan), path=pngfile, verbose=True)
     log("plotted the plan")
 
     validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
     print(validation)
     print(p.validate_states(sae.decode(plan)))
     log("validated plan")
-    with open(problem(network("{}_{}.json".format(action_type,heuristics))),"w") as f:
+    with open(jsonfile,"w") as f:
         json.dump({
             "network":network_dir,
             "problem":problem_dir,
