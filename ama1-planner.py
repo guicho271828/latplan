@@ -11,7 +11,6 @@ from latplan.util.planner import *
 import os.path
 import keras.backend as K
 import tensorflow as tf
-import math
 import json
 
 float_formatter = lambda x: "%.3f" % x
