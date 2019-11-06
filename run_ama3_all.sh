@@ -1,11 +1,10 @@
-#!/bin/bash
+#!/bin/bash -x
 
 ulimit -v 16000000000
 
 trap exit SIGINT
 
-# Desired usage of this script is "./run_ama3_all.sh | parallel -j <number of processes>"
-# where the number should be adjusted for the resource capacity on your system.
+probdir=problem-instances
 
 #### foolproof check
 
@@ -17,48 +16,53 @@ trap exit SIGINT
     ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release64
 )
 
-probdir=problem-instances
-# in the weird case this happens
-chmod -R +w $probdir
+chmod -R +w $probdir            # in the weird case this happens
 
 #### job submission
 
 key=$1
+if [ -z $key ]
+then
+    echo "usage: $0 domainfilename [mem]" >&2
+    echo "mem: e.g. 64g" >&2
+    exit 1
+fi
 mem=${2:-64g}
 
-proj=$(date +%Y%m%d%H%M)
-
-common=" -mem $mem -queue x86_1h -proj $proj"
-dir=$(dirname $(dirname $(readlink -ef $0)))
-export PYTHONPATH=$dir:$PYTHONPATH
+proj=$(date +%Y%m%d%H%M)ama3
+command="jbsub -mem $mem -queue x86_1h -proj $proj task"
+export PYTHONPATH=$(dirname $(dirname $(readlink -ef $0))):$PYTHONPATH
 export PYTHONUNBUFFERED=1
-export PATH=VAL:$PATH
+task (){
+    ./ama3-planner.py \
+        $@ \
+        1> $2/ama3_$(basename $(dirname $1))_$(basename $1 .pddl)_$3.log \
+        2> $2/ama3_$(basename $(dirname $1))_$(basename $1 .pddl)_$3.err
+}
+export -f task
 
-command="jbsub -hold $common 'helper/ama3-planner.sh {1} {2} {3}'"
-
-
-parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*mnist*/${key}*.pddl \
+parallel $command \
+         ::: samples/puzzle*mnist*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
          ::: blind 
 
-parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*mandrill*/${key}*.pddl \
+parallel $command \
+         ::: samples/puzzle*mandrill*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
          ::: blind 
 
-parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*spider*/${key}*.pddl \
+parallel $command \
+         ::: samples/puzzle*spider*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
          ::: blind 
 
-parallel -j 1 --no-notice "$command" \
-         ::: samples/lightsout*digital*/${key}*.pddl \
+parallel $command \
+         ::: samples/lightsout*digital*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
          ::: blind 
 
-parallel -j 1 --no-notice "$command" \
-         ::: samples/lightsout*twisted*/${key}*.pddl \
+parallel $command \
+         ::: samples/lightsout*twisted*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
          ::: blind 
 
