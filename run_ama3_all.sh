@@ -34,8 +34,9 @@ trap exit SIGINT
     ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release64
 )
 
+probdir=problem-instances
 # in the weird case this happens
-chmod -R +w noise-0.6-0.12-ama3
+chmod -R +w $probdir
 
 #### job submission
 
@@ -54,34 +55,34 @@ command="jbsub -hold $common 'helper/ama3-planner.sh {1} {2} {3}'"
 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*mnist*169_10000_0.7_0.0*/${key}*.pddl \
-         ::: noise-0.6-0.12-ama3/*/latplan.puzzles.puzzle_mnist/* \
+         ::: samples/puzzle*mnist*/${key}*.pddl \
+         ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
          ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*mandrill*169_10000_0.7_0.0*/${key}*.pddl \
-         ::: noise-0.6-0.12-ama3/*/latplan.puzzles.puzzle_mandrill/* \
+         ::: samples/puzzle*mandrill*/${key}*.pddl \
+         ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
          ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/puzzle*spider*169_10000_0.7_0.0*/${key}*.pddl \
-         ::: noise-0.6-0.12-ama3/*/latplan.puzzles.puzzle_spider/* \
+         ::: samples/puzzle*spider*/${key}*.pddl \
+         ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
          ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/lightsout*digital*169_10000_0.7_0.0*/${key}*.pddl \
-         ::: noise-0.6-0.12-ama3/*/latplan.puzzles.lightsout_digital/* \
+         ::: samples/lightsout*digital*/${key}*.pddl \
+         ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
          ::: blind 
 
 parallel -j 1 --no-notice "$command" \
-         ::: samples/lightsout*twisted*169_10000_0.7_0.0*/${key}*.pddl \
-         ::: noise-0.6-0.12-ama3/*/latplan.puzzles.lightsout_twisted/* \
+         ::: samples/lightsout*twisted*/${key}*.pddl \
+         ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
          ::: blind 
 
 # parallel -j 1 --no-notice \
 #          "jbsub $common './ama3-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama3.log 2> {2}/{1/}_{3}.ama3.err'" \
 #          ::: samples/hanoi* \
-#          ::: noise-0.6-0.12-ama3/*/latplan.puzzles.hanoi/* \
+#          ::: $probdir/*/latplan.puzzles.hanoi/* \
 #          ::: blind  \
          # ::: remlic-1-1-0 remlic-2-2-0 remlic-4-4-0  actionlearner rf-2-others1b-t rf-5-others1b-t rf-10-others1b-t
 
