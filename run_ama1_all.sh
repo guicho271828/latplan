@@ -1,8 +1,73 @@
-#!/bin/bash
+#!/bin/bash -x
 
 ulimit -v 16000000000
 
 trap exit SIGINT
+
+probdir=problem-instances
+
+#### foolproof check
+
+# ensuring if the system is built correctly
+(
+    make -C lisp
+    git submodule update --init --recursive
+    cd downward
+    ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release64
+)
+
+chmod -R +w $probdir            # in the weird case this happens
+
+#### job submission
+
+proj=$(date +%Y%m%d%H%M)ama1
+command="jbsub -mem 128g -queue x86_24h -proj $proj task"
+export PYTHONPATH=$(dirname $(dirname $(readlink -ef $0))):$PYTHONPATH
+export PYTHONUNBUFFERED=1
+export SHELL=/bin/bash
+task (){
+    ./ama1-planner.py \
+        $@ \
+        1> $2/ama1_$(basename $1)_$4_$3.log \
+        2> $2/ama1_$(basename $1)_$4_$3.err
+}
+export -f task
+
+parallel $command \
+         ::: samples/puzzle*mnist* \
+         ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
+         ::: blind ::: all_actions actions
+
+parallel $command \
+         ::: samples/puzzle*mandrill* \
+         ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
+         ::: blind ::: all_actions actions
+
+
+parallel $command \
+         ::: samples/puzzle*spider* \
+         ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
+         ::: blind ::: all_actions actions
+
+
+parallel $command \
+         ::: samples/lightsout*digital* \
+         ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
+         ::: blind ::: all_actions actions
+
+
+parallel $command \
+         ::: samples/lightsout*twisted* \
+         ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
+         ::: blind ::: all_actions actions
+
+
+# parallel --no-notice \
+#          $command \
+#          ::: samples/hanoi* \
+#          ::: $probdir/*/latplan.puzzles.hanoi/* \
+#          ::: blind ::: all_actions actions
+
 
 # Note: AMA1 requires huge memory and runtime for preprocessing.
 # For example:
@@ -23,66 +88,3 @@ trap exit SIGINT
 
 # Desired usage of this script is "./run_ama1_all.sh | parallel -j <number of processes>"
 # where the number should be adjusted for the resource capacity on your system.
-
-#### foolproof check
-
-# ensuring if the system is built correctly
-(
-    make -C lisp
-    git submodule update --init --recursive
-    cd downward
-    ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release64
-)
-
-# in the weird case this happens
-chmod -R +w noise-0.6-0.12-ama1
-
-#### job submission
-proj=$(date +%Y%m%d%H%M)
-common="-mem 128g -queue x86_24h -proj $proj"
-dir=$(dirname $(dirname $(readlink -ef $0)))
-export PYTHONPATH=$dir:$PYTHONPATH
-export PYTHONUNBUFFERED=1
-
-probdir=problem-instances
-
-parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
-         ::: samples/puzzle*mnist* \
-         ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
-         ::: blind ::: all_actions actions
-
-parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
-         ::: samples/puzzle*mandrill* \
-         ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
-         ::: blind ::: all_actions actions
-
-
-parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
-         ::: samples/puzzle*spider* \
-         ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
-         ::: blind ::: all_actions actions
-
-
-parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
-         ::: samples/lightsout*digital* \
-         ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
-         ::: blind ::: all_actions actions
-
-
-parallel --no-notice \
-         "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
-         ::: samples/lightsout*twisted* \
-         ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
-         ::: blind ::: all_actions actions
-
-
-# parallel --no-notice \
-#          "jbsub $common './ama1-planner.py {1} {2} {3} {4} > {2}/{1/}_{4}_{3}.ama1.log 2> {2}/{1/}_{4}_{3}.ama1.err'" \
-#          ::: samples/hanoi* \
-#          ::: $probdir/*/latplan.puzzles.hanoi/* \
-#          ::: blind ::: all_actions actions
-
