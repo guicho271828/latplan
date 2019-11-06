@@ -188,13 +188,15 @@ class Searcher:
         finally:
             print("->".join(map(str,reductions)))
 
-    def __del__(self):
-        print("**************** Search statistics ****************")
+    def report(self,path):
         for k, v in self.stats.items():
             print(k, v)
         import time
         self.endtime = time.time()
-        print("time", self.endtime-self.starttime)
+        self.states["time"] = self.endtime-self.starttime
+        import json
+        with open(path,"w") as f:
+            json.dump(self.stats, f)
 
 class StateBasedGoalDetection:
     def goalp(self,state,goal):
@@ -339,25 +341,29 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     for i, pos in enumerate(np.where(histogram > 0)[0]):
         available_actions[i][0][pos] = 1
 
-    for i, found_goal_state in enumerate(eval(searcher)().search(init,goal,goalcount)):
-        plan = np.array( found_goal_state.path())
-        print(plan)
-        plot_grid(sae.decode(plan),
-                  path=problem(ama(network(search("path_{}.png".format(i))))),verbose=True)
-
-        validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
-        print(validation)
-        print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
-
-        print(p.validate_states(sae.decode(plan)))
-        print(combined_sd(plan,sae,cae,sd3).flatten())
-        import subprocess
-        subprocess.call(["rm", "-f", problem(ama(network(search("path_{}.valid".format(i)))))])
-        if np.all(validation):
-            subprocess.call(["touch", problem(ama(network(search("path_{}.valid".format(i)))))])
-            sys.exit(0)
-        if first_solution:
-            sys.exit(0)
+    _searcher = eval(searcher)()
+    try:
+        for i, found_goal_state in enumerate(_searcher.search(init,goal,goalcount)):
+            plan = np.array( found_goal_state.path())
+            print(plan)
+            plot_grid(sae.decode(plan),
+                      path=problem(ama(network(search("path_{}.png".format(i))))),
+                      verbose=True)
+            
+            validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
+            print(validation)
+            print(ad.discriminate( np.concatenate((plan[0:-1], plan[1:]), axis=-1)).flatten())
+            print(p.validate_states(sae.decode(plan)))
+            print(combined_sd(plan,sae,cae,sd3).flatten())
+            if np.all(validation):
+                _searcher.stats["valid"] = True
+                return
+            if first_solution:
+                _searcher.stats["valid"] = False
+                return
+    finally:
+        _searcher.stats["times"] = times
+        _searcher.report(problem(ama(network("{}.json".format(searcher)))))
 
 if __name__ == '__main__':
     import sys
