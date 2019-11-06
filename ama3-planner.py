@@ -45,6 +45,9 @@ options = {
 
 def main(domainfile, problem_dir, heuristics):
     network_dir = os.path.dirname(domainfile)
+    def domain(path):
+        root, ext = os.path.splitext(path)
+        return "{}_{}{}".format(os.path.splitext(os.path.basename(domainfile))[0], root, ext)
     def heur(path):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(heuristics, root, ext)
@@ -59,35 +62,39 @@ def main(domainfile, problem_dir, heuristics):
     log("loaded init/goal")
 
     bits = np.concatenate((init,goal))
+
+    ###### files ################################################################
+    ig          = problem(ama(network("ig.csv")))
+    problemfile = problem(ama(network(domain(heur("problem.pddl")))))
+    planfile    = problem(ama(network(domain(heur("problem.plan")))))
+    tracefile   = problem(ama(network(domain(heur("problem.trace")))))
+    csvfile     = problem(ama(network(domain(heur("problem.csv")))))
+    pngfile     = problem(ama(network(domain(heur("problem.png")))))
+    jsonfile    = problem(ama(network(domain(heur("problem.json")))))
+    
     ###### preprocessing ################################################################
-    np.savetxt(problem(network("ama1_ig.csv")),[bits],"%d")
-
-    def output(ext):
-        return problem(network("{}_{}.{}".format(os.path.splitext(os.path.basename(domainfile))[0], heuristics, ext)))
-
-    echodo(["helper/problem.sh",
-            problem(network("ama1_ig.csv")),
-            output("pddl")])
+    os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
+    echodo(["helper/problem.sh",ig,problemfile])
     log("generated problem")
     
     ###### do planning #############################################
-    echodo(["helper/fd.sh", options[heuristics], output("pddl"), domainfile])
+    echodo(["helper/fd.sh", options[heuristics], problemfile, domainfile])
     log("finished planning")
-    assert os.path.exists(output("plan"))
+    assert os.path.exists(planfile)
 
-    echodo(["arrival", domainfile, output("pddl"), output("plan"), output("trace")])
+    echodo(["arrival", domainfile, problemfile, planfile, tracefile])
         
     log("simulated the plan")
-    echodo(["lisp/read-latent-state-traces.bin", output("trace"), str(len(init)), output("csv")])
-    plan = np.loadtxt(output("csv"), dtype=int)
+    echodo(["lisp/read-latent-state-traces.bin", tracefile, str(len(init)), csvfile])
+    plan = np.loadtxt(csvfile, dtype=int)
     log("parsed the plan")
-    plot_grid(sae.decode(plan), path=output("png"), verbose=True)
+    plot_grid(sae.decode(plan), path=pngfile, verbose=True)
     log("plotted the plan")
     validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
     print(validation)
     print(p.validate_states(sae.decode(plan)))
     log("validated the plan")
-    with open(output("json"),"w") as f:
+    with open(jsonfile,"w") as f:
         json.dump({
             "network":network_dir,
             "problem":problem_dir,
