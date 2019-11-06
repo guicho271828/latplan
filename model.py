@@ -31,6 +31,23 @@ from .util.perminv   import *
 def get(name):
     return globals()[name]
 
+def get_ae_type(directory):
+    import os.path
+    import json
+    with open(os.path.join(directory,"aux.json"),"r") as f:
+        return json.load(f)["class"]
+
+def load(directory,allow_failure=False):
+    if allow_failure:
+        try:
+            classobj = get(get_ae_type(directory))
+        except FileNotFoundError as c:
+            print("Error skipped:", c)
+            return None
+    else:
+        classobj = get(get_ae_type(directory))
+    return classobj(directory).load(allow_failure=allow_failure)
+
 class Network:
     """Base class for various neural networks including GANs, AEs and Classifiers.
 Provides an interface for saving / loading the trained weights as well as hyperparameters.
@@ -117,6 +134,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         import json
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
+                       "class"     :self.__class__.__name__,
                        "input_shape":self.net.input_shape[1:]}, f , skipkeys=True)
 
     def save_epoch(self, freq=10):
