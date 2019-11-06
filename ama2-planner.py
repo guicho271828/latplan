@@ -343,7 +343,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
         plan = np.array( found_goal_state.path())
         print(plan)
         plot_grid(sae.decode(plan),
-                  path=problem(network(search("path_{}.png".format(i)))),verbose=True)
+                  path=problem(ama(network(search("path_{}.png".format(i))))),verbose=True)
 
         validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
         print(validation)
@@ -352,9 +352,9 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
         print(p.validate_states(sae.decode(plan)))
         print(combined_sd(plan,sae,cae,sd3).flatten())
         import subprocess
-        subprocess.call(["rm", "-f", problem(network(search("path_{}.valid".format(i))))])
+        subprocess.call(["rm", "-f", problem(ama(network(search("path_{}.valid".format(i)))))])
         if np.all(validation):
-            subprocess.call(["touch", problem(network(search("path_{}.valid".format(i))))])
+            subprocess.call(["touch", problem(ama(network(search("path_{}.valid".format(i)))))])
             sys.exit(0)
         if first_solution:
             sys.exit(0)
