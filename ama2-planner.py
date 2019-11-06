@@ -80,7 +80,6 @@ def inflate_actions(y):
     t = y[:,N:]
     for i in range(inflation-1):
         t = union(sae.autodecode(t).round().astype(int), t)
-    import math
     y = y.repeat(math.ceil(len(t)/len(y)), axis=0)[:len(t)]
     y[:,N:] = t
     return y
