@@ -8,6 +8,7 @@ import latplan.model
 from latplan.model       import combined_sd
 from latplan.util        import curry, set_difference, prepare_binary_classification_data
 from latplan.util.tuning import grid_search, nn_task
+from latplan.util.np_distances import *
 import numpy.random as random
 import keras.backend as K
 import tensorflow as tf
@@ -242,22 +243,6 @@ parameters = {
 # good for lightsout
 # {'dropout': 0.5, 'full_epoch': 1000, 'layer': 300, 'num_layers': 2,
 #  'batch_size': 1000, 'activation': 'relu', 'epoch': 3000, 'lr': 0.001}
-
-def bce(x,y):
-    from keras.layers import Input
-    from keras.models import Model
-    i = Input(shape=x.shape[1:])
-    m = Model(i,i)
-    m.compile(optimizer="adam", loss='binary_crossentropy')
-    return m.evaluate(x,y,batch_size=1000,verbose=0)
-
-def mae(x,y):
-    from keras.layers import Input
-    from keras.models import Model
-    i = Input(shape=x.shape[1:])
-    m = Model(i,i)
-    m.compile(optimizer="adam", loss='mean_absolute_error')
-    return m.evaluate(x,y,batch_size=1000,verbose=0)
 
 def learn(input_type):
     if "hanoi" in sae.path:

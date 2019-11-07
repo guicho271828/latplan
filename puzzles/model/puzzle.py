@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from latplan.util import bce
+from ...util.np_distances import bce
 from ..util import wrap
 
 from keras.layers import Input, Reshape
