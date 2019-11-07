@@ -7,8 +7,9 @@ import numpy.random as random
 import latplan
 import latplan.model
 from latplan.model       import combined_sd
-from latplan.util        import curry, prepare_binary_classification_data, set_difference, union, bce
+from latplan.util        import curry, prepare_binary_classification_data, set_difference, union
 from latplan.util.tuning import grid_search, nn_task
+from latplan.util.np_distances import *
 
 from keras.optimizers import Adam
 from keras_adabound   import AdaBound

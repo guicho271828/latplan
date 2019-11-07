@@ -8,6 +8,7 @@ import latplan.model
 from latplan.model import combined_sd
 from latplan.util import *
 from latplan.util.plot import *
+from latplan.util.np_distances import *
 import os.path
 import keras.backend as K
 import tensorflow as tf

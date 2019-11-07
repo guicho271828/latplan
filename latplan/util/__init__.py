@@ -50,21 +50,6 @@ def union(a, b):
     d = set_difference(a, b)
     return np.concatenate((b, d), axis=0)
 
- 
-def bce(true,pred,axis=None,epsilon=1e-7):
-    x = true
-    y = pred
-    return - (x * np.log(np.clip(y,epsilon,1)) + \
-              (1-x) * np.log(np.clip(1-y,epsilon,1))).mean(axis=axis)
-
-def mae(x,y,axis=None):
-    return np.mean(np.absolute(x - y),axis=axis)
-
-
-def mse(x,y,axis=None):
-    return np.sqrt(np.sum(np.square(x - y),axis=axis))
-
-
 def puzzle_module(directory):
     import importlib
     from latplan.util import ensure_directory
