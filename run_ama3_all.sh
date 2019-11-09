@@ -44,33 +44,33 @@ export -f task
 parallel $command \
          ::: samples/puzzle*mnist*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
-         ::: blind 
+         ::: ff hmax 
 
 parallel $command \
          ::: samples/puzzle*mandrill*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
-         ::: blind 
+         ::: ff hmax 
 
 parallel $command \
          ::: samples/puzzle*spider*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
-         ::: blind 
+         ::: ff hmax 
 
 parallel $command \
          ::: samples/lightsout*digital*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
-         ::: blind 
+         ::: ff hmax 
 
 parallel $command \
          ::: samples/lightsout*twisted*/${key}.pddl \
          ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
-         ::: blind 
+         ::: ff hmax 
 
 # parallel -j 1 --no-notice \
 #          "jbsub $common './ama3-planner.py {1} {2} {3} > {2}/{1/}_{3}.ama3.log 2> {2}/{1/}_{3}.ama3.err'" \
 #          ::: samples/hanoi* \
 #          ::: $probdir/*/latplan.puzzles.hanoi/* \
-#          ::: blind  \
+#          ::: ff hmax  \
          # ::: remlic-1-1-0 remlic-2-2-0 remlic-4-4-0  actionlearner rf-2-others1b-t rf-5-others1b-t rf-10-others1b-t
 
 
