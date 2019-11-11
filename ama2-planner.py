@@ -19,7 +19,7 @@ float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
 
 sae = None
-oae = None
+aae = None
 ad  = None
 sd3 = None
 cae = None
@@ -57,14 +57,14 @@ class State(object):
             return [self.state]
 
 def action_reconstruction_filtering(y):
-    # filtering based on OAE action reconstruction
-    action_reconstruction = oae.encode_action(y).round()
+    # filtering based on AAE action reconstruction
+    action_reconstruction = aae.encode_action(y).round()
     return y[np.all(np.equal(available_actions, action_reconstruction),axis=(1,2))]
 
-def state_reconstruction_from_oae_filtering(y):
-    action_reconstruction = oae.encode_action(y)
+def state_reconstruction_from_aae_filtering(y):
+    action_reconstruction = aae.encode_action(y)
     N = y.shape[1]//2
-    y_reconstruction = oae.decode([y[:,:N], action_reconstruction]).round()
+    y_reconstruction = aae.decode([y[:,:N], action_reconstruction]).round()
     return y[np.all(np.equal(y, y_reconstruction),axis=(1,))]
 
 def state_reconstruction_filtering(y):
@@ -129,7 +129,7 @@ def decide_pruning_method():
     if type1_error > 0.25:
         pruning_methods = [
             action_reconstruction_filtering,           # if applied, this should be the first method
-            # state_reconstruction_from_oae_filtering,
+            # state_reconstruction_from_aae_filtering,
             # inflate_actions,
             action_discriminator_filtering,
             state_reconstruction_filtering,
@@ -137,7 +137,7 @@ def decide_pruning_method():
     else:
         pruning_methods = [
             action_reconstruction_filtering,           # if applied, this should be the first method
-            # state_reconstruction_from_oae_filtering,
+            # state_reconstruction_from_aae_filtering,
             # inflate_actions,
             action_discriminator_filtering,
             state_reconstruction_filtering,
@@ -163,7 +163,7 @@ class Searcher:
         try:
             reductions = []
             s = state.state
-            y = oae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
+            y = aae.decode([np.repeat(np.expand_dims(s,0), len(available_actions), axis=0), available_actions]) \
                    .round().astype(int)
             reductions.append(len(y))
 
@@ -306,7 +306,7 @@ def blind(state,goal):
     return 0
 
 def main(network_dir, problem_dir, searcher, first_solution=False):
-    global sae, oae, ad, sd3, cae, available_actions
+    global sae, aae, ad, sd3, cae, available_actions
     
     def search(path):
         root, ext = os.path.splitext(path)
@@ -315,7 +315,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     p = latplan.util.puzzle_module(network_dir)
 
     sae = latplan.model.load(network_dir,allow_failure=True)
-    oae = latplan.model.load(sae.local("_aae/"),allow_failure=True)
+    aae = latplan.model.load(sae.local("_aae/"),allow_failure=True)
     ad  = latplan.model.load(sae.local("_ad/"),allow_failure=True)
     sd3 = latplan.model.load(sae.local("_sd3/"),allow_failure=True)
     cae = latplan.model.load(sae.local("_cae/"),allow_failure=True)
@@ -326,7 +326,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     init, goal = init_goal_misc(p)
     
     known_transisitons = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
-    actions = oae.encode_action(known_transisitons, batch_size=1000).round()
+    actions = aae.encode_action(known_transisitons, batch_size=1000).round()
     histogram = np.squeeze(actions.sum(axis=0,dtype=int))
     print(histogram)
     print(np.count_nonzero(histogram),"actions valid")
