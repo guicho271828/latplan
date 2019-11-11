@@ -94,6 +94,8 @@ def generate_aae_action(known_transisitons):
 ################################################################
 # data preparation
 
+# discriminate correct transitions and nop, suc-permutation, reconstructable, and random bits combined
+# **** does not discriminate OEA-generated states quite well, do not use ****
 def prepare(data):
     print("discriminate correct transitions and nop, suc-permutation, reconstructable, and random bits combined")
     print("**** does not discriminate OEA-generated states quite well, do not use ****")
