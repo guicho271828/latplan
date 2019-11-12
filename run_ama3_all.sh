@@ -27,7 +27,7 @@ then
     echo "mem: e.g. 64g" >&2
     exit 1
 fi
-mem=${2:-64g}
+mem=${2:-256g}
 
 proj=$(date +%Y%m%d%H%M)ama3
 command="jbsub -mem $mem -queue x86_1h -proj $proj task"
