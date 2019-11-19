@@ -39,15 +39,14 @@ if len(sys.argv) == 1:
     sys.exit("{} [directory]".format(sys.argv[0]))
 
 directory = sys.argv[1]
-directory_aae = "{}/_aae/".format(directory)
-mode = sys.argv[2]
+mode      = sys.argv[2]
 
-ae = latplan.model.load(directory)
+sae = latplan.model.load(directory)
 
-if "hanoi" in ae.path:
-    data = np.loadtxt(ae.local("all_actions.csv"),dtype=np.int8)
+if "hanoi" in sae.path:
+    data = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
 else:
-    data = np.loadtxt(ae.local("actions.csv"),dtype=np.int8)
+    data = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
 
 print(data.shape)
 N = data.shape[1]//2
@@ -57,7 +56,7 @@ val   = data[int(len(data)*0.9):]
 try:
     if 'learn' in mode:
         raise Exception('learn')
-    aae = ActionAE(directory_aae).load()
+    aae = ActionAE(sae.local("_aae/")).load()
     num_actions = aae.parameters["M"]
 except:
     for num_actions in range(min_num_actions,max_num_actions,inc_num_actions):
@@ -77,7 +76,7 @@ except:
             # quick eval
             'lr'         :[0.001],
             }
-        aae,_,_ = grid_search(curry(nn_task, ActionAE, directory_aae, train, train, val, val,),
+        aae,_,_ = grid_search(curry(nn_task, ActionAE, sae.local("_aae/"), train, train, val, val,),
                               default_parameters,
                               parameters)
         val_diff = np.abs(aae.autoencode(val)-val)[:,N:]
@@ -101,11 +100,11 @@ if 'plot' in mode:
     aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test.png")
     
     
-    aae.plot(data[:8], "aae_train_decoded.png", ae=ae)
-    aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test_decoded.png", ae=ae)
+    aae.plot(data[:8], "aae_train_decoded.png", sae=sae)
+    aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test_decoded.png", sae=sae)
     
     transitions = aae.decode([np.repeat(data[:1,:N], len(all_labels), axis=0), all_labels])
-    aae.plot(transitions, "aae_all_actions_for_a_state.png", ae=ae)
+    aae.plot(transitions, "aae_all_actions_for_a_state.png", sae=sae)
     
     from latplan.util.timer import Timer
     # with Timer("loading csv..."):
@@ -113,9 +112,9 @@ if 'plot' in mode:
     # transitions = aae.decode([np.repeat(all_actions[:1,:N], len(all_labels), axis=0), all_labels])
     suc = transitions[:,N:]
     from latplan.util.plot import plot_grid, squarify
-    plot_grid([x for x in ae.decode(suc)], w=8, path=aae.local("aae_all_actions_for_a_state_8x16.png"), verbose=True)
-    plot_grid([x for x in ae.decode(suc)], w=16, path=aae.local("aae_all_actions_for_a_state_16x8.png"), verbose=True)
-    plot_grid(ae.decode(data[:1,:N]), w=1, path=aae.local("aae_all_actions_for_a_state_state.png"), verbose=True)
+    plot_grid([x for x in sae.decode(suc)], w=8, path=aae.local("aae_all_actions_for_a_state_8x16.png"), verbose=True)
+    plot_grid([x for x in sae.decode(suc)], w=16, path=aae.local("aae_all_actions_for_a_state_16x8.png"), verbose=True)
+    plot_grid(sae.decode(data[:1,:N]), w=1, path=aae.local("aae_all_actions_for_a_state_state.png"), verbose=True)
     
 
 if 'test' in mode:
@@ -148,11 +147,10 @@ if 'test' in mode:
 if "dump" in mode:
     # one-hot to id
     actions_byid = (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
-    with open(ae.local("action_ids.csv"), 'wb') as f:
+    with open(sae.local("action_ids.csv"), 'wb') as f:
         np.savetxt(f,actions_byid,"%d")
-        
-        
-        
+
+
 """* Summary:
 Input: a subset of valid action pairs.
 
