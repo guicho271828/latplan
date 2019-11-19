@@ -1203,7 +1203,7 @@ We again use gumbel-softmax for representing A."""
                   lambda data: self.autoencoder.evaluate(data,data,**opts))
         return self
     
-    def plot(self,data,path,verbose=False,ae=None):
+    def plot(self,data,path,verbose=False,sae=None):
         self.load()
         dim = data.shape[1] // 2
         x = data
@@ -1218,11 +1218,11 @@ We again use gumbel-softmax for representing A."""
         by_pre, by_suc = squarify(by[:,:dim]), squarify(by[:,dim:])
         y_suc_r, by_suc_r = y_suc.round(), by_suc.round()
 
-        if ae:
-            x_pre_im, x_suc_im = ae.decode(x[:,:dim]), ae.decode(x[:,dim:])
-            y_pre_im, y_suc_im = ae.decode(y[:,:dim]), ae.decode(y[:,dim:])
-            by_pre_im, by_suc_im = ae.decode(by[:,:dim]), ae.decode(by[:,dim:])
-            y_suc_r_im, by_suc_r_im = ae.decode(y[:,dim:].round()), ae.decode(by[:,dim:].round())
+        if sae:
+            x_pre_im, x_suc_im = sae.decode(x[:,:dim]), sae.decode(x[:,dim:])
+            y_pre_im, y_suc_im = sae.decode(y[:,:dim]), sae.decode(y[:,dim:])
+            by_pre_im, by_suc_im = sae.decode(by[:,:dim]), sae.decode(by[:,dim:])
+            y_suc_r_im, by_suc_r_im = sae.decode(y[:,dim:].round()), sae.decode(by[:,dim:].round())
             images = []
             for seq in zip(x_pre_im, x_suc_im, squarify(np.squeeze(z)), y_pre_im, y_suc_im, y_suc_r_im, squarify(np.squeeze(b)), by_pre_im, by_suc_im, by_suc_r_im):
                 images.extend(seq)
