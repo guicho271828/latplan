@@ -237,18 +237,11 @@ def test():
     valid = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
     random.shuffle(valid)
 
-    mixed = generate_aae_action(valid[:1000]) # 1000 * A transitions (max)
-    random.shuffle(mixed)
-    
-    N = valid.shape[1] // 2
-    pre_images = sae.decode(mixed[:,:N],batch_size=1000)
-    suc_images = sae.decode(mixed[:,N:],batch_size=1000)
-    
-    p = latplan.util.puzzle_module(sae.local(""))
-    answers = np.array(p.validate_transitions([pre_images, suc_images],batch_size=1000))
-    invalid = mixed[np.logical_not(answers)]
+    invalid = np.loadtxt(sae.local("invalid_actions.csv"),dtype=np.int8)
     random.shuffle(invalid)
-   
+
+    N = int(valid.shape[1] // 2)
+    
     performance = {}
     def reg(names,value,d=performance):
         name = names[0]
@@ -264,7 +257,6 @@ def test():
             print(name,": ", value)
     
     reg(["valid"],   len(valid))
-    reg(["mixed"],   len(mixed))
     reg(["invalid"], len(invalid))
 
     def measure(valid, invalid, suffix):
@@ -299,6 +291,8 @@ def test():
 
     measure(valid,invalid,"raw")
     measure(valid,invalid[np.where(np.squeeze(combined_sd(invalid[:,N:],sae,cae,sd3,batch_size=1000)) > 0.5)[0]],     "sd")
+    
+    p = latplan.util.puzzle_module(sae.local(""))
     measure(valid,invalid[p.validate_states(sae.decode(invalid[:,N:],batch_size=1000),verbose=False,batch_size=1000)],"validated")
     
     import json
