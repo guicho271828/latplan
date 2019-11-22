@@ -13,6 +13,15 @@ import numpy.random as random
 import keras.backend as K
 import tensorflow as tf
 
+from keras.optimizers import Adam
+from keras_adabound   import AdaBound
+from keras_radam      import RAdam
+
+import keras.optimizers
+
+setattr(keras.optimizers,"radam", RAdam)
+setattr(keras.optimizers,"adabound", AdaBound)
+
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
 
@@ -218,6 +227,7 @@ default_parameters = {
     'min_temperature' : 0.1,
     'M'               : 2,
     'min_grad'        : 0.0,
+    'optimizer'       : 'radam',
 }
 
 # exhaustive tuning
@@ -239,11 +249,11 @@ parameters = {
     'layer'      :[300],# [400,4000],
     'dropout'    :[0.5, 0.8],    #[0.1,0.4], #0.6,0.7,
     'batch_size' :[1000],
-    'full_epoch' :[1000],
+    'full_epoch' :[400],
     'activation' :['relu'],
     # quick eval
-    'epoch'      :[3000],
-    'lr'         :[0.001],
+    'epoch'      :[400],
+    'lr'         :[0.01,0.001],
 }
 
 # good for puzzles
