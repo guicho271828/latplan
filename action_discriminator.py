@@ -234,7 +234,7 @@ def learn(input_type):
     return discriminator
 
 def test():
-    valid = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
+    valid = np.loadtxt(sae.local("valid_actions.csv"),dtype=np.int8)
     random.shuffle(valid)
 
     invalid = np.loadtxt(sae.local("invalid_actions.csv"),dtype=np.int8)
