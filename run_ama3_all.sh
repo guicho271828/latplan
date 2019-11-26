@@ -34,10 +34,11 @@ command="jbsub -mem $mem -queue x86_1h -proj $proj task"
 export PYTHONPATH=$(dirname $(dirname $(readlink -ef $0))):$PYTHONPATH
 export PYTHONUNBUFFERED=1
 task (){
+    out=$(echo ${1%%.pddl} | sed 's@/@_@g')
     ./ama3-planner.py \
         $@ \
-        1> $2/ama3_$(basename $(dirname $1))_$(basename $1 .pddl)_$3.log \
-        2> $2/ama3_$(basename $(dirname $1))_$(basename $1 .pddl)_$3.err
+        1> $2/ama3_${out}_$3.log \
+        2> $2/ama3_${out}_$3.err
 }
 export -f task
 
