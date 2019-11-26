@@ -36,7 +36,17 @@ options = {
 }
 
 def main(domainfile, problem_dir, heuristics):
-    network_dir = os.path.dirname(domainfile)
+    network_dir = domainfile
+    success = False
+    while not success:
+        try:
+            network_dir = os.path.dirname(network_dir)
+            p = latplan.util.puzzle_module(network_dir)
+            success = True
+        except:
+            pass
+
+    
     def domain(path):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(os.path.splitext(os.path.basename(domainfile))[0], root, ext)
@@ -44,7 +54,6 @@ def main(domainfile, problem_dir, heuristics):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(heuristics, root, ext)
     
-    p = latplan.util.puzzle_module(network_dir)
     log("loaded puzzle")
     sae = latplan.model.load(network_dir,allow_failure=True)
     log("loaded sae")
