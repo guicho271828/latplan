@@ -1,3 +1,3 @@
 #!/bin/bash +x
 
-planner-scripts/limit.sh -v -o "$1" -- fd-clean $2 $3
+planner-scripts/limit.sh -- "planner-scripts/fd-clean -o '$1' -- $2 $3"
