@@ -1,3 +1,3 @@
 #!/bin/bash +x
 
-planner-scripts/limit.sh -v -o "$1" -- fd-sasgz-clean $2 $(dirname $2)/domain.pddl
+planner-scripts/limit.sh -- "planner-scripts/fd-sasgz-clean -o '$1' -- $2 $(dirname $2)/domain.pddl"

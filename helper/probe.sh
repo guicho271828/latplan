@@ -1,3 +1,3 @@
 #!/bin/bash +x
 
-planner-scripts/limit.sh -v -o "$1" -- probe-clean $2 $3
+planner-scripts/limit.sh -- "planner-scripts/probe-clean -- $2 $(dirname $2)/domain.pddl"
