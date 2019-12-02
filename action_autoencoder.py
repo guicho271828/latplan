@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import latplan.model
 from latplan.model import ActionAE
-from latplan.util        import curry
+from latplan.util        import curry, set_difference
 from latplan.util.tuning import grid_search, nn_task
 
 import keras.backend as K
@@ -90,8 +90,7 @@ actions = aae.encode_action(data, batch_size=1000).round()
 histogram = np.squeeze(actions.sum(axis=0,dtype=int))
 print(histogram)
 print(np.count_nonzero(histogram > 0))
-effective_labels = np.count_nonzero(histogram)
-all_labels = np.zeros((effective_labels, actions.shape[1], actions.shape[2]), dtype=int)
+all_labels = np.zeros((np.count_nonzero(histogram), actions.shape[1], actions.shape[2]), dtype=int)
 for i, pos in enumerate(np.where(histogram > 0)[0]):
     all_labels[i][0][pos] = 1
 
@@ -138,18 +137,99 @@ if 'test' in mode:
     metrics(train,"train")
     metrics(all_actions,"all")
 
-    performance["effective_labels"] = int(effective_labels)
+    performance["effective_labels"] = int(len(all_labels))
 
     import json
     with open(aae.local("performance.json"),"w") as f:
         json.dump(performance, f)
 
+def generate_aae_action(known_transisitons):
+    N = known_transisitons.shape[1] // 2
+    states = known_transisitons.reshape(-1, N)
+    
+    def repeat_over(array, repeats, axis=0):
+        array = np.expand_dims(array, axis)
+        array = np.repeat(array, repeats, axis)
+        return np.reshape(array,(*array.shape[:axis],-1,*array.shape[axis+2:]))
+    
+    print("start generating transitions")
+    # s1,s2,s3,s1,s2,s3,....
+    repeated_states  = repeat_over(states, len(all_labels), axis=0)
+    # a1,a1,a1,a2,a2,a2,....
+    repeated_actions = np.repeat(all_labels, len(states), axis=0)
+    
+    y = aae.decode([repeated_states, repeated_actions], batch_size=1000).round().astype(np.int8)
+
+    print("remove known transitions")
+    y = set_difference(y, known_transisitons)
+    print("shuffling")
+    random.shuffle(y)
+    return y
+
 if "dump" in mode:
+    # dump list of available actions
+    print(sae.local("available_actions.csv"))
+    with open(sae.local("available_actions.csv"), 'wb') as f:
+        np.savetxt(f,np.where(histogram > 0)[0],"%d")
+
     # one-hot to id
     actions_byid = (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
-    with open(sae.local("action_ids.csv"), 'wb') as f:
-        np.savetxt(f,actions_byid,"%d")
+    print(sae.local("actions+ids.csv"))
+    with open(sae.local("actions+ids.csv"), 'wb') as f:
+        np.savetxt(f,np.concatenate((data,actions_byid), axis=1),"%d")
 
+    transitions = generate_aae_action(data)
+    # note: transitions are already shuffled, and also do not contain any examples in data.
+    actions      = aae.encode_action(transitions, batch_size=1000).round()
+    actions_byid = (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
+
+    # ensure there are enough test examples
+    separation = min(len(data)*10,len(transitions)-len(data))
+    
+    # fake dataset is used only for the training.
+    fake_transitions  = transitions[:separation]
+    fake_actions_byid = actions_byid[:separation]
+
+    # remaining data are used only for the testing.
+    test_transitions  = transitions[separation:]
+    test_actions_byid = actions_byid[separation:]
+
+    print(fake_transitions.shape, test_transitions.shape)
+
+    print(sae.local("fake_actions.csv"))
+    with open(sae.local("fake_actions.csv"), 'wb') as f:
+        np.savetxt(f,fake_transitions,"%d")
+    print(sae.local("fake_actions+ids.csv"))
+    with open(sae.local("fake_actions+ids.csv"), 'wb') as f:
+        np.savetxt(f,np.concatenate((fake_transitions,fake_actions_byid), axis=1),"%d")
+    
+    p = latplan.util.puzzle_module(sae.path)
+    print("decoding pre")
+    pre_images = sae.decode(test_transitions[:,:N],batch_size=1000)
+    print("decoding suc")
+    suc_images = sae.decode(test_transitions[:,N:],batch_size=1000)
+    print("validating transitions")
+    valid    = p.validate_transitions([pre_images, suc_images],batch_size=1000)
+    invalid  = np.logical_not(valid)
+    
+    valid_transitions  = test_transitions [valid][:len(data)] # reduce the amount of data to reduce runtime
+    valid_actions_byid = test_actions_byid[valid][:len(data)]
+    invalid_transitions  = test_transitions [invalid][:len(data)] # reduce the amount of data to reduce runtime
+    invalid_actions_byid = test_actions_byid[invalid][:len(data)]
+
+    print(sae.local("valid_actions.csv"))
+    with open(sae.local("valid_actions.csv"), 'wb') as f:
+        np.savetxt(f,valid_transitions,"%d")
+    print(sae.local("valid_actions+ids.csv"))
+    with open(sae.local("valid_actions+ids.csv"), 'wb') as f:
+        np.savetxt(f,np.concatenate((valid_transitions,valid_actions_byid), axis=1),"%d")
+        
+    print(sae.local("invalid_actions.csv"))
+    with open(sae.local("invalid_actions.csv"), 'wb') as f:
+        np.savetxt(f,invalid_transitions,"%d")
+    print(sae.local("invalid_actions+ids.csv"))
+    with open(sae.local("invalid_actions+ids.csv"), 'wb') as f:
+        np.savetxt(f,np.concatenate((invalid_transitions,invalid_actions_byid), axis=1),"%d")
 
 """* Summary:
 Input: a subset of valid action pairs.
