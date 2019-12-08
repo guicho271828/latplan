@@ -157,6 +157,11 @@ def simple_genetic_search(task, default_config, parameters,
     results       = []
     list(map(print, _random_configs(parameters, False)))
 
+    # assert 2 <= initial_population
+    if not (2 <= initial_population):
+        print({"initial_population":initial_population},"is superceded by",{"initial_population":2},". initial_population must be larger than equal to 2",)
+        initial_population = 2
+    
     # assert initial_population <= limit
     if not (initial_population <= limit):
         print({"initial_population":initial_population},"is superceded by",{"limit":limit},". limit must be larger than equal to the initial population",)
