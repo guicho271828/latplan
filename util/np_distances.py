@@ -12,8 +12,7 @@ def mae(x,y,axis=None):
     return np.mean(np.absolute(x - y),axis=axis)
 
 def mse(x,y,axis=None):
-    return np.sqrt(np.sum(np.square(x - y),axis=axis))
-
+    return np.mean(np.square(x - y),axis=axis)
 
 # def bce(x,y):
 #     from keras.layers import Input
