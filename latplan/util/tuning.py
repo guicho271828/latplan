@@ -1,6 +1,17 @@
 from timeout_decorator import timeout, TimeoutError
 import numpy.random as random
 
+import signal
+class SignalInterrupt(Exception):
+    """Raised when a signal handler was invoked"""
+    def __init__(self,signal,frame):
+        print("Received Signal",signal)
+        self.signal = signal
+        self.frame  = frame
+        raise self
+
+signal.signal(signal.SIGUSR2,SignalInterrupt)
+
 class InvalidHyperparameterError(Exception):
     """Raised when the hyperparameter is not valid"""
     pass
@@ -226,6 +237,8 @@ def simple_genetic_search(task, default_config, parameters,
                 i += 1
             except InvalidHyperparameterError as e:
                 pass
+    except SignalInterrupt as e:
+        print("received",e.signal,", optimization stopped")
     finally:
         _final_report(best,results)
     return best['artifact'],best['params'],best['eval']
