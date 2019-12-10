@@ -310,4 +310,8 @@ def main():
         globals()[task](*map(myeval,sys.argv))
     
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        import latplan.util.stacktrace
+        latplan.util.stacktrace.format()
