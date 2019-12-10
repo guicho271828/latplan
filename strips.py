@@ -17,7 +17,7 @@ import os.path
 
 float_formatter = lambda x: "%.5f" % x
 import sys
-np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
+np.set_printoptions(formatter={'float_kind':float_formatter})
 
 mode     = 'learn_dump'
 sae_path = None
