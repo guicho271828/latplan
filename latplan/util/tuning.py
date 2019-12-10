@@ -18,23 +18,18 @@ class InvalidHyperparameterError(Exception):
 
 def nn_task(network, path, train_in, train_out, test_in, test_out, parameters):
     net = network(path,parameters=parameters)
-    try:
-        net.train(train_in,
-                  test_data=test_in,
-                  train_data_to=train_out,
-                  test_data_to=test_out,
-                  report=False,
-                  **parameters,)
-        error = net.net.evaluate(test_in,test_out,batch_size=100,verbose=0)
-    finally:
-        try:
-            print("logging the results")
-            with open(net.local("grid_search.log"), 'a') as f:
-                import json
-                json.dump((error, parameters), f)
-                f.write("\n")
-        except TypeError:
-            pass
+    net.train(train_in,
+              test_data=test_in,
+              train_data_to=train_out,
+              test_data_to=test_out,
+              report=False,
+              **parameters,)
+    error = net.net.evaluate(test_in,test_out,batch_size=100,verbose=0)
+    print("logging the results")
+    with open(net.local("grid_search.log"), 'a') as f:
+        import json
+        json.dump((error, parameters), f)
+        f.write("\n")
     return net, error
 
 def merge_hash(a, b):
