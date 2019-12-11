@@ -153,7 +153,7 @@ def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters)
     raise Exception()
 
 def simple_genetic_search(task, default_config, parameters,
-                          initial_population=10,
+                          initial_population=20,
                           population=10,
                           mutation_ratio=0.3,
                           limit=float('inf'),
