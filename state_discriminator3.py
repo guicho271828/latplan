@@ -290,6 +290,6 @@ if __name__ == '__main__':
         print(sys.argv)
         main(*sys.argv[1:])
     except:
-        import traceback
-        print(traceback.format_exc())
+        import latplan.util.stacktrace
+        latplan.util.stacktrace.format()
         sys.exit("{} [directory] [mode=test] [method=feature]".format(sys.argv[0]))

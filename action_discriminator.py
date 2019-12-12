@@ -366,5 +366,10 @@ def main(directory, mode="test", input_type="prepare_aae_PU3", subdir="_ad/"):
 if __name__ == '__main__':
     import sys
     print(sys.argv)
-    main(*sys.argv[1:])
+    try:
+        main(*sys.argv[1:])
+    except:
+        import latplan.util.stacktrace
+        latplan.util.stacktrace.format()
+
 
