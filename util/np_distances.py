@@ -5,14 +5,26 @@ import numpy as np
 def bce(true,pred,axis=None,epsilon=1e-7):
     x = true
     y = pred
-    return float( - ( (  x   * np.log(np.clip(y,  epsilon,1))) + \
-                      ((1-x) * np.log(np.clip(1-y,epsilon,1)))   ).mean(axis=axis) )
+    result = - ( (  x   * np.log(np.clip(y,  epsilon,1))) + \
+                 ((1-x) * np.log(np.clip(1-y,epsilon,1)))   ).mean(axis=axis)
+    if result.size == 1:
+        return float(result)
+    else:
+        return result
 
 def mae(x,y,axis=None):
-    return float(np.mean(np.absolute(x - y),axis=axis))
+    result = np.mean(np.absolute(x - y),axis=axis)
+    if result.size == 1:
+        return float(result)
+    else:
+        return result
 
 def mse(x,y,axis=None):
-    return float(np.mean(np.square(x - y),axis=axis))
+    result = np.mean(np.square(x - y),axis=axis)
+    if result.size == 1:
+        return float(result)
+    else:
+        return result
 
 # def bce(x,y):
 #     from keras.layers import Input
