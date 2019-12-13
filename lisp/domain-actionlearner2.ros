@@ -1,0 +1,103 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=128000 -Q -- $0 "$@"
+|#
+
+#|
+
+This is a converter from a CSV file containing the propositional state vectors
+to a PDDL *domain* file.
+The algorithm follows the Action Learner algorithm (Amado et.al., 2018).
+
+PDDL files are compatible to any classical planning solvers.
+See the past competition solvers for example.
+
+http://www.plg.inf.uc3m.es/ipc2011-deterministic/
+https://helios.hud.ac.uk/scommv/IPC-14/planners.html
+
+|#
+
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre function-cache serializable-object dsama) :silent t)
+  )
+
+(defpackage :ros.script.to-sas.3690427216
+  (:use :cl :alexandria :iterate :trivia :trivia.ppcre :function-cache))
+(in-package :ros.script.to-sas.3690427216)
+
+(defmethod print-object ((o (eql nil)) s)
+  (write-char #\( s)
+  (write-char #\) s))
+
+(function-cache:defcached sym (&rest args)
+  (intern (format nil "~{~a~}" args)))
+
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (list (sym 'z dim)))
+
+(defun find-precondition (transitions a dim)
+  (let ((pres (numcl:asarray (numcl:aref transitions t `(0 ,dim)) :type 'bit))
+        (indices (numcl:= a (numcl:aref transitions t -1)))
+        (pre+ (numcl:ones dim))
+        (pre- (numcl:ones dim)))
+    (iter (for flag in-vector indices with-index i)
+          (when (= flag 1)
+            (bit-and (numcl:aref pres i) pre+ pre+))
+          (when (= flag 1)
+            (bit-andc1 (numcl:aref pres i) pre- pre-)))
+    (numcl:- pre+ pre-)))
+
+(defun make-domain (available-actions add del transitions)
+  (iter (for a in-vector (numcl:flatten available-actions) with-index i)
+        (for add/a = (numcl:aref add i))
+        (for del/a = (numcl:aref del i))
+        (for pre/a = (find-precondition transitions a dim))
+        (with dim = (second (numcl:shape add)))
+        (collecting
+         `(:action ,(sym 'a a)
+                   :parameters () ;TODO: Is it possible to use parameters in our framework?
+                   :precondition
+                   (and ,@(iter (for p in-vector pre/a with-index i)
+                                (when (plusp p)
+                                  (collect (z i)))
+                                (when (minusp p)
+                                  (collect `(not ,(z i))))))
+                   :effect
+                   (and ,@(iter (for p in-vector add/a with-index i)
+                                (when (plusp p)
+                                  (collect (z i))))
+                        ,@(iter (for p in-vector del/a with-index i)
+                                (when (plusp p)
+                                  (collect `(not ,(z i)))))))
+         into actions)
+        (finally
+         (return
+           `(define (domain latent)
+                (:requirements :strips :negative-preconditions)
+              (:predicates
+               ,@(map 'list #'z (iota dim)))
+              ,@actions)))))
+
+(defun main (directory mode transitions)
+  (flet ((load-csv (filename)
+           (dataloader:load (merge-pathnames filename (uiop:ensure-directory-pathname directory))
+                            :mime "text/plain"
+                            :separator #\Space
+                            :data-map-fn #'read-from-string)))
+    (let ((*print-right-margin* 70)
+          (*trace-output* *error-output*))
+      (time
+       (format t "~(~:S~)~%"
+               (make-domain (load-csv "available_actions.csv")
+                            (load-csv (format nil "action_add~a.csv" mode))
+                            (load-csv (format nil "action_del~a.csv" mode))
+                            (load-csv transitions)))))))
+
+
+;;; vim: set ft=lisp lisp:
+
+
+
