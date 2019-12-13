@@ -26,10 +26,14 @@ export PYTHONPATH=$(dirname $(dirname $(readlink -ef $0))):$PYTHONPATH
 export PYTHONUNBUFFERED=1
 export SHELL=/bin/bash
 task (){
+    base=$2/ama1_$(basename $1)_$4_$3
+    outfile=$base.log
+    errfile=$base.err
+    trap "cat $outfile; cat $errfile >&2" RETURN
     ./ama1-planner.py \
         $@ \
-        1> $2/ama1_$(basename $1)_$4_$3.log \
-        2> $2/ama1_$(basename $1)_$4_$3.err
+        1> $outfile \
+        2> $errfile
 }
 export -f task
 

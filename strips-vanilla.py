@@ -55,13 +55,6 @@ parameters = {
     'noise'      :[0.4],
     'dropout_z'  :[False],
     'activation' :['relu'],
-    'num_actions'    :[100,200,400,800,1600],
-    'aae_width'      :[100,300,600,],
-    'aae_depth'      :[0,1,2],
-    'aae_activation' :['relu','tanh'],
-    'aae_delay'      :[0,],
-    'direct'             :[0.1,1.0,10.0],
-    'direct_delay'       :[0.05,0.1,0.2,0.3,0.5],
     'zerosuppress'       :[0.1,0.2,0.5],
     'zerosuppress_delay' :[0.05,0.1,0.2,0.3,0.5],
     'loss'               :["BCE"],
@@ -102,9 +95,6 @@ def dump_actions(ae,transitions,name="actions.csv",repeat=1):
         return
     print(ae.local(name))
     pre, suc = transitions[0], transitions[1]
-    if ae.parameters["test_gumbel"]:
-        pre = np.repeat(pre,axis=0,repeats=10)
-        suc = np.repeat(suc,axis=0,repeats=10)
     pre = ae.encode(pre,batch_size=1000)
     suc = ae.encode(suc,batch_size=1000)
     ae.dump_actions(pre,suc,batch_size=1000)
@@ -150,7 +140,7 @@ def run(path,train,val,parameters,train_out=None,val_out=None,):
             default_parameters,
             parameters,
             path,
-            limit=300,
+            limit=100,
             report_best= lambda net: net.save(),
         )
     elif 'reproduce' in mode:   # reproduce the best result from the grid search log
@@ -216,19 +206,17 @@ def hanoi(disks=7,towers=4,num_examples=6500,N=None,num_actions=None,direct=None
     p.setup()
     path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
     with np.load(path) as data:
-        pre_configs = data['pres']
-        suc_configs = data['sucs']
+        pre_configs = data['pres'][:num_examples]
+        suc_configs = data['sucs'][:num_examples]
     pres = p.generate(pre_configs,disks,towers)
     sucs = p.generate(suc_configs,disks,towers)
     transitions = np.array([pres, sucs])
-    
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     data = np.swapaxes(transitions,0,1)
     print(data.shape)
-    train = data[:int(num_examples*0.9)]
-    val   = data[int(num_examples*0.9):int(num_examples*0.95)]
-    test  = data[int(num_examples*0.95):]
-    print(train.shape, val.shape, test.shape)
+    train = data[:int(len(data)*0.9)]
+    val   = data[int(len(data)*0.9):int(len(data)*0.95)]
+    test  = data[int(len(data)*0.95):]
     ae = run(os.path.join("samples",sae_path), train, val, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image(ae,test,train)

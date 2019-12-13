@@ -4,7 +4,7 @@ ulimit -v 16000000000
 
 trap exit SIGINT
 
-probdir=problem-instances
+probdir=problem-instances-16-korf
 
 #### foolproof check
 
@@ -22,9 +22,9 @@ probdir=problem-instances
 
 key=${1:-*}
 
-suffix=planning
-base=samples-planning
-taskfile=benchmark
+suffix=16puzzle
+base=samples-16
+taskfile=benchmark-16-korf
 
 task (){
     out=$(echo ${1%%.pddl} | sed 's@/@_@g')
@@ -41,34 +41,9 @@ export -f task
 
 (
     parallel echo task \
-             ::: $base/puzzle_mnist*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
-             ::: blind gc lama lmcut mands
-
-    parallel echo task \
              ::: $base/puzzle_mandrill*$suffix/${key}.pddl \
              ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
-             ::: blind gc lama lmcut mands
-
-    parallel echo task \
-             ::: $base/puzzle_spider*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
-             ::: blind gc lama lmcut mands
-
-    parallel echo task \
-             ::: $base/lightsout_digital*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
-             ::: blind gc lama lmcut mands
-
-    parallel echo task \
-             ::: $base/lightsout_twisted*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
-             ::: blind gc lama lmcut mands
-
-    # parallel echo task \
-        #          ::: $base/hanoi*$suffix/${key}.pddl \
-        #          ::: $probdir/*/latplan.puzzles.hanoi/* \
-        #          ::: blind gc lama lmcut mands
+             ::: blind lama lmcut mands
 ) > $taskfile
 
 num=$(wc -l $taskfile)
@@ -88,7 +63,7 @@ mkdir -p $taskfile-split
 rm $taskfile-split/*
 split -l $taskperjob $taskfile $taskfile-split/$taskfile.
 
-proj=$(date +%Y%m%d%H%M)ama3
+proj=$(date +%Y%m%d%H%M)ama3-16-korf
 submit="jbsub -cores $cores -mem ${memperjob}g -queue x86_${hours}h -proj $proj"
 export PYTHONPATH=$(dirname $(dirname $(readlink -ef $0))):$PYTHONPATH
 export PYTHONUNBUFFERED=1

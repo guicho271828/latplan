@@ -4,7 +4,7 @@ ulimit -v 16000000000
 
 trap exit SIGINT
 
-probdir=problem-instances
+probdir=problem-instances-cube-aae
 
 #### foolproof check
 
@@ -22,9 +22,9 @@ probdir=problem-instances
 
 key=${1:-*}
 
-suffix=planning
-base=samples-planning
-taskfile=benchmark
+suffix=vanilla/*/
+base=samples-for-aae
+taskfile=benchmark-cube-aae
 
 task (){
     out=$(echo ${1%%.pddl} | sed 's@/@_@g')

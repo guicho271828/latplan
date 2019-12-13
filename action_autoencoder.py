@@ -39,13 +39,14 @@ default_parameters = {
 }
 
 parameters = {
-    'M'          :[50,100,200,400,800,1600],
+    'M'          :[100,200,400,800,1600],
     'N'          :[1],
     'dropout'    :[0.4],
     'aae_width'      :[100,300,600,],
     'aae_depth'      :[0,1,2],
     'aae_activation' :['relu','tanh'],
     'lr'         :[0.1,0.01,0.001],
+    'beta'       :[-0.3,-0.1,0.0,0.1,0.3],
 }
 
 import numpy.random as random
