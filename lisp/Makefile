@@ -1,9 +1,5 @@
 
-all: domain.bin problem.bin parse-plan.bin sas.bin domain-actionlearner.bin domain-fol.bin problem-fol.bin parse-plan-fol.ros \
-	read-latent-state-traces.bin val-simulate.bin
-
-val-simulate.ros:
-	ln -s ~/.roswell/bin/val-simulate $@
+all: $(patsubst %.ros,%.bin,$(wildcard *.ros))
 
 %.bin: %.ros
 	LANG=en_US.utf8 ros build $<
