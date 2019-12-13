@@ -150,7 +150,7 @@ def run(path,train,val,parameters,train_out=None,val_out=None,):
             default_parameters,
             parameters,
             path,
-            limit=300,
+            limit=100,
             report_best= lambda net: net.save(),
         )
     elif 'reproduce' in mode:   # reproduce the best result from the grid search log
@@ -216,19 +216,17 @@ def hanoi(disks=7,towers=4,num_examples=6500,N=None,num_actions=None,direct=None
     p.setup()
     path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
     with np.load(path) as data:
-        pre_configs = data['pres']
-        suc_configs = data['sucs']
+        pre_configs = data['pres'][:num_examples]
+        suc_configs = data['sucs'][:num_examples]
     pres = p.generate(pre_configs,disks,towers)
     sucs = p.generate(suc_configs,disks,towers)
     transitions = np.array([pres, sucs])
-    
     states = np.concatenate((transitions[0], transitions[1]), axis=0)
     data = np.swapaxes(transitions,0,1)
     print(data.shape)
-    train = data[:int(num_examples*0.9)]
-    val   = data[int(num_examples*0.9):int(num_examples*0.95)]
-    test  = data[int(num_examples*0.95):]
-    print(train.shape, val.shape, test.shape)
+    train = data[:int(len(data)*0.9)]
+    val   = data[int(len(data)*0.9):int(len(data)*0.95)]
+    test  = data[int(len(data)*0.95):]
     ae = run(os.path.join("samples",sae_path), train, val, parameters)
     show_summary(ae, train, test)
     plot_autoencoding_image(ae,test,train)
