@@ -45,11 +45,12 @@ def main(domainfile, problem_dir, heuristics):
             success = True
         except:
             pass
-
+    domainfile_rel = os.path.relpath(domainfile, network_dir)
     
     def domain(path):
+        dom_prefix = domainfile_rel.replace("/","_")
         root, ext = os.path.splitext(path)
-        return "{}_{}{}".format(os.path.splitext(os.path.basename(domainfile))[0], root, ext)
+        return "{}_{}{}".format(os.path.splitext(dom_prefix)[0], root, ext)
     def heur(path):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(heuristics, root, ext)
