@@ -88,7 +88,7 @@ def setup_planner_utils(_sae, _problem_dir, _network_dir, _ama_version):
 import subprocess
 def echodo(cmd,*args,**kwargs):
     print(cmd,flush=True)
-    subprocess.call(cmd,*args,**kwargs)
+    subprocess.run(cmd,*args,**kwargs)
 
 def echo_out(cmd):
     print(cmd)
