@@ -1042,16 +1042,17 @@ class HammingLoggerMixin:
 class LocalityMixin:
     def _build(self,input_shape):
         super()._build(input_shape)
-        
-        self.locality_alpha = LinearSchedule(schedule={
-            self.parameters["locality"]:self.parameters["locality"]
+
+        self.locality_alpha = StepSchedule(schedule={
+            0:0,
+            (self.parameters["epoch"]*self.parameters["locality_delay"]):self.parameters["locality"],
         })
         self.callbacks.append(LambdaCallback(on_epoch_end=self.locality_alpha.update))
+
+        def locality(x, y):
+            return self.locality_alpha.variable
         
-        # def locality_alpha(x, y):
-        #     return self.locality_alpha.variable
-        # 
-        # self.metrics.append(locality_alpha)
+        self.metrics.append(locality)
         return
 
 class HammingMixin(LocalityMixin, HammingLoggerMixin):
