@@ -824,11 +824,10 @@ Note: references to self.parameters[key] are all hyperparameters."""
 class ZeroSuppressMixin:
     def _build(self,input_shape):
         super()._build(input_shape)
-        
-        alpha = LinearSchedule(schedule={
+
+        alpha = StepSchedule(schedule={
             0:0,
-            (self.parameters["epoch"]//3):0,
-            (self.parameters["epoch"]//3)*2:self.parameters["zerosuppress"]
+            (self.parameters["epoch"]*self.parameters["zerosuppress_delay"]):self.parameters["zerosuppress"],
         })
         self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
         
@@ -839,11 +838,11 @@ class ZeroSuppressMixin:
         def activation(x, y):
             return zerosuppress_loss
 
-        def zerosuppres(x, y):
-            return alpha.variable
+        # def zerosuppres(x, y):
+        #     return alpha.variable
 
         self.metrics.append(activation)
-        self.metrics.append(zerosuppress)
+        # self.metrics.append(zerosuppress)
         return
 
 # The original Gumbel Softmax formulation that minimizes the KL divergence
