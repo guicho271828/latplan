@@ -161,7 +161,6 @@ def simple_genetic_search(task, default_config, parameters,
     "Initialize the queue by evaluating the N nodes. Select 2 parents randomly from top N nodes and perform the uniform crossover. Fall back to LGBFS on a fixed ratio (as a mutation)."
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
     results       = []
-    list(map(print, _random_configs(parameters, False)))
 
     # assert 2 <= initial_population
     if not (2 <= initial_population):
