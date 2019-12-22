@@ -108,13 +108,30 @@ def _top_k(open_list, k):
         open_list.put(parent)
     return top_k
 
+def _inverse_weighted_select(lst):
+    weights = [ 1/peval for peval, _ in lst ]
+    cum_weights = []
+    cum = 0.0
+    for w in weights:
+        cum += w
+        cum_weights.append(cum)
+
+    pivot = random.random() * cum
+    selected = len(cum_weights)-1
+    for i, th in enumerate(cum_weights):
+        if pivot < th:
+            selected = i
+            break
+
+    return lst[selected]
+
 def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters):
     top_k = _top_k(open_list,k)
     for tried in range(max_trial):
-        peval1, parent1 = _select(top_k)
-        peval2, parent2 = _select(top_k)
+        peval1, parent1 = _inverse_weighted_select(top_k)
+        peval2, parent2 = _inverse_weighted_select(top_k)
         while parent1 == parent2:
-            peval2, parent2 = _select(top_k)
+            peval2, parent2 = _inverse_weighted_select(top_k)
 
         child = _crossover(parent1, parent2)
         if _key(child) not in close_list:
@@ -132,7 +149,7 @@ def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters
 def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters):
     top_k = _top_k(open_list,k)
     for tried in range(max_trial):
-        peval, parent = _select(top_k)
+        peval, parent = _inverse_weighted_select(top_k)
         children = _neighbors(parent, parameters)
         open_children = []
         for c in children:
