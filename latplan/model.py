@@ -844,12 +844,12 @@ class ZeroSuppressMixin:
         
         def activation(x, y):
             return zerosuppress_loss
-        
-        def zerosup_alpha(x, y):
+
+        def zerosuppres(x, y):
             return alpha.variable
-        
+
         self.metrics.append(activation)
-        self.metrics.append(zerosup_alpha)
+        self.metrics.append(zerosuppress)
         return
 
 # The original Gumbel Softmax formulation that minimizes the KL divergence
