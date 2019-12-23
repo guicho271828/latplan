@@ -169,7 +169,6 @@ def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters)
 def simple_genetic_search(task, default_config, parameters,
                           initial_population=20,
                           population=10,
-                          mutation_ratio=0.3,
                           limit=float('inf'),
                           report=None, report_best=None,):
     "Initialize the queue by evaluating the N nodes. Select 2 parents randomly from top N nodes and perform the uniform crossover. Fall back to LGBFS on a fixed ratio (as a mutation)."
@@ -221,7 +220,13 @@ def simple_genetic_search(task, default_config, parameters,
             pass
         i = initial_population
         print("Simple GA: Generated the initial population")
+
         while i < limit:
+            mutation_ratio = open_list[0][0] / open_list[population-1][0]
+            assert mutation_ratio < 1
+            print("Simple GA: best",open_list[0][0],
+                  "worst",open_list[population-1][0],
+                  "current mutation ratio",mutation_ratio)
             done = False
             while not done:
                 try:
