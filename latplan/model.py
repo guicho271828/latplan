@@ -324,6 +324,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             'do_validation': False,
             'metrics': [],
         })
+        self.nets[0].stop_training = False
 
         def generate_logs(data,data_to):
             logs   = {}
@@ -357,6 +358,8 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                 for k,v in generate_logs(test_data,  test_data_to).items():
                     logs["val_"+k] = v
                 clist.on_epoch_end(epoch,logs)
+                if self.nets[0].stop_training:
+                    break
             clist.on_train_end()
         
         except KeyboardInterrupt:
