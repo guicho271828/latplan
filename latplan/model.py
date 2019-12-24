@@ -251,19 +251,19 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         return loss
     
     def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,test_data=None,save=True,report=True,
+              epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,val_data=None,save=True,
               train_data_to=None,
-              test_data_to=None,
+              val_data_to=None,
               **kwargs):
         """Main method for training.
  This method may be overloaded by the subclass into a specific training method, e.g. GAN training."""
 
-        if test_data     is None:
-            test_data     = train_data
+        if val_data     is None:
+            val_data     = train_data
         if train_data_to is None:
             train_data_to = train_data
-        if test_data_to  is None:
-            test_data_to  = test_data
+        if val_data_to  is None:
+            val_data_to  = val_data
 
         self.max_epoch = epoch
         self.build(train_data.shape[1:]) # depends on self.optimizer
@@ -280,8 +280,8 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
           
         train_data    = replicate(train_data)
         train_data_to = replicate(train_data_to)
-        test_data     = replicate(test_data)
-        test_data_to  = replicate(test_data_to)
+        val_data     = replicate(val_data)
+        val_data_to  = replicate(val_data_to)
         optimizer     = replicate(optimizer)
         lr            = replicate(lr)
         
@@ -300,9 +300,9 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         
         assert assert_length(train_data   )
         assert assert_length(train_data_to)
-        assert assert_length(test_data    )
-        assert assert_length(test_data_to )
-    
+        assert assert_length(val_data    )
+        assert assert_length(val_data_to )
+
         def make_batch(subdata):
             # len: 15, batch: 5 -> 3 : 19//5 = 3
             # len: 14, batch: 5 -> 3 : 18//5 = 3
@@ -355,7 +355,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                         net.train_on_batch(train_subdata_batch_cache, train_subdata_to_batch_cache)
 
                 logs = generate_logs(train_data, train_data_to)
-                for k,v in generate_logs(test_data,  test_data_to).items():
+                for k,v in generate_logs(val_data,  val_data_to).items():
                     logs["val_"+k] = v
                 clist.on_epoch_end(epoch,logs)
                 if self.nets[0].stop_training:
@@ -365,12 +365,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         except KeyboardInterrupt:
             print("learning stopped\n")
         self.loaded = True
-        if report:
-            self.report(train_data,
-                        batch_size=batch_size,
-                        test_data=test_data,
-                        train_data_to=train_data_to,
-                        test_data_to=test_data_to)
         if save:
             self.save()
         return self
@@ -1209,19 +1203,19 @@ class PUDiscriminator(Discriminator):
               batch_size=1000,
               save=True,
               train_data_to=None,
-              test_data=None,
-              test_data_to=None,
+              val_data=None,
+              val_data_to=None,
               **kwargs):
         super().train(train_data,
                       batch_size=batch_size,
                       train_data_to=train_data_to,
-                      test_data=test_data,
-                      test_data_to=test_data_to,
+                      val_data=val_data,
+                      val_data_to=val_data_to,
                       save=False,
                       **kwargs)
-        
-        s = self.net.predict(test_data[test_data_to == 1],batch_size=batch_size)
-        if np.count_nonzero(test_data_to == 1) > 0:
+
+        s = self.net.predict(val_data[val_data_to == 1],batch_size=batch_size)
+        if np.count_nonzero(val_data_to == 1) > 0:
             c = s.mean()
             print("PU constant c =", c)
             K.set_value(self.c, c)
@@ -1505,21 +1499,21 @@ class UBDiscriminator(Discriminator):
         
     def train(self,train_data,
               train_data_to=None,
-              test_data=None,
-              test_data_to=None,
+              val_data=None,
+              val_data_to=None,
               *args,**kwargs):
 
         self.build(train_data.shape[1:])
-        
-        num   = len(test_data_to)
-        num_p = np.count_nonzero(test_data_to)
+
+        num   = len(val_data_to)
+        num_p = np.count_nonzero(val_data_to)
         num_n = num-num_p
         assert num_n > num_p
         print("positive : negative = ",num_p,":",num_n,"negative ratio",num_n/num_p)
 
-        ind_p = np.where(test_data_to == 1)[0]
-        ind_n = np.where(test_data_to == 0)[0]
-        
+        ind_p = np.where(val_data_to == 1)[0]
+        ind_n = np.where(val_data_to == 0)[0]
+
         from numpy.random import shuffle
         shuffle(ind_n)
         
@@ -1530,8 +1524,8 @@ class UBDiscriminator(Discriminator):
             ind = np.concatenate((ind_p,ind_n_per_bag))
             d.train(train_data[ind],
                     train_data_to=train_data_to[ind],
-                    test_data=test_data,
-                    test_data_to=test_data_to,
+                    val_data=val_data,
+                    val_data_to=val_data_to,
                     *args,**kwargs)
 
     def discriminate(self,data,**kwargs):
