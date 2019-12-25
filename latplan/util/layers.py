@@ -98,20 +98,20 @@ def count_params(model):
 from keras.callbacks import Callback
 class GradientEarlyStopping(Callback):
     def __init__(self, monitor='val_loss',
-                 min_grad=-0.0001, epoch=1, verbose=0, smooth=3):
-        super(GradientEarlyStopping, self).__init__()
+                 min_grad=-0.0001, sample_epochs=20, verbose=0, smooth=3):
+        super().__init__()
         self.monitor = monitor
         self.verbose = verbose
         self.min_grad = min_grad
         self.history = []
-        self.epoch = epoch
+        self.sample_epochs = sample_epochs
         self.stopped_epoch = 0
-        assert epoch >= 2
-        if epoch > smooth*2:
+        assert sample_epochs >= 2
+        if sample_epochs > smooth*2:
             self.smooth = smooth
         else:
-            print("epoch is too small for smoothing!")
-            self.smooth = epoch//2
+            print("sample_epochs is too small for smoothing!")
+            self.smooth = sample_epochs//2
 
     def on_train_begin(self, logs=None):
         # Allow instances to be re-used
@@ -123,7 +123,7 @@ class GradientEarlyStopping(Callback):
         
         # e.g. when smooth = 3, take the first/last 3 elements, average them over 3,
         # take the difference, then divide them by the epoch(== length of the history)
-        return (h[-self.smooth:] - h[:self.smooth]).mean()/self.epoch
+        return (h[-self.smooth:] - h[:self.smooth]).mean()/self.sample_epochs
         
     def on_epoch_end(self, epoch, logs=None):
         import warnings
@@ -133,7 +133,7 @@ class GradientEarlyStopping(Callback):
                           (self.monitor), RuntimeWarning)
 
         self.history.append(current) # to the last
-        if len(self.history) > self.epoch:
+        if len(self.history) > self.sample_epochs:
             self.history.pop(0) # from the front
             if self.gradient() >= self.min_grad:
                 self.model.stop_training = True
