@@ -40,13 +40,18 @@ def main(domainfile, problem_dir, heuristics):
     network_dir = domainfile
     success = False
     while not success:
+        network_dir = os.path.dirname(network_dir)
+        print(network_dir)
+        if network_dir == "":
+            break
         try:
-            network_dir = os.path.dirname(network_dir)
-            p = latplan.util.puzzle_module(network_dir)
+            p = puzzle_module(network_dir)
             success = True
         except Exception as e:
             print(e)
             latplan.util.stacktrace.format(False)
+    if not success:
+        sys.exit("could not locate the network")
     domainfile_rel = os.path.relpath(domainfile, network_dir)
     
     def domain(path):
