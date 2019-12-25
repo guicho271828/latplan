@@ -8,6 +8,7 @@ import latplan
 import latplan.model
 from latplan.util import *
 from latplan.util.planner import *
+from latplan.util.plot import *
 import os.path
 import keras.backend as K
 import tensorflow as tf
