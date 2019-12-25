@@ -96,7 +96,22 @@ def count_params(model):
     return trainable_count
 
 from keras.callbacks import Callback
-class GradientEarlyStopping(Callback):
+
+class HistoryBasedEarlyStopping(Callback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def on_train_begin(self, logs=None):
+        # Allow instances to be re-used
+        self.wait = 0
+        self.stopped_epoch = 0
+
+    def on_train_end(self, logs=None):
+        if self.stopped_epoch > 0 and self.verbose > 0:
+            print('\nEpoch %05d: early stopping' % (self.stopped_epoch))
+            print('history:',self.history)
+
+class GradientEarlyStopping(HistoryBasedEarlyStopping):
     def __init__(self, monitor='val_loss',
                  min_grad=-0.0001, sample_epochs=20, verbose=0, smooth=3):
         super().__init__()
@@ -112,11 +127,6 @@ class GradientEarlyStopping(Callback):
         else:
             print("sample_epochs is too small for smoothing!")
             self.smooth = sample_epochs//2
-
-    def on_train_begin(self, logs=None):
-        # Allow instances to be re-used
-        self.wait = 0
-        self.stopped_epoch = 0
 
     def gradient(self):
         h = np.array(self.history)
@@ -138,12 +148,7 @@ class GradientEarlyStopping(Callback):
             if self.gradient() >= self.min_grad:
                 self.model.stop_training = True
                 self.stopped_epoch = epoch
-                
-    def on_train_end(self, logs=None):
-        if self.stopped_epoch > 0 and self.verbose > 0:
-            print('\nEpoch %05d: early stopping' % (self.stopped_epoch))
-            print('history:',self.history)
-            print('min_grad:',self.min_grad,"gradient:",self.gradient())
+
     
 def anneal_rate(epoch,min=0.1,max=5.0):
     import math
