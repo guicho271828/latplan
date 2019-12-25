@@ -51,6 +51,6 @@ def puzzle_module(directory):
     if args[0] == "hanoi":
         p = importlib.import_module('latplan.puzzles.hanoi')
     else:
-        p = importlib.import_module('latplan.puzzles.{}_{}'.format(args[0],args[2]))
+        p = importlib.import_module('latplan.puzzles.{}_{}'.format(args[0],args[1]))
     p.setup()
     return p
