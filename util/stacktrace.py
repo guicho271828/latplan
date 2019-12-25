@@ -34,7 +34,7 @@ def print_object(o,include_private=False):
         except Exception as e:
             print("{} = Error printing object : {}".format(key.rjust(maxlen),e),file=sys.stderr)
 
-def format():
+def format(exit=True):
     np.set_printoptions(threshold=25,formatter=None)
     print("Fancy Traceback (most recent call last):",file=sys.stderr)
     type, value, tb = sys.exc_info()
@@ -54,7 +54,8 @@ def format():
     
     print(file=sys.stderr)
     print(*(traceback.format_exception_only(type,value)),file=sys.stderr)
-    sys.exit(1)
+    if exit:
+        sys.exit(1)
 
 def fn1():
     a = 1
