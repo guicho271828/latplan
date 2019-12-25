@@ -94,6 +94,7 @@ def main(domainfile, problem_dir, heuristics):
     log("finished planning")
     assert os.path.exists(planfile)
 
+    log("running a validator")
     echodo(["arrival", domainfile, problemfile, planfile, tracefile])
         
     log("simulated the plan")
@@ -109,11 +110,20 @@ def main(domainfile, problem_dir, heuristics):
     with open(jsonfile,"w") as f:
         json.dump({
             "network":network_dir,
-            "problem":problem_dir,
+            "problem":os.path.normpath(problem_dir).split("/")[-1],
+            "domain" :os.path.normpath(problem_dir).split("/")[-2],
+            "noise"  :os.path.normpath(problem_dir).split("/")[-3],
             "times":times,
             "heuristics":heuristics,
-            "domainfile":domainfile,
+            "domainfile":domainfile.split("/"),
+            "problemfile":problemfile,
+            "planfile":planfile,
+            "tracefile":tracefile,
+            "csvfile":csvfile,
+            "pngfile":pngfile,
+            "jsonfile":jsonfile,
             "parameters":sae.parameters,
+            "cost":len(plan),
             "valid":bool(np.all(validation)),
         }, f)
     
