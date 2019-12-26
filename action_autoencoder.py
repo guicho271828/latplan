@@ -4,9 +4,9 @@ import config
 import sys
 import numpy as np
 import latplan.model
-from latplan.model import ActionAE
+from latplan.model import ActionAE, CubeActionAE
 from latplan.util        import curry, set_difference
-from latplan.util.tuning import grid_search, nn_task
+from latplan.util.tuning import grid_search, nn_task, simple_genetic_search, reproduce
 
 import keras.backend as K
 import tensorflow as tf
@@ -14,23 +14,36 @@ import tensorflow as tf
 float_formatter = lambda x: "%.3f" % x
 np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
 
+from keras.optimizers import Adam
+from keras_adabound   import AdaBound
+from keras_radam      import RAdam
+
+import keras.optimizers
+
+setattr(keras.optimizers,"radam", RAdam)
+setattr(keras.optimizers,"adabound", AdaBound)
+
 ################################################################
 
 # default values
 default_parameters = {
-    'lr'              : 0.0001,
-    'batch_size'      : 2000,
-    'full_epoch'      : 1000,
-    'epoch'           : 1000,
+    'epoch'           : 200,
+    'batch_size'      : 500,
+    'optimizer'       : "radam",
     'max_temperature' : 5.0,
-    'min_temperature' : 0.1,
-    'M'               : 2,
-    'argmax'          : True,
+    'min_temperature' : 0.7,
+    'test_gumbel'     : False,
 }
 
-min_num_actions = 8
-max_num_actions = 128
-inc_num_actions = 8
+parameters = {
+    'M'          :[50,100,200,400,800,1600],
+    'N'          :[1],
+    'dropout'    :[0.4],
+    'aae_width'      :[100,300,600,],
+    'aae_depth'      :[0,1,2],
+    'aae_activation' :['relu','tanh'],
+    'lr'         :[0.1,0.01,0.001],
+}
 
 import numpy.random as random
 
@@ -40,13 +53,12 @@ if len(sys.argv) == 1:
 
 directory = sys.argv[1]
 mode      = sys.argv[2]
+aeclass   = sys.argv[3]
+num_actions = eval(sys.argv[4])
 
 sae = latplan.model.load(directory)
 
-if "hanoi" in sae.path:
-    data = np.loadtxt(sae.local("all_actions.csv"),dtype=np.int8)
-else:
-    data = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
+data = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
 
 print(data.shape)
 N = data.shape[1]//2
@@ -54,39 +66,29 @@ train = data[:int(len(data)*0.9)]
 val   = data[int(len(data)*0.9):int(len(data)*0.95)]
 test  = data[int(len(data)*0.95):]
 
-try:
-    if 'learn' in mode:
-        raise Exception('learn')
-    aae = ActionAE(sae.local("_aae/")).load()
-    num_actions = aae.parameters["M"]
-except:
+if 'learn' in mode:
     print("start training")
-    for num_actions in range(min_num_actions,max_num_actions,inc_num_actions):
-        parameters = {
-            'N'          :[1],
-            'M'          :[num_actions],
-            'layer'      :[400],# 200,300,400,700,1000
-            'encoder_layers' : [2], # 0,2,3
-            'decoder_layers' : [2], # 0,1,3
-            'dropout'    :[0.4], #[0.1,0.4],
-            # 'dropout_z'  :[False],
-            'batch_size' :[2000],
-            'full_epoch' :[1000],
-            'epoch'      :[1000],
-            'encoder_activation' :['relu'], # 'tanh'
-            'decoder_activation' :['relu'], # 'tanh',
-            # quick eval
-            'lr'         :[0.001],
-            }
-        aae,_,_ = grid_search(curry(nn_task, ActionAE, sae.local("_aae/"), train, train, val, val,),
-                              default_parameters,
-                              parameters)
-        val_diff = np.abs(aae.autoencode(val)-val)[:,N:]
-        val_mae  = np.mean(val_diff)
-        
-        if val_mae < (1.0 / N): # i.e. below 1 bit
-            break
+    if num_actions is not None:
+        parameters['M'] = [num_actions]
+    aae,_,_ = simple_genetic_search(
+        curry(nn_task, eval(aeclass), sae.local("_{}_{}/".format(aeclass,num_actions)), train, train, val, val,),
+        default_parameters,
+        parameters,
+        sae.local("_{}_{}/".format(aeclass,num_actions)),
+        limit=100,
+        report_best= lambda net: net.save(),
+    )
+elif 'reproduce' in mode:
+    aae,_,_ = reproduce(
+        curry(nn_task, eval(aeclass), sae.local("_{}_{}/".format(aeclass,num_actions)), train, train, val, val,),
+        default_parameters,
+        parameters,
+        sae.local("_{}_{}/".format(aeclass,num_actions)),)
     aae.save()
+else:
+    aae = eval(aeclass)(sae.local("_{}_{}/".format(aeclass,num_actions))).load()
+
+num_actions = aae.parameters["M"]
 
 actions = aae.encode_action(data, batch_size=1000).round()
 histogram = np.squeeze(actions.sum(axis=0,dtype=int))

@@ -2382,10 +2382,10 @@ We again use gumbel-softmax for representing A."""
         return [
             *[
                 Sequential([
-                    Dense(self.parameters['layer'], activation=self.parameters['encoder_activation'], use_bias=False),
+                    Dense(self.parameters['aae_width'], activation=self.parameters['aae_activation'], use_bias=False),
                     BN(),
                     Dropout(self.parameters['dropout']),])
-                for i in range(self.parameters['encoder_layers'])
+                for i in range(self.parameters['aae_depth'])
             ],
             Sequential([
                     Dense(self.parameters['N']*self.parameters['M']),
@@ -2398,13 +2398,14 @@ We again use gumbel-softmax for representing A."""
         return [
             *[
                 Sequential([
-                    Dense(self.parameters['layer'], activation=self.parameters['decoder_activation'], use_bias=False),
+                    Dense(self.parameters['aae_width'], activation=self.parameters['aae_activation'], use_bias=False),
                     BN(),
                     Dropout(self.parameters['dropout']),])
-                for i in range(self.parameters['decoder_layers'])
+                for i in range(self.parameters['aae_depth'])
             ],
             Sequential([
-                Dense(data_dim, activation=Lambda(lambda x: K.in_train_phase(K.sigmoid(x), K.round(K.sigmoid(x))))),
+                Dense(data_dim),
+                rounded_sigmoid(),
                 Reshape(input_shape),]),]
 
     def _build(self,input_shape):
@@ -2492,6 +2493,66 @@ We again use gumbel-softmax for representing A."""
                 images.extend(seq)
             plot_grid(images, w=10, path=self.local(path), verbose=verbose)
         return x,z,y,b,by
+
+class CubeActionAE(ActionAE):
+    """AAE with cube-like structure, developped for a compariason purpose."""
+    def build_decoder(self,input_shape):
+        data_dim = np.prod(input_shape)
+        return [
+            *[
+                Sequential([
+                    Dense(self.parameters['aae_width'], activation=self.parameters['aae_activation'], use_bias=False),
+                    BN(),
+                    Dropout(self.parameters['dropout']),])
+                for i in range(self.parameters['aae_depth'])
+            ],
+            Sequential([
+                Dense(data_dim,use_bias=False),
+                BN(),
+            ]),
+        ]
+
+    def _build(self,input_shape):
+
+        dim = np.prod(input_shape) // 2
+        print("{} latent bits".format(dim))
+        M, N = self.parameters['M'], self.parameters['N']
+
+        x = Input(shape=input_shape)
+
+        pre = wrap(x,x[:,:dim],name="pre")
+        suc = wrap(x,x[:,dim:],name="suc")
+
+        _encoder = self.build_encoder([dim])
+        action = ConditionalSequential(_encoder, pre, axis=1)(suc)
+
+        _decoder = self.build_decoder([dim])
+        l_eff = Sequential(_decoder)(flatten(action))
+
+        scaling = BN()
+        l_pre = scaling(pre)
+
+        l_suc = add([l_eff,l_pre])
+        suc_reconstruction = rounded_sigmoid()(l_suc)
+
+        y = Concatenate(axis=1)([pre,suc_reconstruction])
+
+        action2 = Input(shape=(N,M))
+        pre2    = Input(shape=(dim,))
+        l_pre2 = scaling(pre2)
+        l_eff2 = Sequential(_decoder)(flatten(action2))
+        l_suc2 = add([l_eff2,l_pre2])
+        suc_reconstruction2 = rounded_sigmoid()(l_suc2)
+        y2 = Concatenate(axis=1)([pre2,suc_reconstruction2])
+
+        self.metrics.append(MAE)
+        self.loss = BCE
+        self.encoder     = Model(x, [pre,action])
+        self.decoder     = Model([pre2,action2], y2)
+
+        self.net = Model(x, y)
+        self.autoencoder = self.net
+
 
 class ActionDiscriminator(Discriminator):
     def _build(self,input_shape):
