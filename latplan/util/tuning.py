@@ -62,14 +62,8 @@ def _update_best(artifact, eval, config, results, best, report, report_best):
         del artifact
 
 def _random_configs(parameters,shuffle):
-    import itertools
-    names  = [ k for k, _ in parameters.items()]
-    values = [ v for _, v in parameters.items()]
-    all_config_values = list(itertools.product(*values))
-    if shuffle:
-        random.shuffle(all_config_values)
-    for config_values in all_config_values:
-        yield { k:v for k,v in zip(names,config_values) }
+    while True:
+        yield { k: random.choice(v) for k,v in parameters.items() }
 
 def _final_report(best,results):
     from colors import bold
