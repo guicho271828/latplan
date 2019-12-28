@@ -1,5 +1,5 @@
 from timeout_decorator import timeout, TimeoutError
-import numpy.random as random
+import random
 
 import signal
 class SignalInterrupt(Exception):
@@ -39,7 +39,6 @@ def merge_hash(a, b):
     return c
 
 def _select(list):
-    import random
     return list[random.randint(0,len(list)-1)]
 
 def _update_best(artifact, eval, config, results, best, report, report_best):
