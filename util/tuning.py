@@ -99,16 +99,6 @@ def _crossover(parent1,parent2):
             child[k] = v2
     return child
 
-def _top_k(open_list, k):
-    top_k = []
-    for i in range(k):
-        if open_list.empty():
-            raise Exception("open list exhausted!")
-        top_k.append(open_list.get())
-    for parent in top_k:
-        open_list.put(parent)
-    return top_k
-
 def _inverse_weighted_select(lst):
     weights = [ 1/peval for peval, _ in lst ]
     cum_weights = []
@@ -127,7 +117,7 @@ def _inverse_weighted_select(lst):
     return lst[selected]
 
 def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters):
-    top_k = _top_k(open_list,k)
+    top_k = open_list[:k]
     for tried in range(max_trial):
         peval1, parent1 = _inverse_weighted_select(top_k)
         peval2, parent2 = _inverse_weighted_select(top_k)
@@ -148,7 +138,7 @@ def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters
     return _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters)
 
 def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters):
-    top_k = _top_k(open_list,k)
+    top_k = open_list[:k]
     for tried in range(max_trial):
         peval, parent = _inverse_weighted_select(top_k)
         children = _neighbors(parent, parameters)
@@ -191,15 +181,15 @@ def simple_genetic_search(task, default_config, parameters,
         print({"population":population},"is superceded by",{"initial_population":initial_population},". initial_population must be larger than equal to the population",)
         population = initial_population
 
-    import queue
-    open_list  = queue.PriorityQueue()
+    open_list  = []
     close_list = {}
 
     def _iter(config):
         artifact, eval = task(merge_hash(default_config,config))
         _update_best(artifact, eval, config, results, best, report, report_best)
         close_list[_key(config)] = eval # tuples are hashable
-        open_list.put((eval, config))
+        open_list.insert(0,(eval, config))
+        open_list.sort(key=lambda x: x[0])
 
     try:
         print("Simple GA: Generating the initial population")
