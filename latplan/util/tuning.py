@@ -1,3 +1,4 @@
+import os.path
 from timeout_decorator import timeout, TimeoutError
 import random
 
@@ -20,6 +21,49 @@ class HyperparameterGenerationError(Exception):
     """Raised when the hyperparameter generation failed """
     pass
 
+# append the new log entry into a file
+def save_history(path,obj):
+    print("logging the results")
+    with open(os.path.join(path,"grid_search.log"), 'a') as f:
+        import json
+        json.dump(obj, f)
+        f.write("\n")
+    return load_history(path)
+
+# load the past history of runs to continue the search that was previously terminated
+def load_history(path):
+    log = os.path.join(path,"grid_search.log")
+    if os.path.exists(log):
+        print("loading the previous results: ",log)
+        open_list  = []
+        close_list = {}
+        for hist in stream_read_json(log):
+            print("loaded:",hist)
+            open_list.insert(0,tuple(hist))
+            close_list[_key(hist[1])] = hist[0]
+        open_list.sort(key=lambda x: x[0])
+        return open_list, close_list
+    else:
+        return [], {}
+
+# from https://stackoverflow.com/questions/6886283/how-i-can-i-lazily-read-multiple-json-values-from-a-file-stream-in-python
+def stream_read_json(fn):
+    import json
+    start_pos = 0
+    with open(fn, 'r') as f:
+        while True:
+            try:
+                obj = json.load(f)
+                yield obj
+                return
+            except json.JSONDecodeError as e:
+                f.seek(start_pos)
+                json_str = f.read(e.pos)
+                obj = json.loads(json_str)
+                start_pos += e.pos
+                yield obj
+
+# single iteration of NN training
 def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
     net = network(path,parameters=parameters)
     net.train(train_in,
@@ -29,11 +73,6 @@ def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
               save=False,
               **parameters,)
     error = net.net.evaluate(val_in,val_out,batch_size=100,verbose=0)
-    print("logging the results")
-    with open(net.local("grid_search.log"), 'a') as f:
-        import json
-        json.dump((error, parameters), f)
-        f.write("\n")
     return net, error
 
 def merge_hash(a, b):
@@ -100,7 +139,7 @@ def _crossover(parent1,parent2):
     return child
 
 def _inverse_weighted_select(lst):
-    weights = [ 1/peval for peval, _ in lst ]
+    weights = [ 1/entry[0] for entry in lst ]
     cum_weights = []
     cum = 0.0
     for w in weights:
@@ -119,10 +158,10 @@ def _inverse_weighted_select(lst):
 def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters):
     top_k = open_list[:k]
     for tried in range(max_trial):
-        peval1, parent1 = _inverse_weighted_select(top_k)
-        peval2, parent2 = _inverse_weighted_select(top_k)
+        peval1, parent1, _ = _inverse_weighted_select(top_k)
+        peval2, parent2, _ = _inverse_weighted_select(top_k)
         while parent1 == parent2:
-            peval2, parent2 = _inverse_weighted_select(top_k)
+            peval2, parent2, _ = _inverse_weighted_select(top_k)
 
         child = _crossover(parent1, parent2)
         if _key(child) not in close_list:
@@ -140,7 +179,7 @@ def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters
 def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters):
     top_k = open_list[:k]
     for tried in range(max_trial):
-        peval, parent = _inverse_weighted_select(top_k)
+        peval, parent, _ = _inverse_weighted_select(top_k)
         children = _neighbors(parent, parameters)
         open_children = []
         for c in children:
@@ -157,7 +196,7 @@ def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters)
     print("Simple GA: Reached a local minima")
     raise HyperparameterGenerationError()
 
-def simple_genetic_search(task, default_config, parameters,
+def simple_genetic_search(task, default_config, parameters, path,
                           initial_population=20,
                           population=10,
                           limit=float('inf'),
@@ -181,21 +220,21 @@ def simple_genetic_search(task, default_config, parameters,
         print({"population":population},"is superceded by",{"initial_population":initial_population},". initial_population must be larger than equal to the population",)
         population = initial_population
 
-    open_list  = []
-    close_list = {}
+    open_list, close_list = load_history(path)
+    if len(open_list) > 0:
+        _update_best(None, open_list[0][0], open_list[0][1], results, best, None, None)
 
     def _iter(config):
+        nonlocal open_list, close_list
         artifact, eval = task(merge_hash(default_config,config))
+        open_list, close_list = save_history(path, (eval, config, default_config))
         _update_best(artifact, eval, config, results, best, report, report_best)
-        close_list[_key(config)] = eval # tuples are hashable
-        open_list.insert(0,(eval, config))
-        open_list.sort(key=lambda x: x[0])
 
     try:
         print("Simple GA: Generating the initial population")
         
         try:
-            gen_i      = iter(range(initial_population))
+            gen_i      = iter(range(len(open_list),initial_population))
             gen_config = _random_configs(parameters)
             
             i      = next(gen_i)
@@ -209,7 +248,7 @@ def simple_genetic_search(task, default_config, parameters,
                 config = next(gen_config)
         except StopIteration:
             pass
-        i = initial_population
+        i = len(open_list)
         print("Simple GA: Generated the initial population")
 
         while i < limit:
