@@ -349,3 +349,22 @@ def simple_genetic_search(task, default_config, parameters, path,
     finally:
         _final_report(best)
     return best['artifact'],best['params'],best['eval']
+
+
+# do not run it in parallel.
+def reproduce(task, default_config, parameters, path, report=None, report_best=None, limit=3):
+    best = {'eval'    :None, 'params'  :None, 'artifact':None}
+
+    open_list, close_list = load_history(path)
+
+    def _iter(config,default_config):
+        artifact, eval = task(merge_hash(default_config,config))
+        _update_best(artifact, eval, config, best, report, report_best)
+
+    print("Reproducing the best results from the log")
+    try:
+        for _ in range(limit):
+            _iter(open_list[0][1],open_list[0][2])
+    finally:
+        _final_report(best)
+    return best['artifact'],best['params'],best['eval']
