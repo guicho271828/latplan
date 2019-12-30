@@ -64,7 +64,7 @@ def _update_best(artifact, eval, config, results, best, report, report_best):
     else:
         del artifact
 
-def _random_configs(parameters,shuffle):
+def _random_configs(parameters):
     while True:
         yield { k: random.choice(v) for k,v in parameters.items() }
 
@@ -206,7 +206,7 @@ def simple_genetic_search(task, default_config, parameters,
         
         try:
             gen_i      = iter(range(initial_population))
-            gen_config = _random_configs(parameters, True)
+            gen_config = _random_configs(parameters)
             
             i      = next(gen_i)
             config = next(gen_config)
