@@ -22,6 +22,7 @@ def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
               val_data=val_in,
               train_data_to=train_out,
               val_data_to=val_out,
+              save=False,
               **parameters,)
     error = net.net.evaluate(val_in,val_out,batch_size=100,verbose=0)
     print("logging the results")
