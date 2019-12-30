@@ -51,7 +51,8 @@ else:
 print(data.shape)
 N = data.shape[1]//2
 train = data[:int(len(data)*0.9)]
-val   = data[int(len(data)*0.9):]
+val   = data[int(len(data)*0.9):int(len(data)*0.95)]
+test  = data[int(len(data)*0.95):]
 
 try:
     if 'learn' in mode:
@@ -59,6 +60,7 @@ try:
     aae = ActionAE(sae.local("_aae/")).load()
     num_actions = aae.parameters["M"]
 except:
+    print("start training")
     for num_actions in range(min_num_actions,max_num_actions,inc_num_actions):
         parameters = {
             'N'          :[1],
@@ -95,12 +97,12 @@ for i, pos in enumerate(np.where(histogram > 0)[0]):
     all_labels[i][0][pos] = 1
 
 if 'plot' in mode:
-    aae.plot(data[:8], "aae_train.png")
-    aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test.png")
+    aae.plot(train[:8], "aae_train.png")
+    aae.plot(test[:8], "aae_test.png")
     
     
-    aae.plot(data[:8], "aae_train_decoded.png", sae=sae)
-    aae.plot(data[int(len(data)*0.9):int(len(data)*0.9)+8], "aae_test_decoded.png", sae=sae)
+    aae.plot(train[:8], "aae_train_decoded.png", sae=sae)
+    aae.plot(test[:8], "aae_test_decoded.png", sae=sae)
     
     transitions = aae.decode([np.repeat(data[:1,:N], len(all_labels), axis=0), all_labels])
     aae.plot(transitions, "aae_all_actions_for_a_state.png", sae=sae)
@@ -118,8 +120,6 @@ if 'plot' in mode:
 
 if 'test' in mode:
     from latplan.util.timer import Timer
-    with Timer("loading csv..."):
-        all_actions = np.loadtxt("{}/all_actions.csv".format(directory),dtype=np.int8)
 
     # note: unlike rf, product of bitwise match probability is not grouped by actions
     performance = {}
@@ -135,7 +135,7 @@ if 'test' in mode:
 
     metrics(val,"val")
     metrics(train,"train")
-    metrics(all_actions,"all")
+    metrics(test,"test")
 
     performance["effective_labels"] = int(len(all_labels))
 
