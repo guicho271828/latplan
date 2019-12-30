@@ -78,11 +78,12 @@ def _neighbors(parent,parameters):
     "Returns all dist-1 neighbors"
     results = []
     for k, _ in parent.items():
-        for v in parameters[k]:
-            if parent[k] is not v:
-                other = parent.copy()
-                other[k] = v
-                results.append(other)
+        if k in parameters:     # HACK! HACK! remove in the next run. 2019/12/29
+            for v in parameters[k]:
+                if parent[k] is not v:
+                    other = parent.copy()
+                    other[k] = v
+                    results.append(other)
     return results
 
 def _key(config):
