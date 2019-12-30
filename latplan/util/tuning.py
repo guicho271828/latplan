@@ -16,6 +16,10 @@ class InvalidHyperparameterError(Exception):
     """Raised when the hyperparameter is not valid"""
     pass
 
+class HyperparameterGenerationError(Exception):
+    """Raised when the hyperparameter generation failed """
+    pass
+
 def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
     net = network(path,parameters=parameters)
     net.train(train_in,
@@ -143,7 +147,7 @@ def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters)
             return child
     print("Simple GA: mutation failed after {} trials".format(max_trial))
     print("Simple GA: Reached a local minima")
-    raise Exception()
+    raise HyperparameterGenerationError()
 
 def simple_genetic_search(task, default_config, parameters,
                           initial_population=20,
@@ -211,7 +215,7 @@ def simple_genetic_search(task, default_config, parameters,
                         print("Simple GA: crossover was selected")
                         child = _generate_child_by_crossover(open_list, close_list, population, 10000, parameters)
                     done = True
-                except Exception as e:
+                except HyperparameterGenerationError as e:
                     print(e)
                     print("Simple GA: Increasing populations {} -> {}".format(population,population*2))
                     population = population*2
