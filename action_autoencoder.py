@@ -129,7 +129,7 @@ if 'test' in mode:
     
     def metrics(data,track):
         data_match           = 1-np.abs(aae.autoencode(data)-data)[:,N:]
-        performance["mae"][track]           = float(np.mean(data_match))                 # average bitwise match
+        performance["mae"][track]           = float(np.mean(1-data_match))                 # average bitwise match
         performance["prob_bitwise"][track]  = float(np.prod(np.mean(data_match,axis=0))) # product of bitwise match probabilty
         performance["prob_allmatch"][track] = float(np.mean(np.prod(data_match,axis=1))) # probability of complete match
 
