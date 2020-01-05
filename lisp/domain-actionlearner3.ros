@@ -1,0 +1,234 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=128000 -Q -- $0 "$@"
+|#
+
+#|
+
+This is a converter from a CSV file containing the propositional state vectors
+to a PDDL *domain* file.
+The algorithm follows the Action Learner algorithm (Amado et.al., 2018).
+
+PDDL files are compatible to any classical planning solvers.
+See the past competition solvers for example.
+
+http://www.plg.inf.uc3m.es/ipc2011-deterministic/
+https://helios.hud.ac.uk/scommv/IPC-14/planners.html
+
+|#
+
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre serializable-object dsama lparallel) :silent t)
+  )
+
+(defpackage :ros.script.to-sas.3690427216
+  (:use :numcl :iterate :trivia :trivia.ppcre)
+  (:shadowing-import-from :numcl
+                          :sum))
+(in-package :ros.script.to-sas.3690427216)
+
+(defparameter *depth-threshold* 0)
+
+(defvar *stream-lock* (make-hash-table))
+
+(defmacro with-batched-output ((&rest output-streams) &body body)
+  `(call-with-batched-output (list ,@output-streams) (lambda ,output-streams ,@body)))
+
+(defun call-with-batched-output (output-streams fn)
+  (let ((string-streams
+         (mapcar (lambda (x) (declare (ignore x)) (make-string-output-stream))
+                 output-streams)))
+    (prog1 (apply fn string-streams)
+      (iter (for os in output-streams)
+            (for ss in string-streams)
+            (for lock = (gethash os *stream-lock*))
+            (bordeaux-threads:with-lock-held (lock)
+              (write-sequence (get-output-stream-string ss) os))))))
+
+(defmethod print-object ((o (eql nil)) s)
+  (write-char #\( s)
+  (write-char #\) s))
+
+(defun sym (&rest args)
+  (intern (format nil "~{~a~}" args)))
+
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (list (sym 'z dim)))
+(defun negate (thing) `(not ,thing))
+
+(defun find-precondition (transitions+id a dim)
+  (format *error-output* "~% next action: ~a" a)
+  ;; (break)
+  (let* ((pres    (aref transitions+id t `(0 ,dim)))
+         (indices (= a (aref transitions+id t -1)))
+         (pres/a  (let ((a (zeros (list (count 1 indices) dim))))
+                    (iter (with (the fixnum j) = 0)
+                          (declare (declare-variables))
+                          (for (the bit flag) in-vector indices with-index i)
+                          (when (= flag 1)
+                            (setf (aref a j) (aref pres i))
+                            (incf j)))
+                    a)))
+    (find-precondition-static pres/a (alexandria:iota dim) 0)))
+
+(defun find-precondition-static (transitions dims depth)
+  (let* ((min (amin transitions :axes 0))
+         (max (amax transitions :axes 0))
+         (static-axes     (intersection dims (first (nonzero (= min max)))))
+         (static-pos-axes (intersection dims (first (nonzero (= min 1)))))
+         (static-neg-axes (intersection dims (first (nonzero (= max 0)))))
+         (nonstatic-axes (set-difference dims static-axes)))
+    (format *error-output* "~%transitions: ~a, static axes: ~a, free axes: ~a, entropy: ~a"
+            (length transitions)
+            (length static-axes)
+            (length nonstatic-axes)
+            (sum (entropy (mean transitions :axes 0))))
+    `(and ,@(mapcar #'z
+                    static-pos-axes)
+          ,@(mapcar (alexandria:compose #'negate #'z)
+                    static-neg-axes)
+          ,@(cond
+              ((null nonstatic-axes)
+               (format *error-output* "~%no more axes to shrink, stop recursion")
+               nil)
+              ((<= *depth-threshold* depth)
+               (format *error-output* "~%depth limit reached, stop recursion")
+               nil)
+              (t
+               (find-precondition-rec transitions nonstatic-axes (1+ depth)))))))
+
+(defun find-precondition-rec (transitions dims depth)
+  (destructuring-bind (dim gain)
+      (iter (for j in dims)
+            (for gain = (node-info-gain transitions j))
+            ;; (format *error-output* "~%bit ~a gain: ~a" j gain)
+            (finding (list j gain) minimizing gain))
+    (format *error-output* "~%next pivot: ~a gain: ~a" dim gain)
+    (let ((entropy (sum (entropy (mean transitions :axes 0)))))
+      (format *error-output* "~%disjoint gain: ~a" entropy)
+      (if (< gain entropy)
+          (let* ((pos (= 1 (flatten (aref transitions t dim))))
+                 (neg (bit-not pos)))
+            `((or ,(find-precondition-static (filter transitions pos) dims depth)
+                  ,(find-precondition-static (filter transitions neg) dims depth))))
+          (progn
+            (format *error-output* "~%gain test failed, stop recursion")
+            nil)))))
+
+(defun filter (array filter)
+  "take the sum of the 1st dimension, but ignore elements if filter is 0"
+  (let* ((dim (array-dimension array 1))
+         (res (zeros (list (count 1 filter) dim) :type (dtype array))))
+    (declare (fixnum dim))
+    (iter (with i2 = 0)
+          (for flag in-vector filter with-index i)
+          (declare (bit flag))
+          (declare (fixnum i2))
+          (declare (declare-variables))
+          (when (= flag 1)
+            (dotimes (j dim)
+              (setf (cl:aref res   i2 j)
+                    (cl:aref array i  j)))
+            (incf i2)))
+    res))
+
+(defun filtered-sum (array filter)
+  "take the sum of the 1st dimension, but ignore elements if filter is 0"
+  (let* ((dim (array-dimension array 1))
+         (sum (zeros dim :type 'fixnum)))
+    (declare (fixnum dim))
+    (iter (for flag in-vector filter with-index i)
+          (declare (bit flag))
+          (declare (declare-variables))
+          (when (= flag 1)
+            (dotimes (j dim)
+              (incf (cl:aref sum j)
+                    (cl:aref array i j)))))
+    sum))
+
+(defun entropy (p)
+  (let* ((p    (clip p 1e-7 (- 1 1e-7)))
+         (1-p  (- 1 p)))
+    (- (+ (* p (realpart (log2 p)))
+          (* 1-p (realpart (log2 1-p)))))))
+
+(defun node-info-gain (transitions dim)
+  (let* ((pos (= 1 (aref transitions t dim)))
+         (neg (bit-not pos))
+         (pos-count (count 1 pos))
+         (neg-count (count 1 neg))
+         (count (length transitions)))
+    ;; H(z)
+    (+
+     ;; H(zj)
+     (entropy (/ pos-count count))
+     ;; H(z|zj) = p(zj=1)H(z|zj=1) + p(zj=0)H(z|zj=0)
+     (* (/ pos-count count)
+        (sum (entropy (/ (filtered-sum transitions pos)
+                         pos-count))))
+     (* (/ neg-count count)
+        (sum (entropy (/ (filtered-sum transitions neg)
+                         neg-count)))))))
+
+(defun make-domain (available-actions add del transitions)
+  (let ((flat (flatten available-actions))
+        (dim (second (shape add))))
+    `(define (domain latent)
+         (:requirements :strips :negative-preconditions)
+       (:predicates
+        ,@(map 'list #'z (alexandria:iota dim)))
+       ,@(lparallel:pmap
+          'list
+          (lambda (a i)
+            (with-batched-output (*standard-output* *error-output*)
+              (let ((add/a (aref add i))
+                    (del/a (aref del i)))
+                `(:action ,(sym 'a a)
+                          :parameters () ;TODO: Is it possible to use parameters in our framework?
+                          :precondition
+                          ,(find-precondition transitions a dim)
+                          :effect
+                          (and ,@(iter (for p in-vector add/a with-index i)
+                                       (when (plusp p)
+                                         (collect (z i))))
+                               ,@(iter (for p in-vector del/a with-index i)
+                                       (when (plusp p)
+                                         (collect `(not ,(z i))))))))))
+          flat
+          (alexandria:iota (length flat))))))
+
+(defun main (directory mode transitions depth)
+  (flet ((load-csv (filename)
+           (dataloader:load (merge-pathnames filename (uiop:ensure-directory-pathname directory))
+                            :mime "text/plain"
+                            :separator #\Space
+                            :data-map-fn #'read-from-string)))
+    (let ((*print-right-margin* 70)
+          (*trace-output* *error-output*)
+          (*depth-threshold* (parse-integer depth)))
+      
+      (setf lparallel:*kernel*
+            (lparallel:make-kernel 16 :bindings (mapcar (lambda (x) (cons x (symbol-value x)))
+                                                        '(*standard-output*
+                                                          *error-output*
+                                                          *print-right-margin*
+                                                          *trace-output*
+                                                          *depth-threshold*
+                                                          *package*)))
+            (gethash *standard-output* *stream-lock*) (bordeaux-threads:make-lock)
+            (gethash *error-output*    *stream-lock*) (bordeaux-threads:make-lock))
+      
+      (time
+       (format t "~(~:S~)~%"
+               (make-domain (load-csv "available_actions.csv")
+                            (load-csv (format nil "action_add~a.csv" mode))
+                            (load-csv (format nil "action_del~a.csv" mode))
+                            (load-csv transitions)))))))
+
+;;; vim: set ft=lisp lisp:
+
+
+
