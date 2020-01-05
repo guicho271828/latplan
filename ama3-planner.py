@@ -126,7 +126,15 @@ def main(domainfile, problem_dir, heuristics):
             "cost":len(plan),
             "valid":bool(np.all(validation)),
         }, f)
-    
-import sys
-print(sys.argv)
-main(*sys.argv[1:])
+    return valid
+
+if __name__ == '__main__':
+    try:
+        valid = main(*sys.argv[1:])
+        if valid:
+            sys.exit(0)
+        else:
+            sys.exit(1)
+    except:
+        import latplan.util.stacktrace
+        latplan.util.stacktrace.format()
