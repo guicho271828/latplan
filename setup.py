@@ -2,7 +2,7 @@
 
 import config
 import numpy as np
-import numpy.random as random
+import random
 import latplan
 import latplan.model
 from latplan.util        import curry
@@ -21,36 +21,34 @@ np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatte
 
 ################################################################
 
-def puzzle(type='mnist',width=3,height=3):
+def puzzle(type='mnist',width=3,height=3,limit=None):
+    # limit = number that "this much is enough"
     path = os.path.join("puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
-    configs = p.generate_configs(width*height)
-    configs = np.array([ c for c in configs ])
+    configs = p.generate_random_configs(width*height, limit)
     print(len(configs))
-    random.shuffle(configs)
+    np.random.shuffle(configs)
     np.savez_compressed(path,configs=configs)
 
-def hanoi(disks=7,towers=4):
+def hanoi(disks=7,towers=4,limit=None):
     path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
     import latplan.puzzles.hanoi as p
     p.setup()
-    configs = p.generate_configs(disks,towers)
-    configs = np.array([ c for c in configs ])
+    configs = p.generate_random_configs(disks,towers, limit)
     print(len(configs))
-    random.shuffle(configs)
+    np.random.shuffle(configs)
     np.savez_compressed(path,configs=configs)
 
-def lightsout(type='digital',size=4):
+def lightsout(type='digital',size=4,limit=None):
     path = os.path.join("puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     p.setup()
-    configs = p.generate_configs(size)
-    configs = np.array([ c for c in configs ])
+    configs = p.generate_random_configs(size, limit)
     print(len(configs))
-    random.shuffle(configs)
+    np.random.shuffle(configs)
     np.savez_compressed(path,configs=configs)
 
 def main():
