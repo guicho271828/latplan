@@ -39,7 +39,8 @@ options = {
     "lcg"   : "--search lazy_greedy(cg())",
     "lcgpo" : "--evaluator h=cg() --search lazy_greedy(h, preferred=h)",
     "lama"  : "--alias lama-first",
-    "mands" : "--search astar(merge_and_shrink(shrink_strategy=shrink_bisimulation(max_states=50000,greedy=false),merge_strategy=merge_dfp(),label_reduction=exact(before_shrinking=true,before_merging=false)))",
+    "oldmands" : "--search astar(merge_and_shrink(shrink_strategy=shrink_bisimulation(max_states=50000,greedy=false),merge_strategy=merge_dfp(),label_reduction=exact(before_shrinking=true,before_merging=false)))",
+    "mands"    : "--search astar(merge_and_shrink(shrink_strategy=shrink_bisimulation(greedy=false),merge_strategy=merge_sccs(order_of_sccs=topological,merge_selector=score_based_filtering(scoring_functions=[goal_relevance,dfp,total_order])),label_reduction=exact(before_shrinking=true,before_merging=false),max_states=50k,threshold_before_merge=1))",
     "pdb"   : "--search astar(pdb())",
     "cpdb"  : "--search astar(cpdbs())",
     "ipdb"  : "--search astar(ipdb())",
@@ -99,7 +100,7 @@ def main(domainfile, problem_dir, heuristics):
     log("generated problem")
     
     ###### do planning #############################################
-    echodo(["helper/fd.sh", options[heuristics], problemfile, domainfile])
+    echodo(["helper/fd-latest.sh", options[heuristics], problemfile, domainfile])
     log("finished planning")
     assert os.path.exists(planfile)
 
