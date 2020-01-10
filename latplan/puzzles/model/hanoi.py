@@ -3,18 +3,21 @@
 import numpy as np
 
 # config encoding:
-# A config is a sequence of x-positions (towers)
+# A config is a sequence of x-positions (towers). An example with 6 disks, 3 towers is
 # [0,2,1,2,1,0]
 # since there is an implicit order that is enforced,
 # the assignments of each disk to some tower defines a unique, valid state
 # [0,2,1,2,1,0] == [[05][24][13]]
 
-# random config is available from np.random.randint(0,3,size)
+# random config is available from 
 
 def generate_configs(disks=6,towers=3):
     import itertools
     return itertools.product(range(towers),repeat=disks)
 
+def generate_random_configs(disks=6,towers=3,sample=10000):
+    return np.random.randint(0,towers,(sample,disks))
+    
 # state encoding:
 # intermediate representation for generating an image.
 # XX each disk has an x-position and a y-position (counted from the bottom)

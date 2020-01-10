@@ -1,7 +1,7 @@
 
 import random
 import numpy as np
-from .model.hanoi import generate_configs, successors, config_state
+from .model.hanoi import generate_configs, generate_random_configs, successors, config_state
 import math
 from .util import wrap
 from .util import preprocess
