@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import random
 import numpy as np
 from .model.lightsout import generate_configs, generate_random_configs, successors
 from .util import preprocess
@@ -187,11 +188,8 @@ def transitions_old(size, configs=None, one_per_state=False, **kwargs):
     if configs is None:
         configs = generate_configs(size)
     if one_per_state:
-        def pickone(thing):
-            index = np.random.randint(0,len(thing))
-            return thing[index]
         transitions = np.array([
-            generate([c1,pickone(successors(c1))], **kwargs)
+            generate([c1,random.choice(successors(c1))], **kwargs)
             for c1 in configs ])
     else:
         transitions = np.array([ generate([c1,c2], **kwargs)
@@ -202,11 +200,8 @@ def transitions(size, configs=None, one_per_state=False, **kwargs):
     if configs is None:
         configs = generate_configs(size)
     if one_per_state:
-        def pickone(thing):
-            index = np.random.randint(0,len(thing))
-            return thing[index]
         pre = generate(configs, **kwargs)
-        suc = generate(np.array([pickone(successors(c1)) for c1 in configs ]), **kwargs)
+        suc = generate(np.array([random.choice(successors(c1)) for c1 in configs ]), **kwargs)
         return np.array([pre, suc])
     else:
         transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1) ])

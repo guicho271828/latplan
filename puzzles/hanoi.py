@@ -1,4 +1,5 @@
 
+import random
 import numpy as np
 from .model.hanoi import generate_configs, successors, config_state
 import math
@@ -60,11 +61,8 @@ def transitions_old(disks, towers, configs=None, one_per_state=False, **kwargs):
     if configs is None:
         configs = generate_configs(disks, towers)
     if one_per_state:
-        def pickone(thing):
-            index = np.random.randint(0,len(thing))
-            return thing[index]
         transitions = np.array([
-            generate([c1,pickone(successors(c1,disks,towers))],disks,towers, **kwargs)
+            generate([c1,random.choice(successors(c1,disks,towers))],disks,towers, **kwargs)
             for c1 in configs ])
     else:
         transitions = np.array([ generate([c1,c2],disks,towers, **kwargs)
@@ -75,11 +73,8 @@ def transitions(disks, towers, configs=None, one_per_state=False, **kwargs):
     if configs is None:
         configs = generate_configs(disks, towers)
     if one_per_state:
-        def pickone(thing):
-            index = np.random.randint(0,len(thing))
-            return thing[index]
         pre = generate(configs, disks, towers, **kwargs)
-        suc = generate(np.array([pickone(successors(c1, disks, towers)) for c1 in configs ]), disks, towers, **kwargs)
+        suc = generate(np.array([random.choice(successors(c1, disks, towers)) for c1 in configs ]), disks, towers, **kwargs)
         return np.array([pre, suc])
     else:
         transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1, disks, towers) ])
