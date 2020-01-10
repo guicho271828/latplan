@@ -93,6 +93,7 @@ def main(domainfile, problem_dir, heuristics):
     csvfile     = problem(ama(network(domain(heur("problem.csv")))))
     pngfile     = problem(ama(network(domain(heur("problem.png")))))
     jsonfile    = problem(ama(network(domain(heur("problem.json")))))
+    logfile     = problem(ama(network(domain(heur("problem.log")))))
     
     ###### preprocessing ################################################################
     os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
@@ -132,6 +133,7 @@ def main(domainfile, problem_dir, heuristics):
             "csvfile":csvfile,
             "pngfile":pngfile,
             "jsonfile":jsonfile,
+            "statistics":json.loads(echo_out(["helper/fd-parser.awk", logfile])),
             "parameters":sae.parameters,
             "cost":len(plan),
             "valid":bool(np.all(validation)),
