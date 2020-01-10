@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import random
 import numpy as np
 from ...util.np_distances import bce
 from ..util import wrap
@@ -179,12 +180,9 @@ def transitions_old(width, height, configs=None, one_per_state=False):
     if configs is None:
         configs = generate_configs(digit)
     if one_per_state:
-        def pickone(thing):
-            index = np.random.randint(0,len(thing))
-            return thing[index]
         transitions = np.array([
             generate(
-                [c1,pickone(successors(c1,width,height))],width,height)
+                [c1,random.choice(successors(c1,width,height))],width,height)
             for c1 in configs ])
     else:
         transitions = np.array([ generate([c1,c2],width,height)
@@ -196,11 +194,8 @@ def transitions(width, height, configs=None, one_per_state=False, **kwargs):
     if configs is None:
         configs = generate_configs(digit)
     if one_per_state:
-        def pickone(thing):
-            index = np.random.randint(0,len(thing))
-            return thing[index]
         pre = generate(configs, width, height, **kwargs)
-        suc = generate(np.array([pickone(successors(c1,width,height)) for c1 in configs ]), width, height, **kwargs)
+        suc = generate(np.array([random.choice(successors(c1,width,height)) for c1 in configs ]), width, height, **kwargs)
         return np.array([pre, suc])
     else:
         transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1,width,height) ])
@@ -347,11 +342,8 @@ def object_transitions(width, height, configs=None, one_per_state=False,shuffle=
     if configs is None:
         configs = generate_configs(digit)
     if one_per_state:
-        def pickone(thing):
-            index = np.random.randint(0,len(thing))
-            return thing[index]
         pre = to_objects(configs, width, height, shuffle)
-        suc = to_objects(np.array([pickone(successors(c1,width,height)) for c1 in configs ]), width, height, shuffle, **kwargs)
+        suc = to_objects(np.array([random.choice(successors(c1,width,height)) for c1 in configs ]), width, height, shuffle, **kwargs)
         return np.array([pre, suc])
     else:
         transitions = np.array([ [c1,c2] for c1 in configs for c2 in successors(c1,width,height) ])
