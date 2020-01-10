@@ -207,6 +207,12 @@ def generate_configs(digit=9):
     import itertools
     return itertools.permutations(range(digit))
 
+def generate_random_configs(digit=9,sample=10000):
+    results = np.zeros((sample,digit))
+    for i in range(sample):
+        results[i] = np.random.permutation(digit)
+    return results
+
 def successors(config,width,height):
     pos = config[0]
     x = pos % width
