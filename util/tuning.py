@@ -21,6 +21,33 @@ class HyperparameterGenerationError(Exception):
     """Raised when the hyperparameter generation failed """
     pass
 
+# flock does not work on GPFS
+# import struct, fcntl, os,
+# 
+# with open("lockfile","a") as f:
+#     fcntl.lockf(f, fcntl.LOCK_EX)
+#     print("sleep")
+#     time.sleep(30)
+#     print("finished")
+
+import time
+import subprocess
+def call_with_lock(path,fn):
+    subprocess.call(["mkdir","-p",path])
+    lock = path+"/lock"
+    while True:
+        try:
+            with open(lock,"x") as f:
+                try:
+                    result = fn()
+                finally:
+                    subprocess.run(["rm",lock])
+            break
+        except FileExistsError:
+            print("waiting for lock...")
+            time.sleep(1)
+    return result
+
 # append the new log entry into a file
 def save_history(path,obj):
     print("logging the results")
@@ -214,38 +241,40 @@ def simple_genetic_search(task, default_config, parameters, path,
         print({"population":population},"is superceded by",{"initial_population":initial_population},". initial_population must be larger than equal to the population",)
         population = initial_population
 
-    open_list, close_list = load_history(path)
-    if len(open_list) > 0:
-        _update_best(None, open_list[0][0], open_list[0][1], best, None, None)
+    # Python sucks! It does not even have a normal lambda.
+    def fn():
+        open_list, close_list = load_history(path)
+        if len(open_list) > 0:
+            _update_best(None, open_list[0][0], open_list[0][1], best, None, None)
+        return open_list, close_list
+    open_list, close_list = call_with_lock(path, fn)
 
     def _iter(config):
-        nonlocal open_list, close_list
         artifact, eval = task(merge_hash(default_config,config))
-        open_list, close_list = save_history(path, (eval, config, default_config))
-        _update_best(artifact, eval, config, best, report, report_best)
+        def fn():
+            open_list, close_list = save_history(path, (eval, config, default_config))
+            if (open_list[0][1] == config) and (len(open_list) < limit):
+                _update_best(artifact, eval, config, best, report, report_best)
+            return open_list, close_list
+        return call_with_lock(path, fn)
 
     try:
         print("Simple GA: Generating the initial population")
-        
-        try:
-            gen_i      = iter(range(len(open_list),initial_population))
-            gen_config = _random_configs(parameters)
-            
-            i      = next(gen_i)
-            config = next(gen_config)
-            while True:
-                try:
-                    _iter(config)
-                    i = next(gen_i)
-                except InvalidHyperparameterError as e:
-                    pass
-                config = next(gen_config)
-        except StopIteration:
-            pass
-        i = len(open_list)
-        print("Simple GA: Generated the initial population")
 
-        while i < limit:
+        gen_config = _random_configs(parameters)
+        try:
+            while len(open_list) < initial_population:
+                while True:
+                    try:
+                        open_list, close_list = _iter(next(gen_config))
+                        break
+                    except InvalidHyperparameterError as e:
+                        pass
+        except StopIteration:   # from gen_config
+            pass
+
+        print("Simple GA: Generated the initial population")
+        while len(open_list) < limit:
             mutation_ratio = open_list[0][0] / open_list[population-1][0]
             assert mutation_ratio < 1
             print("Simple GA: best",open_list[0][0],
@@ -270,8 +299,7 @@ def simple_genetic_search(task, default_config, parameters, path,
                         return best['artifact'],best['params'],best['eval']
             
             try:
-                _iter(child)
-                i += 1
+                open_list, close_list = _iter(child)
             except InvalidHyperparameterError as e:
                 pass
     except SignalInterrupt as e:
