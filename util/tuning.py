@@ -84,14 +84,10 @@ def merge_hash(a, b):
 def _select(list):
     return list[random.randint(0,len(list)-1)]
 
-def _update_best(artifact, eval, config, results, best, report, report_best):
-    results.append((eval, config))
+def _update_best(artifact, eval, config, best, report, report_best):
     if report:
         report(artifact)
     print("Evaluation result for:\n{}\neval = {}".format(config,eval))
-    print("Current results:")
-    results.sort(key=lambda result: result[0])
-    [ print(r) for r in results]
     if best['eval'] is None or eval < best['eval']:
         print("Found a better parameter:\n{}\neval:{} old-best:{}".format(config,eval,best['eval']))
         if report_best:
@@ -107,10 +103,9 @@ def _random_configs(parameters):
     while True:
         yield { k: random.choice(v) for k,v in parameters.items() }
 
-def _final_report(best,results):
+def _final_report(best):
     from colors import bold
     print(bold("*** Best parameter: ***\n{}\neval: {}".format(best['params'],best['eval'])))
-    print(results)
     return
 
 def _neighbors(parent,parameters):
@@ -203,7 +198,6 @@ def simple_genetic_search(task, default_config, parameters, path,
                           report=None, report_best=None,):
     "Initialize the queue by evaluating the N nodes. Select 2 parents randomly from top N nodes and perform the uniform crossover. Fall back to LGBFS on a fixed ratio (as a mutation)."
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
-    results       = []
 
     # assert 2 <= initial_population
     if not (2 <= initial_population):
@@ -222,13 +216,13 @@ def simple_genetic_search(task, default_config, parameters, path,
 
     open_list, close_list = load_history(path)
     if len(open_list) > 0:
-        _update_best(None, open_list[0][0], open_list[0][1], results, best, None, None)
+        _update_best(None, open_list[0][0], open_list[0][1], best, None, None)
 
     def _iter(config):
         nonlocal open_list, close_list
         artifact, eval = task(merge_hash(default_config,config))
         open_list, close_list = save_history(path, (eval, config, default_config))
-        _update_best(artifact, eval, config, results, best, report, report_best)
+        _update_best(artifact, eval, config, best, report, report_best)
 
     try:
         print("Simple GA: Generating the initial population")
@@ -283,5 +277,5 @@ def simple_genetic_search(task, default_config, parameters, path,
     except SignalInterrupt as e:
         print("received",e.signal,", optimization stopped")
     finally:
-        _final_report(best,results)
+        _final_report(best)
     return best['artifact'],best['params'],best['eval']
