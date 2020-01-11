@@ -94,6 +94,7 @@ def main(domainfile, problem_dir, heuristics):
     pngfile     = problem(ama(network(domain(heur("problem.png")))))
     jsonfile    = problem(ama(network(domain(heur("problem.json")))))
     logfile     = problem(ama(network(domain(heur("problem.log")))))
+    npzfile     = problem(ama(network(domain(heur("problem.npz")))))
     
     ###### preprocessing ################################################################
     os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
@@ -112,11 +113,14 @@ def main(domainfile, problem_dir, heuristics):
     echodo(["lisp/read-latent-state-traces.bin", tracefile, str(len(init)), csvfile])
     plan = np.loadtxt(csvfile, dtype=int)
     log("parsed the plan")
-    plot_grid(sae.decode(plan), path=pngfile, verbose=True)
+    img_states = sae.decode(plan)
+    log("decoded the plan")
+    plot_grid(img_states, path=pngfile, verbose=True)
     log("plotted the plan")
-    validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
+    validation = p.validate_transitions([img_states[0:-1], img_states[1:]])
     print(validation)
-    print(p.validate_states(sae.decode(plan)))
+    print(p.validate_states(img_states))
+    np.savez_compressed(npzfile,img_states=img_states)
     log("validated the plan")
     with open(jsonfile,"w") as f:
         json.dump({
