@@ -95,6 +95,7 @@ def main(domainfile, problem_dir, heuristics):
     jsonfile    = problem(ama(network(domain(heur("problem.json")))))
     logfile     = problem(ama(network(domain(heur("problem.log")))))
     npzfile     = problem(ama(network(domain(heur("problem.npz")))))
+    negfile     = problem(ama(network(domain(heur("problem.negative")))))
     
     ###### preprocessing ################################################################
     os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
@@ -104,45 +105,67 @@ def main(domainfile, problem_dir, heuristics):
     ###### do planning #############################################
     echodo(["helper/fd-latest.sh", options[heuristics], problemfile, domainfile])
     log("finished planning")
-    assert os.path.exists(planfile)
-
-    log("running a validator")
-    echodo(["arrival", domainfile, problemfile, planfile, tracefile])
-        
-    log("simulated the plan")
-    echodo(["lisp/read-latent-state-traces.bin", tracefile, str(len(init)), csvfile])
-    plan = np.loadtxt(csvfile, dtype=int)
-    log("parsed the plan")
-    img_states = sae.decode(plan)
-    log("decoded the plan")
-    plot_grid(img_states, path=pngfile, verbose=True)
-    log("plotted the plan")
-    validation = p.validate_transitions([img_states[0:-1], img_states[1:]])
-    print(validation)
-    print(p.validate_states(img_states))
-    np.savez_compressed(npzfile,img_states=img_states)
-    log("validated the plan")
-    with open(jsonfile,"w") as f:
-        json.dump({
-            "network":network_dir,
-            "problem":os.path.normpath(problem_dir).split("/")[-1],
-            "domain" :os.path.normpath(problem_dir).split("/")[-2],
-            "noise"  :os.path.normpath(problem_dir).split("/")[-3],
-            "times":times,
-            "heuristics":heuristics,
-            "domainfile":domainfile.split("/"),
-            "problemfile":problemfile,
-            "planfile":planfile,
-            "tracefile":tracefile,
-            "csvfile":csvfile,
-            "pngfile":pngfile,
-            "jsonfile":jsonfile,
-            "statistics":json.loads(echo_out(["helper/fd-parser.awk", logfile])),
-            "parameters":sae.parameters,
-            "cost":len(plan),
-            "valid":bool(np.all(validation)),
-        }, f)
-    return valid
+    if os.path.exists(planfile):
+        log("running a validator")
+        echodo(["arrival", domainfile, problemfile, planfile, tracefile])
+        log("simulated the plan")
+        echodo(["lisp/read-latent-state-traces.bin", tracefile, str(len(init)), csvfile])
+        plan = np.loadtxt(csvfile, dtype=int)
+        log("parsed the plan")
+        img_states = sae.decode(plan)
+        log("decoded the plan")
+        plot_grid(img_states, path=pngfile, verbose=True)
+        log("plotted the plan")
+        validation = p.validate_transitions([img_states[0:-1], img_states[1:]])
+        print(validation)
+        print(p.validate_states(img_states))
+        np.savez_compressed(npzfile,img_states=img_states)
+        log("validated the plan")
+        with open(jsonfile,"w") as f:
+            json.dump({
+                "network":network_dir,
+                "problem":os.path.normpath(problem_dir).split("/")[-1],
+                "domain" :os.path.normpath(problem_dir).split("/")[-2],
+                "noise"  :os.path.normpath(problem_dir).split("/")[-3],
+                "times":times,
+                "heuristics":heuristics,
+                "domainfile":domainfile.split("/"),
+                "problemfile":problemfile,
+                "planfile":planfile,
+                "tracefile":tracefile,
+                "csvfile":csvfile,
+                "pngfile":pngfile,
+                "jsonfile":jsonfile,
+                "statistics":json.loads(echo_out(["helper/fd-parser.awk", logfile])),
+                "parameters":sae.parameters,
+                "valid":bool(np.all(validation)),
+                "found":True,
+                "exhausted": False,
+                }, f)
+        return valid
+    else:
+        with open(jsonfile,"w") as f:
+            json.dump({
+                "network":network_dir,
+                "problem":os.path.normpath(problem_dir).split("/")[-1],
+                "domain" :os.path.normpath(problem_dir).split("/")[-2],
+                "noise"  :os.path.normpath(problem_dir).split("/")[-3],
+                "times":times,
+                "heuristics":heuristics,
+                "domainfile":domainfile.split("/"),
+                "problemfile":problemfile,
+                "planfile":planfile,
+                "tracefile":tracefile,
+                "csvfile":csvfile,
+                "pngfile":pngfile,
+                "jsonfile":jsonfile,
+                "statistics":json.loads(echo_out(["helper/fd-parser.awk", logfile])),
+                "parameters":sae.parameters,
+                "valid":False,
+                "found":False,
+                "exhausted": os.path.exists(negfile),
+                }, f)
+        return False
 
 if __name__ == '__main__':
     try:
