@@ -27,29 +27,29 @@ def puzzle(type='mnist',width=3,height=3,limit=None):
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
-    configs = p.generate_random_configs(width*height, limit)
-    print(len(configs))
-    np.random.shuffle(configs)
-    np.savez_compressed(path,configs=configs)
+    pres = p.generate_random_configs(width*height, limit)
+    np.random.shuffle(pres)
+    sucs = [ random.choice(p.successors(c1,width,height)) for c1 in pres ]
+    np.savez_compressed(path,pres=pres,sucs=sucs)
 
 def hanoi(disks=7,towers=4,limit=None):
     path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
     import latplan.puzzles.hanoi as p
     p.setup()
-    configs = p.generate_random_configs(disks,towers, limit)
-    print(len(configs))
-    np.random.shuffle(configs)
-    np.savez_compressed(path,configs=configs)
+    pres = p.generate_random_configs(disks,towers, limit)
+    np.random.shuffle(pres)
+    sucs = [ random.choice(p.successors(c1,disks,towers)) for c1 in pres ]
+    np.savez_compressed(path,pres=pres,sucs=sucs)
 
 def lightsout(type='digital',size=4,limit=None):
     path = os.path.join("puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     p.setup()
-    configs = p.generate_random_configs(size, limit)
-    print(len(configs))
-    np.random.shuffle(configs)
-    np.savez_compressed(path,configs=configs)
+    pres = p.generate_random_configs(size, limit)
+    np.random.shuffle(pres)
+    sucs = [ random.choice(p.successors(c1)) for c1 in pres ]
+    np.savez_compressed(path,pres=pres,sucs=sucs)
 
 def main():
     import sys
