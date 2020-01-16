@@ -84,7 +84,7 @@ def transitions_old(size, configs=None, one_per_state=False, **kwargs):
 
 def transitions(size, configs=None, one_per_state=False, **kwargs):
     if configs is None:
-        configs = generate_configs(digit)
+        configs = generate_configs(size)
     if one_per_state:
         def pickone(thing):
             index = np.random.randint(0,len(thing))
