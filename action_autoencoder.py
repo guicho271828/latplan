@@ -155,12 +155,9 @@ def generate_aae_action(known_transisitons):
         return np.reshape(array,(*array.shape[:axis],-1,*array.shape[axis+2:]))
     
     print("start generating transitions")
-    # s1,s2,s3,s1,s2,s3,....
-    repeated_states  = repeat_over(states, len(all_labels), axis=0)
-    # a1,a1,a1,a2,a2,a2,....
-    repeated_actions = np.repeat(all_labels, len(states), axis=0)
+    random_actions = all_labels[np.random.choice(len(all_labels), len(states))]
     
-    y = aae.decode([repeated_states, repeated_actions], batch_size=1000).round().astype(np.int8)
+    y = aae.decode([states, random_actions], batch_size=1000).round().astype(np.int8)
 
     print("remove known transitions")
     y = set_difference(y, known_transisitons)
@@ -180,23 +177,10 @@ if "dump" in mode:
     with open(sae.local("actions+ids.csv"), 'wb') as f:
         np.savetxt(f,np.concatenate((data,actions_byid), axis=1),"%d")
 
-    transitions = generate_aae_action(data)
-    # note: transitions are already shuffled, and also do not contain any examples in data.
-    actions      = aae.encode_action(transitions, batch_size=1000).round()
-    actions_byid = (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
-
-    # ensure there are enough test examples
-    separation = min(len(data)*10,len(transitions)-len(data))
-    
-    # fake dataset is used only for the training.
-    fake_transitions  = transitions[:separation]
-    fake_actions_byid = actions_byid[:separation]
-
-    # remaining data are used only for the testing.
-    test_transitions  = transitions[separation:]
-    test_actions_byid = actions_byid[separation:]
-
-    print(fake_transitions.shape, test_transitions.shape)
+    # note: fake_transitions are already shuffled, and also do not contain any examples in data.
+    fake_transitions  = generate_aae_action(data)
+    fake_actions      = aae.encode_action(fake_transitions, batch_size=1000).round()
+    fake_actions_byid = (fake_actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
 
     print(sae.local("fake_actions.csv"))
     with open(sae.local("fake_actions.csv"), 'wb') as f:
@@ -205,19 +189,23 @@ if "dump" in mode:
     with open(sae.local("fake_actions+ids.csv"), 'wb') as f:
         np.savetxt(f,np.concatenate((fake_transitions,fake_actions_byid), axis=1),"%d")
     
+    test_transitions  = generate_aae_action(data)
+    test_actions      = aae.encode_action(test_transitions, batch_size=1000).round()
+    test_actions_byid = (test_actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
+
     p = latplan.util.puzzle_module(sae.path)
     print("decoding pre")
     pre_images = sae.decode(test_transitions[:,:N],batch_size=1000)
     print("decoding suc")
     suc_images = sae.decode(test_transitions[:,N:],batch_size=1000)
     print("validating transitions")
-    valid    = p.validate_transitions([pre_images, suc_images],batch_size=1000)
-    invalid  = np.logical_not(valid)
+    valid   = p.validate_transitions([pre_images, suc_images],batch_size=1000)
+    invalid = np.logical_not(valid)
     
-    valid_transitions  = test_transitions [valid][:len(data)] # reduce the amount of data to reduce runtime
-    valid_actions_byid = test_actions_byid[valid][:len(data)]
-    invalid_transitions  = test_transitions [invalid][:len(data)] # reduce the amount of data to reduce runtime
-    invalid_actions_byid = test_actions_byid[invalid][:len(data)]
+    valid_transitions    = test_transitions [valid]
+    valid_actions_byid   = test_actions_byid[valid]
+    invalid_transitions  = test_transitions [invalid]
+    invalid_actions_byid = test_actions_byid[invalid]
 
     print(sae.local("valid_actions.csv"))
     with open(sae.local("valid_actions.csv"), 'wb') as f:
