@@ -2209,21 +2209,10 @@ class Discriminator(Network):
         self.loss = bce
         self.net = Model(x, y)
 
-    def report(self,train_data,
-               epoch=200,
-               batch_size=1000,optimizer=Adam(0.001),
-               test_data=None,
-               train_data_to=None,
-               test_data_to=None,):
-        opts = {'verbose':0,'batch_size':batch_size}
-        def test_both(msg, fn): 
-            print(msg.format(fn(train_data,train_data_to)))
-            if test_data is not None:
-                print((msg+" (validation)").format(fn(test_data,test_data_to)))
-        self.net.compile(optimizer=optimizer, loss=bce)
-        test_both("BCE: {}",
-                  lambda data, data_to: self.net.evaluate(data,data_to,**opts))
-        return self
+    def _report(self,test_both,**opts):
+        from .util.np_distances import bce
+        test_both(["BCE"], lambda data: bce(data, self.autoencode(data,**opts)))
+        return
     def discriminate(self,data,**kwargs):
         self.load()
         return self.net.predict(data,**kwargs)
