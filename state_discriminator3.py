@@ -225,15 +225,16 @@ def load(method):
     assert method == discriminator.parameters["method"]
 
 def test(method):
-    valid = np.loadtxt(sae.local("all_states.csv"),dtype=np.int8)
+    valid = np.loadtxt(sae.local("valid_actions.csv"),dtype=np.int8)
+    N = valid.shape[1]//2
+    valid = valid.reshape([-1,N])
     random.shuffle(valid)
-
-    _,_,_,_, _, mixed = prepare(valid[:50000],sae)
-
-    p = latplan.util.puzzle_module(sae.path)
-    answers = p.validate_states(sae.decode(mixed))
-    invalid = mixed[np.logical_not(answers)]
+    invalid = np.loadtxt(sae.local("invalid_actions.csv"),dtype=np.int8)
+    invalid = invalid.reshape([-1, N])
     random.shuffle(invalid)
+    mixed = np.loadtxt(sae.local("fake_actions.csv"),dtype=np.int8)
+    mixed = mixed.reshape([-1, N])
+    random.shuffle(mixed)
 
     performance = {}
     def reg(names,value,d=performance):
