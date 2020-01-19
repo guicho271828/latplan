@@ -149,14 +149,16 @@ class Searcher:
         self.open_list = queue.PriorityQueue()
         self.close_list = {}
         self.stats = {
-            "generated_including_duplicate":1, # init
-            "generated":1,
-            "expanded":0,
-            "reopened":0,
+            "statistics":{
+                "generated_including_duplicate":1, # init
+                "generated":1,
+                "expanded":0,
+                "reopened":0,
+            }
         }
 
     def successors(self,state):
-        self.stats["expanded"] += 1
+        self.stats["statistics"]["expanded"] += 1
         try:
             reductions = []
             s = state.state
@@ -173,12 +175,12 @@ class Searcher:
             # for now, assume they are all valid
             for i,succ in enumerate(y[:,self.N:]):
                 # print(succ)
-                self.stats["generated_including_duplicate"] += 1
+                self.stats["statistics"]["generated_including_duplicate"] += 1
                 hash_value = state_hash(succ)
                 if hash_value in self.close_list:
                     yield self.close_list[hash_value]
                 else:
-                    self.stats["generated"] += 1
+                    self.stats["statistics"]["generated"] += 1
                     _succ = State(succ)
                     self.close_list[hash_value] = _succ
                     yield _succ
@@ -237,7 +239,7 @@ class Astar(Searcher,StateBasedGoalDetection):
                     new_g = state.g + 1
                     if c.g > new_g:
                         if c.status == CLOSED:
-                            self.stats["reopened"] += 1
+                            self.stats["statistics"]["reopened"] += 1
                         c.g      = new_g
                         c.parent = state
                         c.status = OPEN
@@ -338,13 +340,22 @@ def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="go
 
     log("start planning")
     _searcher = eval(searcher)()
+    _searcher.stats["heuristics"] = heuristics
+    _searcher.stats["search"]     = searcher
+    _searcher.stats["network"]    = network_dir
+    _searcher.stats["problem"]    = os.path.normpath(problem_dir).split("/")[-1]
+    _searcher.stats["domain"]     = os.path.normpath(problem_dir).split("/")[-2]
+    _searcher.stats["noise"]      = os.path.normpath(problem_dir).split("/")[-3]
+    _searcher.stats["plan_count"] = 0
     try:
         for i, found_goal_state in enumerate(_searcher.search(init,goal,eval(heuristics))):
             log("plan found")
             _searcher.stats["found"] = True
-            _searcher.stats["cost"] = len(plan)-1
-            _searcher.stats["length"] = len(plan)-1
+            _searcher.stats["exhausted"] = False
+            _searcher.stats["plan_count"] += 1
             plan = np.array( found_goal_state.path())
+            _searcher.stats["statistics"]["cost"] = len(plan)-1
+            _searcher.stats["statistics"]["length"] = len(plan)-1
             print(plan)
             if first_solution:
                 plot_grid(sae.decode(plan),
@@ -365,9 +376,12 @@ def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="go
             if np.all(validation):
                 _searcher.stats["valid"] = True
                 return
+            _searcher.stats["valid"] = False
             if first_solution:
-                _searcher.stats["valid"] = False
                 return
+    except StopIteration:
+        _searcher.stats["found"] = False
+        _searcher.stats["exhausted"] = True
     finally:
         _searcher.stats["times"] = times
         _searcher.report(problem(ama(network(search(heur("problem.json"))))))
