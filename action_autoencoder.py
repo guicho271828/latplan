@@ -167,14 +167,14 @@ def generate_aae_action(known_transisitons):
 
 if "dump" in mode:
     # dump list of available actions
-    print(sae.local("available_actions.csv"))
-    with open(sae.local("available_actions.csv"), 'wb') as f:
+    print(aae.local("available_actions.csv"))
+    with open(aae.local("available_actions.csv"), 'wb') as f:
         np.savetxt(f,np.where(histogram > 0)[0],"%d")
 
     # one-hot to id
     actions_byid = (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
-    print(sae.local("actions+ids.csv"))
-    with open(sae.local("actions+ids.csv"), 'wb') as f:
+    print(aae.local("actions+ids.csv"))
+    with open(aae.local("actions+ids.csv"), 'wb') as f:
         np.savetxt(f,np.concatenate((data,actions_byid), axis=1),"%d")
 
     # note: fake_transitions are already shuffled, and also do not contain any examples in data.
@@ -182,11 +182,11 @@ if "dump" in mode:
     fake_actions      = aae.encode_action(fake_transitions, batch_size=1000).round()
     fake_actions_byid = (fake_actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
 
-    print(sae.local("fake_actions.csv"))
-    with open(sae.local("fake_actions.csv"), 'wb') as f:
+    print(aae.local("fake_actions.csv"))
+    with open(aae.local("fake_actions.csv"), 'wb') as f:
         np.savetxt(f,fake_transitions,"%d")
-    print(sae.local("fake_actions+ids.csv"))
-    with open(sae.local("fake_actions+ids.csv"), 'wb') as f:
+    print(aae.local("fake_actions+ids.csv"))
+    with open(aae.local("fake_actions+ids.csv"), 'wb') as f:
         np.savetxt(f,np.concatenate((fake_transitions,fake_actions_byid), axis=1),"%d")
     
     test_transitions  = generate_aae_action(data)
@@ -207,17 +207,17 @@ if "dump" in mode:
     invalid_transitions  = test_transitions [invalid]
     invalid_actions_byid = test_actions_byid[invalid]
 
-    print(sae.local("valid_actions.csv"))
-    with open(sae.local("valid_actions.csv"), 'wb') as f:
+    print(aae.local("valid_actions.csv"))
+    with open(aae.local("valid_actions.csv"), 'wb') as f:
         np.savetxt(f,valid_transitions,"%d")
-    print(sae.local("valid_actions+ids.csv"))
-    with open(sae.local("valid_actions+ids.csv"), 'wb') as f:
+    print(aae.local("valid_actions+ids.csv"))
+    with open(aae.local("valid_actions+ids.csv"), 'wb') as f:
         np.savetxt(f,np.concatenate((valid_transitions,valid_actions_byid), axis=1),"%d")
         
-    print(sae.local("invalid_actions.csv"))
-    with open(sae.local("invalid_actions.csv"), 'wb') as f:
+    print(aae.local("invalid_actions.csv"))
+    with open(aae.local("invalid_actions.csv"), 'wb') as f:
         np.savetxt(f,invalid_transitions,"%d")
-    print(sae.local("invalid_actions+ids.csv"))
-    with open(sae.local("invalid_actions+ids.csv"), 'wb') as f:
+    print(aae.local("invalid_actions+ids.csv"))
+    with open(aae.local("invalid_actions+ids.csv"), 'wb') as f:
         np.savetxt(f,np.concatenate((invalid_transitions,invalid_actions_byid), axis=1),"%d")
 
