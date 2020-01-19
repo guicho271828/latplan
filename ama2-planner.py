@@ -293,12 +293,15 @@ def goalcount(state,goal):
 def blind(state,goal):
     return 0
 
-def main(network_dir, problem_dir, searcher, first_solution=False):
+def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="goalcount"):
     global sae, aae, ad, sd3, cae, available_actions
     
     def search(path):
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(searcher, root, ext)
+    def heur(path):
+        root, ext = os.path.splitext(path)
+        return "{}_{}{}".format(heuristics, root, ext)
 
     p = latplan.util.puzzle_module(network_dir)
     log("loaded puzzle")
@@ -336,13 +339,21 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
     log("start planning")
     _searcher = eval(searcher)()
     try:
-        for i, found_goal_state in enumerate(_searcher.search(init,goal,goalcount)):
+        for i, found_goal_state in enumerate(_searcher.search(init,goal,eval(heuristics))):
             log("plan found")
+            _searcher.stats["found"] = True
+            _searcher.stats["cost"] = len(plan)-1
+            _searcher.stats["length"] = len(plan)-1
             plan = np.array( found_goal_state.path())
             print(plan)
-            plot_grid(sae.decode(plan),
-                      path=problem(ama(network(search("path_{}.png".format(i))))),
-                      verbose=True)
+            if first_solution:
+                plot_grid(sae.decode(plan),
+                        path=problem(ama(network(search(heur("problem.png"))))),
+                        verbose=True)
+            else:
+                plot_grid(sae.decode(plan),
+                        path=problem(ama(network(search(heur("problem_{}.png".format(i)))))),
+                        verbose=True)
             log("plotted the plan")
             
             validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
@@ -359,7 +370,7 @@ def main(network_dir, problem_dir, searcher, first_solution=False):
                 return
     finally:
         _searcher.stats["times"] = times
-        _searcher.report(problem(ama(network("{}.json".format(searcher)))))
+        _searcher.report(problem(ama(network(search(heur("problem.json"))))))
 
 if __name__ == '__main__':
     import sys
