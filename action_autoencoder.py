@@ -166,33 +166,33 @@ def generate_aae_action(known_transisitons):
     return y
 
 if "dump" in mode:
+    def to_id(actions):
+        return (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
+
+    def save(name,data):
+        print("Saving to",aae.local(name))
+        with open(aae.local(name), 'wb') as f:
+            np.savetxt(f,data,"%d")
     # dump list of available actions
-    print(aae.local("available_actions.csv"))
-    with open(aae.local("available_actions.csv"), 'wb') as f:
-        np.savetxt(f,np.where(histogram > 0)[0],"%d")
+    save("available_actions.csv", np.where(histogram > 0)[0])
 
     # one-hot to id
-    actions_byid = (actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
-    print(aae.local("actions+ids.csv"))
-    with open(aae.local("actions+ids.csv"), 'wb') as f:
-        np.savetxt(f,np.concatenate((data,actions_byid), axis=1),"%d")
+    actions_byid = to_id(actions)
+    data_byid = np.concatenate((data,actions_byid), axis=1)
+    save("actions+ids.csv", data_byid)
 
     # note: fake_transitions are already shuffled, and also do not contain any examples in data.
     fake_transitions  = generate_aae_action(data)
     fake_actions      = aae.encode_action(fake_transitions, batch_size=1000).round()
     fake_actions_byid = (fake_actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
-
-    print(aae.local("fake_actions.csv"))
-    with open(aae.local("fake_actions.csv"), 'wb') as f:
-        np.savetxt(f,fake_transitions,"%d")
-    print(aae.local("fake_actions+ids.csv"))
-    with open(aae.local("fake_actions+ids.csv"), 'wb') as f:
-        np.savetxt(f,np.concatenate((fake_transitions,fake_actions_byid), axis=1),"%d")
+    
+    save("fake_actions.csv",fake_transitions)
+    save("fake_actions+ids.csv",np.concatenate((fake_transitions,fake_actions_byid), axis=1))
     
     test_transitions  = generate_aae_action(data)
     test_actions      = aae.encode_action(test_transitions, batch_size=1000).round()
     test_actions_byid = (test_actions * np.arange(num_actions)).sum(axis=-1,dtype=int)
-
+    
     p = latplan.util.puzzle_module(sae.path)
     print("decoding pre")
     pre_images = sae.decode(test_transitions[:,:N],batch_size=1000)
@@ -206,18 +206,49 @@ if "dump" in mode:
     valid_actions_byid   = test_actions_byid[valid]
     invalid_transitions  = test_transitions [invalid]
     invalid_actions_byid = test_actions_byid[invalid]
+    
+    save("valid_actions.csv",valid_transitions)
+    save("valid_actions+ids.csv",np.concatenate((valid_transitions,valid_actions_byid), axis=1))
+    save("invalid_actions.csv",invalid_transitions)
+    save("invalid_actions+ids.csv",np.concatenate((invalid_transitions,invalid_actions_byid), axis=1))
 
-    print(aae.local("valid_actions.csv"))
-    with open(aae.local("valid_actions.csv"), 'wb') as f:
-        np.savetxt(f,valid_transitions,"%d")
-    print(aae.local("valid_actions+ids.csv"))
-    with open(aae.local("valid_actions+ids.csv"), 'wb') as f:
-        np.savetxt(f,np.concatenate((valid_transitions,valid_actions_byid), axis=1),"%d")
-        
-    print(aae.local("invalid_actions.csv"))
-    with open(aae.local("invalid_actions.csv"), 'wb') as f:
-        np.savetxt(f,invalid_transitions,"%d")
-    print(aae.local("invalid_actions+ids.csv"))
-    with open(aae.local("invalid_actions+ids.csv"), 'wb') as f:
-        np.savetxt(f,np.concatenate((invalid_transitions,invalid_actions_byid), axis=1),"%d")
+    # only valid for Cube AAE
+    def extract_effect_from_transitions(transitions):
+        pre = transitions[:,:N]
+        suc = transitions[:,N:]
+        data_diff = suc - pre
+        data_add  = np.maximum(0, data_diff)
+        data_del  = -np.minimum(0, data_diff)
 
+        add_effect = np.zeros((len(all_labels), N))
+        del_effect = np.zeros((len(all_labels), N))
+
+        for i, a in enumerate(np.where(histogram > 0)[0]):
+            indices = np.where(actions_byid == a)[0]
+            add_effect[i] = np.amax(data_add[indices], axis=0)
+            del_effect[i] = np.amax(data_del[indices], axis=0)
+
+        return add_effect, del_effect, data_diff
+
+    all_actions_byid = to_id(all_labels)
+    
+    # effects obtained from the latent vectors
+    add_effect2, del_effect2, diff2 = extract_effect_from_transitions(data)
+
+    save("action_add2.csv",add_effect2)
+    save("action_del2.csv",del_effect2)
+    save("action_add2+ids.csv",np.concatenate((add_effect2,all_actions_byid), axis=1))
+    save("action_del2+ids.csv",np.concatenate((del_effect2,all_actions_byid), axis=1))
+    save("diff2+ids.csv",np.concatenate((diff2,actions_byid), axis=1))
+
+    pre = data[:,:N]
+    data_aae = aae.decode([pre,actions])
+
+    # effects obtained from the latent vectors, but the successor uses the ones coming from the AAE
+    add_effect3, del_effect3, diff3 = extract_effect_from_transitions(data_aae)
+
+    save("action_add3.csv",add_effect3)
+    save("action_del3.csv",del_effect3)
+    save("action_add3+ids.csv",np.concatenate((add_effect3,all_actions_byid), axis=1))
+    save("action_del3+ids.csv",np.concatenate((del_effect3,all_actions_byid), axis=1))
+    save("diff3+ids.csv",np.concatenate((diff3,actions_byid), axis=1))
