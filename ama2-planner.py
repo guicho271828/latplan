@@ -295,7 +295,7 @@ def goalcount(state,goal):
 def blind(state,goal):
     return 0
 
-def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="goalcount"):
+def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="goalcount", _aae="_aae"):
     global sae, aae, ad, sd3, cae, available_actions
     
     def search(path):
@@ -308,11 +308,11 @@ def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="go
     p = latplan.util.puzzle_module(network_dir)
     log("loaded puzzle")
 
-    sae = latplan.model.load(network_dir,allow_failure=True)
-    aae = latplan.model.load(sae.local("_aae/"),allow_failure=True)
-    ad  = latplan.model.load(sae.local("_ad/"),allow_failure=True)
-    sd3 = latplan.model.load(sae.local("_sd3/"),allow_failure=True)
-    cae = latplan.model.load(sae.local("_cae/"),allow_failure=True)
+    sae = latplan.model.load(network_dir)
+    aae = latplan.model.load(sae.local(_aae       ))
+    ad  = latplan.model.load(sae.local(_aae+"_ad/"))
+    sd3 = latplan.model.load(sae.local(    "_sd3/"))
+    cae = latplan.model.load(sae.local(    "_cae/"),allow_failure=True)
     setup_planner_utils(sae, problem_dir, network_dir, "ama2")
     log("loaded sae")
 
@@ -340,6 +340,7 @@ def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="go
 
     log("start planning")
     _searcher = eval(searcher)()
+    _searcher.stats["aae"]        = _aae
     _searcher.stats["heuristics"] = heuristics
     _searcher.stats["search"]     = searcher
     _searcher.stats["network"]    = network_dir
