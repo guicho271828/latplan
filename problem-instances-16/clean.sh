@@ -2,4 +2,3 @@
 
 find $1 -name "ama*" -delete
 
-echo done!
