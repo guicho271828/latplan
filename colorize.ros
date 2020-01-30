@@ -1,0 +1,65 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(alexandria cl-ansi-text cl-colors2 iterate trivia unix-opts) :silent t)
+  )
+
+(defpackage :ros.script.colorize.3785061772
+  (:shadow :iterate)
+  (:use :cl :cl-ansi-text :iterate :trivia :cl-colors :alexandria))
+(in-package :ros.script.colorize.3785061772)
+
+(defun colorize (&key
+                   (input-stream *standard-input*)
+                   (output-stream *standard-output*)
+                   (lower-bound most-negative-double-float)
+                   (upper-bound most-positive-double-float)
+                   increasing)
+  (let* ((numbers (iter (for number in-stream input-stream)
+                        (collecting number)))
+         (max (reduce #'max (remove-if-not #'numberp numbers) :initial-value lower-bound))
+         (min (reduce #'min (remove-if-not #'numberp numbers) :initial-value upper-bound))
+         (max-color (if increasing +blue+ +red+))
+         (min-color (if increasing +red+ +blue+)))
+    (flet ((rate (x)
+             (/ (- x min) (- max min))))
+      (iter (for n in numbers)
+            (if (numberp n)
+                (with-color ((rgb-combination (hsv-combination max-color min-color (rate n) (not increasing))
+                                              +white+
+                                              0.2)
+                             :stream output-stream)
+                  (princ n output-stream))
+                (princ n output-stream))
+            (terpri output-stream)))))
+
+(opts:define-opts
+  (:name :help
+         :description "print this help text"
+         :short #\h
+         :long "help")
+  (:name :mode
+         :description "Specify the color mode"
+         :arg-parser (lambda (str) (make-keyword (format nil "~ABIT" str)))
+         :short #\m
+         :long "mode")
+  (:name :increasing
+         :description "Invert the coloring; If present, smaller the better."
+         :short #\i
+         :long "increasing"))
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (multiple-value-bind (options) (opts:get-opts argv)
+    (handler-case
+        (let ((*color-mode* (getf options :mode :3bit)))
+          (colorize :increasing (getf options :increasing)))
+      #+sbcl
+      (sb-sys:interactive-interrupt ()
+        (ros:quit 1)))))
+
+;;; vim: set ft=lisp lisp:
