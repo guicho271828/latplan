@@ -27,7 +27,6 @@ def load(width,height,force=False):
         setting['panels'] = setting['loader'](width,height)
 
 def generate(configs, width, height, **kwargs):
-    assert width*height <= 9
     load(width, height)
 
     from keras.layers import Input, Reshape
