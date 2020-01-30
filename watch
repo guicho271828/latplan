@@ -1,0 +1,33 @@
+#!/bin/bash
+
+watch -n 1 -t --color report-training \
+      -e M \
+      -e epoch \
+      -e aeclass \
+      -e aae_delay \
+      -e comment \
+      -e argmax \
+      -e batch_size \
+      -e clayer \
+      -e layer \
+      -e dropout \
+      -e dropout_z \
+      -e disks \
+      -e towers \
+      -e width \
+      -e height \
+      -e size \
+      -e earlystop_delay \
+      -e full_epoch \
+      -e locality \
+      -e loss \
+      -e max_temperature \
+      -e min_temperature \
+      -e noise \
+      -e num_examples \
+      -e optimizer \
+      -e stop_gradient \
+      -e type \
+      -e activation \
+      $@
+
