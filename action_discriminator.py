@@ -74,25 +74,25 @@ parameters = {
     'lr'         :[0.01,0.001],
 }
 
-def learn(subdir):
+def learn(path):
     network = latplan.model.get('PUDiscriminator')
     true_actions = np.loadtxt(sae.local("actions.csv"),dtype=np.int8)
-    fake_actions = np.loadtxt(sae.local("fake_actions.csv"),dtype=np.int8)
+    fake_actions = np.loadtxt(aae.local("fake_actions.csv"),dtype=np.int8)
     train_in, train_out, val_in, val_out = prepare_binary_classification_data(true_actions, fake_actions)
-    discriminator,_,_ = grid_search(curry(nn_task, network, sae.local(subdir),
+    discriminator,_,_ = grid_search(curry(nn_task, network, path,
                                           train_in, train_out, val_in, val_out,),
                                     default_parameters,
                                     parameters,
-                                    sae.local(subdir),
+                                    path,
     )
     discriminator.save()
     return discriminator
 
 def test():
-    valid = np.loadtxt(sae.local("valid_actions.csv"),dtype=np.int8)
+    valid = np.loadtxt(aae.local("valid_actions.csv"),dtype=np.int8)
     random.shuffle(valid)
 
-    invalid = np.loadtxt(sae.local("invalid_actions.csv"),dtype=np.int8)
+    invalid = np.loadtxt(aae.local("invalid_actions.csv"),dtype=np.int8)
     random.shuffle(invalid)
 
     N = int(valid.shape[1] // 2)
@@ -151,17 +151,17 @@ def test():
     with open(discriminator.local('performance.json'), 'w') as f:
         json.dump(performance, f)
 
-def main(directory, mode="test", subdir="_ad/"):
+def main(directory, mode="test", _aae="_aae"):
     global sae, aae, sd3, discriminator
     sae = latplan.model.load(directory)
-    aae = latplan.model.load(sae.local("_aae/"))
+    aae = latplan.model.load(sae.local(_aae))
     cae = latplan.model.load(sae.local("_cae/"),allow_failure=True)
     sd3 = latplan.model.load(sae.local("_sd3/"))
 
     if 'learn' in mode:
-        discriminator = learn(subdir)
+        discriminator = learn(sae.local(_aae+"_ad/"))
     else:
-        discriminator = latplan.model.load(sae.local(subdir))
+        discriminator = latplan.model.load(sae.local(_aae+"_ad/"))
 
     if 'test' in mode:
         test()
