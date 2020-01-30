@@ -137,6 +137,7 @@ def puzzle_longest(type='mnist', width=3, height=3):
 
 def hanoi(disks=5, towers=3):
     import latplan.puzzles.hanoi as p
+    p.setup()
     ics = [
         np.zeros(disks,dtype=int),
         *[
@@ -150,6 +151,7 @@ def hanoi(disks=5, towers=3):
 def lightsout(type='digital', size=4):
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
+    p.setup()
     ics = [
         random_walk(np.full(size*size,-1), steps, lambda config: p.successors(config))
         for i in range(instances)
@@ -185,5 +187,10 @@ def main():
     task(*map(myeval,sys.argv[4:]))
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        import latplan.util.stacktrace
+        latplan.util.stacktrace.format()
+
 
