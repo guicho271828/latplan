@@ -7,11 +7,15 @@
 + *NEWS* Updates on version 2: Mainly the refactoring. AAAI18 experiments still works.
 + *NEWS* Updates on version 2.1: Version 2 was not really working and I could finally have time to fix it. Added ZSAE experiments.
 + *NEWS* Updates on version 2.2: Backported more minor improvements from the private repository
++ *NEWS* Updates on version 3.0: Updates for DSAMA system. More refactoring is done on the learner code.
+  We newly introduced ama3-planner which takes a PDDL domain file.
 
 # [[https://travis-ci.org/guicho271828/latplan][https://travis-ci.org/guicho271828/latplan.svg?branch=master]]
 
 This repository contains the source code of LatPlan.
 
++ Asai, M.: 2019. Neural-Symbolic Descriptive Action Model from Images: The Search for STRIPS.
+  + https://arxiv.org/abs/1912.05492
 + Asai, M.: 2019. Unsupervised Grounding of Plannable First-Order Logic Representation from Images (code not yet available)
   + *Accepted* in ICAPS-2019, Learning and Planning Track. https://arxiv.org/abs/1902.08093
 + Asai, M.; Kajino, F: 2019. Towards Stable Symbol Grounding with Zero-Suppressed State AutoEncoder
@@ -29,16 +33,18 @@ It requires =sudo= several times. However Python packages are installed in the u
 Then run:
 
 #+begin_src sh
-./train_all.sh # ~~ few hours
+./train_all.sh      # customize this file for your job scheduler before running.
+./train_actions.sh  # customize this file for your job scheduler before running.
 
+# When everything finishes, generate the problem instances
 (cd problem-instances; ./example.sh)
 
 # modify run_ama1_all.sh and run_ama2_all.sh for the job scheduler for your compute cluster
 
-./run_ama1_all.sh # MANY hours unless you have a compute cluster
-./run_ama2_all.sh # MANY hours unless you have a compute cluster
+./run_ama1_all.sh # MANY hours unless you have a compute cluster.
+./run_ama2_all.sh # MANY hours unless you have a compute cluster.
+./run_ama3_all.sh # MANY hours unless you have a compute cluster.
 #+end_src
-
 
 ** Required software
 
@@ -74,7 +80,8 @@ The applications installed by the script consists of:
 + action_discriminator.py :: The program for training an AD.
 + ama1-planner.py :: Latplan using AMA1.
 + ama2-planner.py :: Latplan using AMA2.
-+ run_ama1_all.sh, run_ama2_all.sh :: Run all experiments.
++ ama3-planner.py :: Latplan using the visual input (init goal) and a PDDL domain file.
++ run_ama{1,2,3}_all.sh :: Run all experiments.
 + various sh files :: supporting scripts.
 + util/ :: contains general-purpose utility functions for python code.
 + tests/ :: test files, mostly the unit tests for domain generator/validator
