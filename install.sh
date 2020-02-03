@@ -29,6 +29,11 @@ git clone -b release https://github.com/roswell/roswell.git
     sudo make install
     ros setup
 )
+
+ros install numcl/constantfold numcl/gtype numcl/specialized-function numcl/numcl
+ros install guicho271828/magicffi guicho271828/dataloader guicho271828/remlic guicho271828/dsama
+ros install arrival
+
 make -j 1 -C lisp
 
 sudo apt -y install python3-pip python3-pil parallel \
