@@ -5,6 +5,7 @@ Networks named like XXX2 uses gumbel softmax for the output layer too,
 assuming the input/output image is binarized
 """
 
+import json
 import numpy as np
 from keras.layers import *
 from keras.layers.normalization import BatchNormalization as BN
@@ -28,12 +29,24 @@ from .util.tuning    import InvalidHyperparameterError
 
 # utilities ###############################################################
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
+
 def get(name):
     return globals()[name]
 
 def get_ae_type(directory):
     import os.path
-    import json
     with open(os.path.join(directory,"aux.json"),"r") as f:
         return json.load(f)["class"]
 
@@ -153,11 +166,10 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         for i, net in enumerate(self.nets):
             net.save_weights(self.local("net{}.h5".format(i)))
 
-        import json
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
                        "class"     :self.__class__.__name__,
-                       "input_shape":self.net.input_shape[1:]}, f , skipkeys=True)
+                       "input_shape":self.net.input_shape[1:]}, f , skipkeys=True, cls=NpEncoder)
 
     def save_epoch(self, freq=10):
         def fn(epoch, logs):
@@ -189,7 +201,6 @@ Users may define a method for each subclass for adding a new load-time feature.
 Each method should call the _load() method of the superclass in turn.
 Users are not expected to call this method directly. Call load() instead.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
-        import json
         with open(self.local('aux.json'), 'r') as f:
             data = json.load(f)
             self.parameters = data["parameters"]
@@ -457,14 +468,12 @@ The latter two are used for verifying the performance of the AE.
 
         self._report(test_both,**opts)
 
-        import json
         with open(self.local('performance.json'), 'w') as f:
-            json.dump(performance, f)
-        
-        import json
+            json.dump(performance, f, cls=NpEncoder)
+
         with open(self.local('parameter_count.json'), 'w') as f:
-            json.dump(count_params(self.autoencoder), f)
-        
+            json.dump(count_params(self.autoencoder), f, cls=NpEncoder)
+
         return self
 
     def encode(self,data,**kwargs):
