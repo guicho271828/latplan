@@ -39,7 +39,10 @@ default_parameters = {
     'max_temperature' : 5.0,
     'min_temperature' : 0.7,
     'M'               : 2,
+    'train_gumbel'    : True,    # if true, noise is added during training
+    'train_softmax'   : True,    # if true, latent output is continuous
     'test_gumbel'     : False,   # if true, noise is added during testing
+    'test_softmax'    : False,   # if true, latent output is continuous
     'locality'        : 0.0,
     'locality_delay'  : 0.0,
 }
