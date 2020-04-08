@@ -284,18 +284,22 @@ Each subclasses should implement a method for it."""
 class GumbelSoftmax(ScheduledVariable):
     count = 0
     
-    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, alpha=1., offset=0,
-                 train_gumbel=True, test_gumbel=True, test_softmax=True, ):
+    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, beta=1., offset=0,
+                 train_gumbel=True,
+                 train_softmax=True,
+                 test_gumbel=False,
+                 test_softmax=False, ):
         self.N = N
         self.M = M
         self.min = min
         self.max = max
-        self.train_gumbel = train_gumbel
-        self.test_gumbel = test_gumbel
-        self.test_softmax = test_softmax
+        self.train_gumbel  = train_gumbel
+        self.train_softmax = train_softmax
+        self.test_gumbel   = test_gumbel
+        self.test_softmax  = test_softmax
         self.anneal_rate = annealer(full_epoch-offset,min,max)
         self.offset = offset
-        self.alpha = alpha
+        self.beta = beta
         super(GumbelSoftmax, self).__init__("temperature")
         
     def call(self,logits):
@@ -314,17 +318,26 @@ class GumbelSoftmax(ScheduledVariable):
 
         def softmax_train(x):
             return K.softmax( x / self.variable )
+        def argmax_train(x):
+            # use straight-through estimator
+            argmax  = K.one_hot(K.argmax( x ), self.M)
+            softmax = K.softmax( x / self.variable )
+            return K.stop_gradient(argmax-softmax) + softmax
         def softmax_test(x):
             return K.softmax( x / self.min )
-        def argmax(x):
+        def argmax_test(x):
             return K.one_hot(K.argmax( x ), self.M)
-            
-        train_activation = softmax_train
+
+        if self.train_softmax:
+            train_activation = softmax_train
+        else:
+            train_activation = argmax_train
+
         if self.test_softmax:
             test_activation = softmax_test
         else:
-            test_activation = argmax
-        
+            test_activation = argmax_test
+
         return K.in_train_phase(
             train_activation( train_logit ),
             test_activation ( test_logit  ))
@@ -338,7 +351,7 @@ class GumbelSoftmax(ScheduledVariable):
         logits = Reshape((self.N,self.M))(prev)
         q = K.softmax(logits)
         log_q = K.log(q + 1e-20)
-        loss = K.mean(q * log_q) * self.alpha
+        loss = K.mean(q * log_q) * self.beta
 
         layer.add_loss(K.in_train_phase(loss, 0.0), logits)
 
