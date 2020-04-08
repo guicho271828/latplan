@@ -9,6 +9,7 @@ import latplan
 import latplan.model
 from latplan.util import *
 from latplan.util.planner import *
+import latplan.util.stacktrace
 import os.path
 import keras.backend as K
 import tensorflow as tf
@@ -43,8 +44,9 @@ def main(domainfile, problem_dir, heuristics):
             network_dir = os.path.dirname(network_dir)
             p = latplan.util.puzzle_module(network_dir)
             success = True
-        except:
-            pass
+        except Exception as e:
+            print(e)
+            latplan.util.stacktrace.format(False)
     domainfile_rel = os.path.relpath(domainfile, network_dir)
     
     def domain(path):
