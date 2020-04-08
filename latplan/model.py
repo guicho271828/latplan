@@ -80,7 +80,7 @@ This dict can be used while building the network, making it easier to perform a 
             if "epoch" in self.parameters:
                 # in test time, epoch may not be set
                 self.parameters["full_epoch"] = self.parameters["epoch"]
-        
+
         self.custom_log_functions = {}
         self.metrics = []
         self.nets    = [None]
@@ -90,7 +90,7 @@ This dict can be used while building the network, making it easier to perform a 
                                          # on_epoch_begin=self.bar_update
                                          ),
                           keras.callbacks.TensorBoard(log_dir=self.local('logs/{}-{}'.format(path,datetime.datetime.now().isoformat())), write_graph=False)]
-        
+
     def build(self,*args,**kwargs):
         """An interface for building a network. Input-shape: list of dimensions.
 Users should not overload this method; Define _build() for each subclass instead.
@@ -103,7 +103,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         self._build(*args,**kwargs)
         self.built = True
         return self
-    
+
     def _build(self,*args,**kwargs):
         """An interface for building a network.
 This function is called by build() only when the network is not build yet.
@@ -112,7 +112,7 @@ Each method should call the _build() method of the superclass in turn.
 Users are not expected to call this method directly. Call build() instead.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         pass
-    
+
     def compile(self,*args,**kwargs):
         """An interface for compiling a network."""
         if self.compiled:
@@ -122,19 +122,19 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         self._compile(*args,**kwargs)
         self.compiled = True
         return self
-    
+
     def _compile(self,optimizers):
         """An interface for compileing a network."""
         # default method.
         for net, o, loss in zip(self.nets, optimizers, self.losses):
             net.compile(optimizer=o, loss=loss, metrics=self.metrics)
-    
+
     def local(self,path):
         """A convenient method for converting a relative path to the learned result directory
 into a full path."""
         import os.path as p
         return p.join(self.path,path)
-    
+
     def save(self):
         """An interface for saving a network.
 Users should not overload this method; Define _save() for each subclass instead.
@@ -143,7 +143,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         print("Saving to {}".format(self.local('')))
         self._save()
         return self
-    
+
     def _save(self):
         """An interface for saving a network.
 Users may define a method for each subclass for adding a new save-time feature.
@@ -164,7 +164,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             if (epoch % freq) == 0:
                 self.save()
         return fn
-            
+
     def load(self,allow_failure=False):
         """An interface for loading a network.
 Users should not overload this method; Define _load() for each subclass instead.
@@ -182,7 +182,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                 self._load()
                 self.loaded = True
         return self
-    
+
     def _load(self):
         """An interface for loading a network.
 Users may define a method for each subclass for adding a new load-time feature.
@@ -196,7 +196,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             self.build(tuple(data["input_shape"]))
         for i, net in enumerate(self.nets):
             net.load_weights(self.local("net{}.h5".format(i)))
-        
+
     def initialize_bar(self):
         import progressbar
         widgets = [
@@ -207,13 +207,13 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             DynamicMessage("status")
         ]
         self.bar = progressbar.ProgressBar(max_value=self.max_epoch, widgets=widgets)
-        
+
     def bar_update(self, epoch, logs):
         "Used for updating the progress bar."
-        
+
         if not hasattr(self,'bar'):
             self.initialize_bar()
-        
+
         tlogs = {}
         for k in self.custom_log_functions:
             tlogs[k] = self.custom_log_functions[k]()
@@ -226,7 +226,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         for k in logs:
             if "val" in k:
                 vlogs[k[4:]] = logs[k]
-        
+
         if (epoch % 10) == 9:
             self.bar.update(epoch+1, status = "[v] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(vlogs.items())]) + "\n")
         else:
@@ -240,7 +240,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def net(self,net):
         self.nets[0] = net
         return net
-    
+
     @property
     def loss(self):
         return self.losses[0]
@@ -249,7 +249,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def loss(self,loss):
         self.losses[0] = loss
         return loss
-    
+
     def train(self,train_data,
               epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,val_data=None,save=True,
               train_data_to=None,
@@ -277,14 +277,14 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                 return thing
             else:
                 return [thing for _ in self.nets]
-          
+
         train_data    = replicate(train_data)
         train_data_to = replicate(train_data_to)
         val_data     = replicate(val_data)
         val_data_to  = replicate(val_data_to)
         optimizer     = replicate(optimizer)
         lr            = replicate(lr)
-        
+
         def get_optimizer(optimizer,lr):
             return getattr(keras.optimizers,optimizer)(lr)
 
@@ -297,7 +297,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                     return False
                 l = len(subdata)
             return True
-        
+
         assert assert_length(train_data   )
         assert assert_length(train_data_to)
         assert assert_length(val_data    )
@@ -312,7 +312,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
 
         index_array = np.arange(len(train_data[0]))
         np.random.shuffle(index_array)
-        
+
         clist = CallbackList(callbacks=self.callbacks)
         clist.set_model(self.nets[0])
         clist.set_params({
@@ -341,7 +341,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                     logs["loss"+str(i)] = loss
             logs["loss"] = np.sum(losses)
             return logs
-        
+
         try:
             clist.on_train_begin()
             logs = {}
@@ -361,14 +361,14 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                 if self.nets[0].stop_training:
                     break
             clist.on_train_end()
-        
+
         except KeyboardInterrupt:
             print("learning stopped\n")
         self.loaded = True
         if save:
             self.save()
         return self
-    
+
     def evaluate(self,*args,**kwargs):
 
         return np.sum([
@@ -426,7 +426,7 @@ The latter two are used for verifying the performance of the AE.
             encoded = [self.encode(noise(data),**opts).round() for i in range(10)]
             var = np.var(encoded,axis=0)
             return np.array([np.amax(var), np.amin(var), np.mean(var), np.median(var)]).tolist()
-            
+
         test_both(["variance","vanilla" ], lambda data: latent_variance_noise(data,(lambda x: x)))
         test_both(["variance","gaussian"], lambda data: latent_variance_noise(data,gaussian))
         test_both(["variance","salt"    ], lambda data: latent_variance_noise(data,salt))
@@ -445,7 +445,7 @@ The latter two are used for verifying the performance of the AE.
         opts = {'verbose':0,'batch_size':batch_size}
 
         performance = {}
-            
+
         def test_both(query, fn):
             result = fn(train_data)
             reg(query+["train"], result, performance)
@@ -454,7 +454,7 @@ The latter two are used for verifying the performance of the AE.
                 result = fn(test_data)
                 reg(query+["test"], result, performance)
                 print(*query,"test", result)
-        
+
         self._report(test_both,**opts)
 
         import json
@@ -466,15 +466,15 @@ The latter two are used for verifying the performance of the AE.
             json.dump(count_params(self.autoencoder), f)
         
         return self
-    
+
     def encode(self,data,**kwargs):
         self.load()
         return self.encoder.predict(data,**kwargs)
-    
+
     def decode(self,data,**kwargs):
         self.load()
         return self.decoder.predict(data,**kwargs)
-    
+
     def autoencode(self,data,**kwargs):
         self.load()
         return self.autoencoder.predict(data,**kwargs)
@@ -512,7 +512,7 @@ The latter two are used for verifying the performance of the AE.
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
             # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
             return gs
-            
+
         return fn(**kwargs)
 
 # Latent Activations ################################################################
@@ -727,7 +727,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         x = Input(shape=input_shape)
         z = Sequential(_encoder)(x)
         y = Sequential(_decoder)(z)
-         
+
         z2 = Input(shape=K.int_shape(z)[1:])
         y2 = Sequential(_decoder)(z2)
         w2 = Sequential(_encoder)(y2)
@@ -742,7 +742,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.net = self.autoencoder
         self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
         self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
-        
+
     def get_features(self, data, **kwargs):
         return self.features.predict(data, **kwargs)
 
@@ -767,11 +767,11 @@ Note: references to self.parameters[key] are all hyperparameters."""
         dyg = (yg-x+1)/2
         dys = (ys-x+1)/2
         dyp = (yp-x+1)/2
-        
+
         from .util.plot import plot_grid, squarify
         _z = squarify(z)
         _b = squarify(b)
-        
+
         images = []
         from .util.plot import plot_grid
         for seq in zip(x, _z, y, dy, _b, by, dby, xg, yg, dyg, xs, ys, dys, xp, yp, dyp):
@@ -783,7 +783,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.load()
         z = data
         x = self.decode(z)
-        
+
         z2 = self.encode(x)
         z2r = z2.round()
         x2 = self.decode(z2)
@@ -793,7 +793,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         z3r = z3.round()
         x3 = self.decode(z3)
         x3r = self.decode(z3r)
-        
+
         M, N = self.parameters['M'], self.parameters['N']
 
         from .util.plot import plot_grid, squarify
@@ -802,7 +802,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         _z2r = squarify(z2r)
         _z3  = squarify(z3)
         _z3r = squarify(z3r)
-        
+
         images = []
         from .util.plot import plot_grid
         for seq in zip(_z, x, _z2, _z2r, x2, x2r, _z3, _z3r, x3, x3r):
@@ -830,11 +830,11 @@ class ZeroSuppressMixin:
             (self.parameters["epoch"]*self.parameters["zerosuppress_delay"]):self.parameters["zerosuppress"],
         })
         self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
-        
+
         zerosuppress_loss = K.mean(self.encoder.output)
 
         self.net.add_loss(K.in_train_phase(zerosuppress_loss * alpha.variable, 0.0))
-        
+
         def activation(x, y):
             return zerosuppress_loss
 
@@ -867,9 +867,9 @@ class NGMixin:
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
             # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
             return gs
-            
+
         return fn(**kwargs)
-    
+
 # The version that does not maximize nor minimize the KL divergence while
 # still adding noise
 class NoKLMixin:
@@ -892,7 +892,7 @@ class NoKLMixin:
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
             # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
             return gs
-            
+
         return fn(**kwargs)
 
 # The version that does not use Gumbel noise
@@ -917,7 +917,7 @@ class DetMixin:
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
             # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
             return gs
-            
+
         return fn(**kwargs)
 
 
@@ -948,7 +948,7 @@ class TransitionAE(GumbelAE):
                 return fn(data,*args,**kwargs)
         finally:
             self.double_mode()
-        
+
     def plot(self, data, *args, **kwargs):
         return self.as_single(super().plot, data, *args, **kwargs)
     def plot_autodecode(self, data, *args, **kwargs):
@@ -975,7 +975,7 @@ class TransitionAE(GumbelAE):
         return self.adaptively(super().autoencode, data, *args, **kwargs)
     def autodecode(self, data, *args, **kwargs):
         return self.adaptively(super().autodecode, data, *args, **kwargs)
-    
+
     def _build(self,input_shape):
         # [batch, 2, ...] -> [batch, ...]
         _encoder = self.build_encoder(input_shape[1:])
@@ -1050,7 +1050,7 @@ class LocalityMixin:
 
         def locality(x, y):
             return self.locality_alpha.variable
-        
+
         self.metrics.append(locality)
         return
 
@@ -1156,7 +1156,7 @@ class Discriminator(Network):
 
         self.loss = bce
         self.net = Model(x, y)
-        
+
     def report(self,train_data,
                epoch=200,
                batch_size=1000,optimizer=Adam(0.001),
@@ -1189,16 +1189,16 @@ class PUDiscriminator(Discriminator):
         super()._build(input_shape)
         c = K.variable(0, name="c")
         self.c = c
-        
+
         x = Input(shape=input_shape)
         s = self.net(x)
         y2 = wrap(s, s / c)
         self.pu = Model(x,y2)
-    
+
     def discriminate(self,data,**kwargs):
         self.load()
         return self.pu.predict(data,**kwargs)
-    
+
     def train(self,train_data,
               batch_size=1000,
               save=True,
@@ -1225,7 +1225,7 @@ class PUDiscriminator(Discriminator):
                 self.save()
         else:
             raise Exception("there are no positive data in the validation set; Training failed.")
-    
+
 class SimpleCAE(AE):
     """A Hack"""
     def build_encoder(self,input_shape):
@@ -1248,7 +1248,7 @@ class SimpleCAE(AE):
                 BN(),
                 MaxPooling2D((2,2)),
                 flatten,]
-    
+
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
@@ -1264,14 +1264,14 @@ class SimpleCAE(AE):
     def _build(self,input_shape):
         _encoder = self.build_encoder(input_shape)
         _decoder = self.build_decoder(input_shape)
-        
+
         x = Input(shape=input_shape)
         z = Sequential([flatten, *_encoder])(x)
         y = Sequential(_decoder)(flatten(z))
 
         z2 = Input(shape=K.int_shape(z)[1:])
         y2 = Sequential(_decoder)(flatten(z2))
-        
+
         self.loss = bce
         self.encoder     = Model(x, z)
         self.decoder     = Model(z2, y2)
@@ -1340,7 +1340,7 @@ We again use gumbel-softmax for representing A."""
                     self.build_gs(),
             ]),
         ]
-    
+
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
@@ -1354,27 +1354,27 @@ We again use gumbel-softmax for representing A."""
             Sequential([
                 Dense(data_dim, activation=Lambda(lambda x: K.in_train_phase(K.sigmoid(x), K.round(K.sigmoid(x))))),
                 Reshape(input_shape),]),]
-   
+
     def _build(self,input_shape):
 
         dim = np.prod(input_shape) // 2
         print("{} latent bits".format(dim))
         M, N = self.parameters['M'], self.parameters['N']
-        
+
         x = Input(shape=input_shape)
-        
+
         pre = wrap(x,x[:,:dim],name="pre")
         suc = wrap(x,x[:,dim:],name="suc")
 
         print("encoder")
         _encoder = self.build_encoder([dim])
         action = ConditionalSequential(_encoder, pre, axis=1)(suc)
-        
+
         print("decoder")
         _decoder = self.build_decoder([dim])
         suc_reconstruction = ConditionalSequential(_decoder, pre, axis=1)(flatten(action))
         y = Concatenate(axis=1)([pre,suc_reconstruction])
-        
+
         action2 = Input(shape=(N,M))
         pre2    = Input(shape=(dim,))
         suc_reconstruction2 = ConditionalSequential(_decoder, pre2, axis=1)(flatten(action2))
@@ -1387,7 +1387,7 @@ We again use gumbel-softmax for representing A."""
 
         self.net = Model(x, y)
         self.autoencoder = self.net
-        
+
     def encode_action(self,data,**kwargs):
         M, N = self.parameters['M'], self.parameters['N']
         return self.encode(data,**kwargs)[1]
@@ -1409,7 +1409,7 @@ We again use gumbel-softmax for representing A."""
         test_both("Reconstruction BCE: {}",
                   lambda data: self.autoencoder.evaluate(data,data,**opts))
         return self
-    
+
     def plot(self,data,path,verbose=False,sae=None):
         self.load()
         dim = data.shape[1] // 2
@@ -1496,7 +1496,7 @@ class UBDiscriminator(Discriminator):
         y = wrap(y,K.round(y))
         self.net = Model(x,y)
         self.net.compile(optimizer='adam',loss=bce)
-        
+
     def train(self,train_data,
               train_data_to=None,
               val_data=None,
@@ -1516,7 +1516,7 @@ class UBDiscriminator(Discriminator):
 
         from numpy.random import shuffle
         shuffle(ind_n)
-        
+
         per_bag = num_n // len(self.discriminators)
         for i, d in enumerate(self.discriminators):
             print("training",i+1,"/",len(self.discriminators),"th discriminator")
