@@ -501,23 +501,26 @@ The latter two are used for verifying the performance of the AE.
 
     def build_gs(self,
                  **kwargs):
-        # hack, but is useful overall
+        # python methods cannot use self in the
+        # default values, because python sucks
 
-        def fn(N=self.parameters['N'],
-               M=self.parameters['M'],
-               max_temperature=self.parameters['max_temperature'],
-               min_temperature=self.parameters['min_temperature'],
-               full_epoch=self.parameters['full_epoch'],
-               offset=0,
-               argmax=self.parameters['argmax'],
-               alpha=-1.):
+        def fn(N               = self.parameters['N'],
+               M               = self.parameters['M'],
+               max_temperature = self.parameters['max_temperature'],
+               min_temperature = self.parameters['min_temperature'],
+               full_epoch      = self.parameters['full_epoch'],
+               train_gumbel    = self.parameters['train_gumbel'],
+               test_gumbel     = self.parameters['test_gumbel'],
+               test_softmax    = self.parameters['test_softmax'],
+               beta            = self.parameters['beta'],
+               offset          = 0):
             gs = GumbelSoftmax(
                 N,M,min_temperature,max_temperature,full_epoch,
-                offset=offset,
-                test_gumbel=not argmax,
-                test_softmax=not argmax,
-                # Entropy Regularization
-                alpha = alpha)
+                offset        = offset,
+                train_gumbel  = train_gumbel,
+                test_gumbel   = test_gumbel,
+                test_softmax  = test_softmax,
+                beta          = beta)
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
             # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
             return gs
@@ -828,81 +831,6 @@ class ZeroSuppressMixin:
         self.metrics.append(activation)
         # self.metrics.append(zerosuppress)
         return
-
-# The original Gumbel Softmax formulation that minimizes the KL divergence
-# between the latent and the the Bernoulli(0.5)
-class NGMixin:
-    def build_gs(self,
-                 **kwargs):
-
-        def fn(N=self.parameters['N'],
-               M=self.parameters['M'],
-               max_temperature=self.parameters['max_temperature'],
-               min_temperature=self.parameters['min_temperature'],
-               full_epoch=self.parameters['full_epoch'],
-               argmax=self.parameters['argmax'],
-               alpha=1.):       # positive alpha
-            gs = GumbelSoftmax(
-                N,M,min_temperature,max_temperature,full_epoch,
-                test_gumbel=not argmax,
-                test_softmax=not argmax,
-                # Entropy Regularization
-                alpha = alpha)
-            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
-            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
-            return gs
-
-        return fn(**kwargs)
-
-# The version that does not maximize nor minimize the KL divergence while
-# still adding noise
-class NoKLMixin:
-    def build_gs(self,
-                 **kwargs):
-
-        def fn(N=self.parameters['N'],
-               M=self.parameters['M'],
-               max_temperature=self.parameters['max_temperature'],
-               min_temperature=self.parameters['min_temperature'],
-               full_epoch=self.parameters['full_epoch'],
-               argmax=self.parameters['argmax'],
-               alpha=0.):       # positive alpha
-            gs = GumbelSoftmax(
-                N,M,min_temperature,max_temperature,full_epoch,
-                test_gumbel=not argmax,
-                test_softmax=not argmax,
-                # Entropy Regularization
-                alpha = alpha)
-            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
-            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
-            return gs
-
-        return fn(**kwargs)
-
-# The version that does not use Gumbel noise
-class DetMixin:
-    def build_gs(self,
-                 **kwargs):
-
-        def fn(N=self.parameters['N'],
-               M=self.parameters['M'],
-               max_temperature=self.parameters['max_temperature'],
-               min_temperature=self.parameters['min_temperature'],
-               full_epoch=self.parameters['full_epoch'],
-               argmax=self.parameters['argmax'],
-               alpha=0.):       # positive alpha
-            gs = GumbelSoftmax(
-                N,M,min_temperature,max_temperature,full_epoch,
-                train_gumbel=False,
-                test_gumbel=not argmax,
-                test_softmax=not argmax,
-                # Entropy Regularization
-                alpha = alpha)
-            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
-            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
-            return gs
-
-        return fn(**kwargs)
 
 
 # The variant that takes transitions instead of states
@@ -1826,8 +1754,7 @@ class DetActionMixin:
                         Dense(self.parameters['num_actions']),
                         self.build_gs(N=1,
                                       M=self.parameters['num_actions'],
-                                      offset=self.parameters["aae_delay"],
-                                      alpha=-1.0),
+                                      offset=self.parameters["aae_delay"],),
             ]),
         ]
     def _action(self,z_pre,z_suc):
@@ -2224,19 +2151,6 @@ class ConvolutionalStateAE(ConvolutionalEncoderMixin, ConcreteLatentMixin, State
     pass
 class Convolutional2StateAE(ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGStateAE(NGMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NGConvolutionalStateAE(NGMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NGConvolutional2StateAE(NGMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NoKLStateAE(NoKLMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NoKLConvolutionalStateAE(NoKLMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NoKLConvolutional2StateAE(NoKLMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-
 
 class ZeroSuppressStateAE(ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
     pass
@@ -2244,25 +2158,6 @@ class ZeroSuppressConvolutionalStateAE(ZeroSuppressMixin, ConvolutionalEncoderMi
     pass
 class ZeroSuppressConvolutional2StateAE(ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
     pass
-class NGZeroSuppressStateAE(NGMixin, ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NGZeroSuppressConvolutionalStateAE(NGMixin, ZeroSuppressMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NGZeroSuppressConvolutional2StateAE(NGMixin, ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NoKLZeroSuppressStateAE(NoKLMixin, ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NoKLZeroSuppressConvolutionalStateAE(NoKLMixin, ZeroSuppressMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class NoKLZeroSuppressConvolutional2StateAE(NoKLMixin, ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class DetZeroSuppressStateAE(DetMixin, ZeroSuppressMixin, ConcreteLatentMixin, StateAE):
-    pass
-class DetZeroSuppressConvolutionalStateAE(DetMixin, ZeroSuppressMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-class DetZeroSuppressConvolutional2StateAE(DetMixin, ZeroSuppressMixin, ConvolutionalDecoderMixin, ConvolutionalEncoderMixin, ConcreteLatentMixin, StateAE):
-    pass
-
 # Transition SAE ################################################################
 
 class VanillaTransitionAE(ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
