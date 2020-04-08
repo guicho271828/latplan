@@ -16,15 +16,14 @@ class InvalidHyperparameterError(Exception):
     """Raised when the hyperparameter is not valid"""
     pass
 
-def nn_task(network, path, train_in, train_out, test_in, test_out, parameters):
+def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
     net = network(path,parameters=parameters)
     net.train(train_in,
-              test_data=test_in,
+              val_data=val_in,
               train_data_to=train_out,
-              test_data_to=test_out,
-              report=False,
+              val_data_to=val_out,
               **parameters,)
-    error = net.net.evaluate(test_in,test_out,batch_size=100,verbose=0)
+    error = net.net.evaluate(val_in,val_out,batch_size=100,verbose=0)
     print("logging the results")
     with open(net.local("grid_search.log"), 'a') as f:
         import json
