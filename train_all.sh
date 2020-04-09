@@ -20,7 +20,7 @@ task-planning (){
     $common ./strips.py $mode puzzle    mandrill 3 3 {} "planning" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips.py $mode lightsout digital    4 {} "planning" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips.py $mode lightsout twisted    4 {} "planning" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
-    $common ./strips.py $mode hanoi     4 8          {} "planning" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
+    # $common ./strips.py $mode hanoi     4 8          {} "planning" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips.py $mode hanoi     9 3          {} "planning" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
 }
 
@@ -35,7 +35,7 @@ task-ablation (){
     $common ./strips-ablation.py $mode puzzle    mandrill 3 3 {} "nodirect" ::: 5000 ::: None ::: None ::: 0.0  ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips-ablation.py $mode lightsout digital    4 {} "nodirect" ::: 5000 ::: None ::: None ::: 0.0  ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips-ablation.py $mode lightsout twisted    4 {} "nodirect" ::: 5000 ::: None ::: None ::: 0.0  ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
-    $common ./strips-ablation.py $mode hanoi     4 8          {} "nodirect" ::: 5000 ::: None ::: None ::: 0.0  ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
+    # $common ./strips-ablation.py $mode hanoi     4 8          {} "nodirect" ::: 5000 ::: None ::: None ::: 0.0  ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips-ablation.py $mode hanoi     9 3          {} "nodirect" ::: 5000 ::: None ::: None ::: 0.0  ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
 
     # stop gradient
@@ -55,7 +55,7 @@ task-ablation (){
     $common ./strips-ablation.py $mode puzzle    mandrill 3 3 {} "arch" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDet{BoolMinMax,BoolSmoothMinMax,BoolAdd,LogitAdd,NormalizedLogitAdd}EffectTransitionAE
     $common ./strips-ablation.py $mode lightsout digital    4 {} "arch" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDet{BoolMinMax,BoolSmoothMinMax,BoolAdd,LogitAdd,NormalizedLogitAdd}EffectTransitionAE
     $common ./strips-ablation.py $mode lightsout twisted    4 {} "arch" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDet{BoolMinMax,BoolSmoothMinMax,BoolAdd,LogitAdd,NormalizedLogitAdd}EffectTransitionAE
-    $common ./strips-ablation.py $mode hanoi     4 8          {} "arch" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDet{BoolMinMax,BoolSmoothMinMax,BoolAdd,LogitAdd,NormalizedLogitAdd}EffectTransitionAE
+    # $common ./strips-ablation.py $mode hanoi     4 8          {} "arch" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDet{BoolMinMax,BoolSmoothMinMax,BoolAdd,LogitAdd,NormalizedLogitAdd}EffectTransitionAE
     $common ./strips-ablation.py $mode hanoi     9 3          {} "arch" ::: 5000 ::: None ::: None ::: None ::: False ::: ConcreteDet{BoolMinMax,BoolSmoothMinMax,BoolAdd,LogitAdd,NormalizedLogitAdd}EffectTransitionAE
 
     # action label restriction, comparing Conditional and NormLogit
@@ -88,7 +88,7 @@ task-vanilla (){
     $common ./strips-vanilla.py $mode puzzle    mandrill 3 3 {} "vanilla" ::: 5000 ::: None ::: None ::: None ::: False ::: VanillaTransitionAE
     $common ./strips-vanilla.py $mode lightsout digital    4 {} "vanilla" ::: 5000 ::: None ::: None ::: None ::: False ::: VanillaTransitionAE
     $common ./strips-vanilla.py $mode lightsout twisted    4 {} "vanilla" ::: 5000 ::: None ::: None ::: None ::: False ::: VanillaTransitionAE
-    $common ./strips-vanilla.py $mode hanoi     4 8          {} "vanilla" ::: 5000 ::: None ::: None ::: None ::: False ::: VanillaTransitionAE
+    # $common ./strips-vanilla.py $mode hanoi     4 8          {} "vanilla" ::: 5000 ::: None ::: None ::: None ::: False ::: VanillaTransitionAE
     $common ./strips-vanilla.py $mode hanoi     9 3          {} "vanilla" ::: 5000 ::: None ::: None ::: None ::: False ::: VanillaTransitionAE
 }
 
@@ -110,7 +110,7 @@ task-fixedactions (){
     $common ./strips-ablation.py $mode puzzle    mandrill 3 3 {} "fixedactions" ::: 5000 ::: None ::: $actions ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips-ablation.py $mode lightsout digital    4 {} "fixedactions" ::: 5000 ::: None ::: $actions ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips-ablation.py $mode lightsout twisted    4 {} "fixedactions" ::: 5000 ::: None ::: $actions ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
-    $common ./strips-ablation.py $mode hanoi     4 8          {} "fixedactions" ::: 5000 ::: None ::: $actions ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
+    # $common ./strips-ablation.py $mode hanoi     4 8          {} "fixedactions" ::: 5000 ::: None ::: $actions ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
     $common ./strips-ablation.py $mode hanoi     9 3          {} "fixedactions" ::: 5000 ::: None ::: $actions ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
 }
 
