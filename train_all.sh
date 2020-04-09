@@ -114,6 +114,8 @@ task-fixedactions (){
     $common ./strips-ablation.py $mode hanoi     9 3          {} "fixedactions" ::: 5000 ::: None ::: $actions ::: None ::: False ::: ConcreteDetNormalizedLogitAddEffectTransitionAE
 }
 
+# for training the NN from the scratch using GA-based hyperparameter tuner (takes ~24hrs)
+
 proj=$(date +%Y%m%d%H%M)sae-planning
 common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_24h -proj $proj"
 # task-planning      learn_plot_dump_summary
@@ -139,7 +141,7 @@ common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj
 
 
 
-# train the NN 3 times with the best hyperparameter found in the result log
+# for training the NN 3 times with the best hyperparameter found in the result log (takes ~2hrs)
 
 proj=$(date +%Y%m%d%H%M)reproduce-planning
 common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
@@ -157,6 +159,12 @@ proj=$(date +%Y%m%d%H%M)reproduce-16puzzle
 common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
 # task-16puzzle     reproduce_plot_dump_summary
 
+proj=$(date +%Y%m%d%H%M)sae-fixedactions
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+# task-fixedactions     reproduce 300
+# task-fixedactions     reproduce 200
+# task-fixedactions     reproduce 100
+# task-fixedactions     reproduce  50
 
 
 
