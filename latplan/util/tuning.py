@@ -107,51 +107,6 @@ def _neighbors(parent,parameters):
 def _key(config):
     return tuple( v for _, v in sorted(config.items()))
 
-def lazy_greedy_best_first_search(task, default_config, parameters,
-                                  initial_population=5,
-                                  limit=float('inf'),
-                                  report=None, report_best=None,):
-    "Initialize the queue by evaluating the fixed number of nodes. Expand the best node based on the parent's evaluation. Randomly select, evaluate, queue a child. The parent is requeued until it expands all children."
-    best = {'eval'    :None, 'params'  :None, 'artifact':None}
-    results       = []
-    list(map(print, _random_configs(parameters, False)))
-
-    import queue
-    open_list  = queue.PriorityQueue()
-    close_list = {}
-
-    def _iter(config):
-        try:
-            artifact, eval = task(merge_hash(default_config,config))
-            _update_best(artifact, eval, config, results, best, report, report_best)
-            close_list[_key(config)] = eval # tuples are hashable
-            open_list.put((eval, config))
-        except InvalidHyperparameterError as e:
-            print(e)
-        
-    try:
-        for i,config in zip(range(initial_population),_random_configs(parameters, True)):
-            _iter(config)
-        i = initial_population
-        while i < limit:
-            i += 1
-            if open_list.empty():
-                break
-            peval, parent = open_list.get()
-            children = _neighbors(parent, parameters)
-
-            open_children = []
-            for c in children:
-                if _key(c) not in close_list:
-                    open_children.append(c)
-            
-            if len(open_children) > 0:
-                open_list.put((peval, parent))
-                _iter(_select(open_children))
-    finally:
-        _final_report(best,results)
-    return best['artifact'],best['params'],best['eval']
-
 def _crossover(parent1,parent2):
     child = {}
     for k,v1 in parent1.items():
