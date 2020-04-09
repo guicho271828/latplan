@@ -130,10 +130,52 @@ def _random_configs(parameters):
     while True:
         yield { k: random.choice(v) for k,v in parameters.items() }
 
+def _all_configs(parameters):
+    import itertools
+    names  = [ k for k, _ in parameters.items()]
+    values = [ v for _, v in parameters.items()]
+    for config_values in itertools.product(*values):
+        yield { k:v for k,v in zip(names,config_values) }
+
 def _final_report(best):
     from colors import bold
     print(bold("*** Best parameter: ***\n{}\neval: {}".format(best['params'],best['eval'])))
     return
+
+def grid_search(task, default_config, parameters, path,
+                report=None, report_best=None,
+                shuffle=True,
+                limit=10000):
+    best = {'eval'    :None, 'params'  :None, 'artifact':None}
+    open_list, close_list = call_with_lock(path,lambda : load_history(path))
+    if len(open_list) > 0:
+        _update_best(None, open_list[0][0], open_list[0][1], best, None, None)
+
+    def _iter(config):
+        nonlocal open_list, close_list
+        artifact, eval = task(merge_hash(default_config,config))
+        open_list, close_list = call_with_lock(path,lambda :  save_history(path, (eval, config, default_config)))
+        _update_best(artifact, eval, config, best, report, report_best)
+
+    if shuffle:
+        gen = _random_configs(parameters)
+    else:
+        gen = _all_configs(parameters)
+    try:
+        for i,config in enumerate(gen):
+            if i > limit:
+                break
+            if _key(config) in close_list:
+                continue
+            try:
+                _iter(config)
+            except InvalidHyperparameterError as e:
+                print(e)
+    except SignalInterrupt as e:
+        print("received",e.signal,", optimization stopped")
+    finally:
+        _final_report(best)
+    return best['artifact'],best['params'],best['eval']
 
 def _neighbors(parent,parameters):
     "Returns all dist-1 neighbors"
