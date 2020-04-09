@@ -71,28 +71,6 @@ def _final_report(best,results):
     print(results)
     return
 
-def grid_search(task, default_config, parameters,
-                report=None, report_best=None,
-                shuffle=True,
-                limit=float('inf')):
-    best = {'eval'    :None, 'params'  :None, 'artifact':None}
-    results       = []
-    all_configs = list(_random_configs(parameters, shuffle))
-    list(map(print, all_configs))
-    try:
-        for i,config in enumerate(all_configs):
-            if i > limit:
-                break
-            print("{}/{} {}".format(i, len(all_configs), config))
-            try:
-                artifact, eval = task(merge_hash(default_config,config))
-                _update_best(artifact, eval, config, results, best, report, report_best)
-            except InvalidHyperparameterError as e:
-                print(e)
-    finally:
-        _final_report(best,results)
-    return best['artifact'],best['params'],best['eval']
-
 def _neighbors(parent,parameters):
     "Returns all dist-1 neighbors"
     results = []
