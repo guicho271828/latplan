@@ -1,0 +1,121 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:eazy-gnuplot :cl-ppcre :trivia.ppcre) :silent t)
+  )
+
+(defpackage :ros.script.plot-init
+  (:use :cl :eazy-gnuplot :trivia :trivia.ppcre :ppcre))
+(in-package :ros.script.plot-init)
+
+(defun main (&rest argv)
+  (with-plots (s :debug t)
+    (gp-setup :output "ood-result-transitions.pdf"
+              :terminal `(:pdf :enhanced
+                               :size
+                               (3.3 2) ; inch ; half column, US letterpaper
+                               ;; (800 800)
+                               ;; :dashed
+                               ;; :background :rgb ,(if improved "white" "gray90")
+                               ;; :monochrome
+                               :font "Times New Roman, 19")
+              :size :square
+              :view '(:equal :xy)
+              :key '(:outside :top :right :|Left| :samplen 2)
+              :pointsize 0.1
+              :xrange '(0 40)
+              :yrange '(-5 15)
+              :xtics '(0 10)
+              :ytics '(0 10)
+              ;; :logscale :xy
+              ;; :format '(xy "10^{%T}")
+              ;; :jitter '() ;'(overlap 1 spread 1 wrap 0)
+              :datafile '(separator comma)
+              :title ""
+              :xlabel "Plan length"
+              :ylabel "Out-of-data transitions")
+    (plot "x"
+          :title "y=x")
+    (dolist (file argv)
+      (plot (pathname file)
+            :using '|($4+0.1*invnorm(rand(0))):($5+0.1*invnorm(rand(0)))|
+            :title (subseq (pathname-name file) 11)
+            :with :points :pt 1)))
+  (with-plots (s :debug t)
+    (gp-setup :output "ood-result-states.pdf"
+              :terminal `(:pdf :enhanced
+                               :size
+                               (3.3 2) ; inch ; half column, US letterpaper
+                               ;; (800 800)
+                               ;; :dashed
+                               ;; :background :rgb ,(if improved "white" "gray90")
+                               ;; :monochrome
+                               :font "Times New Roman, 19")
+              :size :square
+              :view '(:equal :xy)
+              :key '(:outside :top :right :|Left| :samplen 2)
+              :pointsize 0.1
+              :xrange '(0 40)
+              :yrange '(-5 15)
+              :xtics '(0 10)
+              :ytics '(0 10)
+              ;; :logscale :xy
+              ;; :format '(xy "10^{%T}")
+              ;; :jitter '() ;'(overlap 1 spread 1 wrap 0)
+              :datafile '(separator comma)
+              :title ""
+              :xlabel "Plan length"
+              :ylabel "Out-of-data states")
+    (plot "x"
+          :title "y=x")
+    (loop
+       for file in argv
+       for i from 1
+       do
+         (plot (pathname file)
+               :using '|($1+0.1*invnorm(rand(0))):($2+0.1*invnorm(rand(0)))|
+               :title (subseq (pathname-name file) 11)
+               :with :points :pt i)))
+  
+  (with-plots (s :debug t)
+    (gp-setup :output "ood-result-states-ub.pdf"
+              :terminal `(:pdf :enhanced
+                               :size
+                               (3.3 2) ; inch ; half column, US letterpaper
+                               ;; (800 800)
+                               ;; :dashed
+                               ;; :background :rgb ,(if improved "white" "gray90")
+                               ;; :monochrome
+                               :font "Times New Roman, 19")
+              :size :square
+              :view '(:equal :xy)
+              :key '(:outside :top :right :|Left| :samplen 2)
+              :pointsize 0.1
+              :xrange '(0 40)
+              :yrange '(-5 15)
+              :xtics '(0 10)
+              :ytics '(0 10)
+              ;; :logscale :xy
+              ;; :format '(xy "10^{%T}")
+              ;; :jitter '() ;'(overlap 1 spread 1 wrap 0)
+              :datafile '(separator comma)
+              :title ""
+              :xlabel "Plan length"
+              :ylabel "Out-of-data states")
+    (plot "x"
+          :title "y=x")
+    (loop
+       for file in argv
+       for i from 1
+       do
+         (plot (pathname file)
+               :using '|($1+0.1*invnorm(rand(0))):($3+0.1*invnorm(rand(0)))|
+               :title (subseq (pathname-name file) 11)
+               :with :points :pt i))))
+
+
+;;; vim: set ft=lisp lisp:

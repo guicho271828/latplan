@@ -1,0 +1,79 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:eazy-gnuplot :cl-ppcre :trivia.ppcre) :silent t)
+  )
+
+(defpackage :ros.script.plot-init
+  (:use :cl :eazy-gnuplot :trivia :trivia.ppcre :ppcre))
+(in-package :ros.script.plot-init)
+
+(defun main (out &rest argv)
+  (declare (ignorable argv))
+  (multiple-value-bind
+        (xlabel ylabel)
+      (ematch (alexandria:lastcar (split "-" (pathname-name out)))
+              ("evaluated"
+               (values "Evaluation (Blind)"
+                       "(M\\\\&S/LMcut)"))
+              ("generated"
+               (values "Generation (Blind)"
+                       "(M\\\\&S/LMcut)") "")
+              ("expanded"
+               (values "Expansion (Blind)"
+                       "(M\\\\&S/LMcut)"))
+              ((or "total" "total2")
+               (values "Total time (Blind)"
+                       "(M\\\\&S/LMcut)"))
+              ("search"
+               ;; due to space
+               (values "Search (Blind)"
+                       "")
+               #+nil
+               (values "Search (Blind)"
+                       "(M\\\\&S/LMcut)"))
+              ("initialization"
+               (values "Initialization (Blind)"
+                       "(M\\\\&S/LMcut)")))
+    (with-plots (s :debug t)
+      (gp-setup :output out
+                :terminal `(:pdf :enhanced
+                                 :size
+                                 (2.5 2.5) ; inch ; half column, US letterpaper
+                                 ;; (800 800)
+                                 ;; :dashed
+                                 ;; :background :rgb ,(if improved "white" "gray90")
+                                 ;; :monochrome
+                                 :font "Times New Roman, 22")
+                :size :square
+                :view '(:equal :xy)
+                :key '(:top :left :|Left| :reverse :samplen 1)
+                :pointsize 1
+                :logscale :xy
+                :format '(xy "10^{%T}")
+                :xtics '(0.00001 1e4 1e8)
+                :ytics '(0.00001 1e4 1e8)
+                :mxtics :default
+                :mytics :default
+                :datafile '(separator comma)
+                :title ""
+                :xlabel xlabel
+                :xlabel '(:font "Times New Roman, 30")
+                :ylabel ylabel
+                :ylabel '(:font "Times New Roman, 30"))
+      (plot (make-pathname :type "csv" :defaults out)
+            :using '(5 7)
+            :title "vs LMcut"
+            :with :points :pt 8)
+      (plot (make-pathname :type "csv" :defaults out)
+            :using '(5 6)
+            :title "vs M\\\\&S"
+            :with :points :pt 6)
+      (plot "x"
+            :notitle ()))))
+
+;;; vim: set ft=lisp lisp:

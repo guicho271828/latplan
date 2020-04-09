@@ -1,0 +1,112 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:numcl :eazy-gnuplot :cl-ppcre :trivia.ppcre :iterate) :silent t)
+  )
+
+(defpackage :ros.script.plot-init
+  (:shadowing-import-from :numcl :sum)
+  (:use :numcl :eazy-gnuplot :trivia :trivia.ppcre :ppcre :iterate ))
+(in-package :ros.script.plot-init)
+
+#+nil
+(defun main (input output &rest argv)
+  (with-plots (s :debug t)
+    (gp-setup :output output
+              :terminal `(:pdf :enhanced
+                               :size
+                               (3.3 2) ; inch ; half column, US letterpaper
+                               ;; (800 800)
+                               ;; :dashed
+                               ;; :background :rgb ,(if improved "white" "gray90")
+                               ;; :monochrome
+                               :font "Times New Roman, 19")
+              ;; :size :square
+              ;; :view '(:equal :xy)
+              ;; :key '(:outside :top :right :|Left| :samplen 2)
+              :pointsize 0.1
+              ;; :xrange '(0 40)
+              ;; :yrange '(-5 15)
+              ;; :xtics '(0 10)
+              ;; :ytics '(0 10)
+              ;; :logscale :xy
+              ;; :format '(xy "10^{%T}")
+              ;; :jitter '() ;'(overlap 1 spread 1 wrap 0)
+              :datafile '(separator comma)
+              :title ""
+              :xlabel "Plan length"
+              :ylabel (format nil "Out-of-data ~a" (subseq (pathname-name input) 14)))
+    (splot (pathname input)
+           :using '(1 2 3)
+           :notitle ()
+           :with :points :pt 1)))
+
+(defun my-load-csv (file)
+  (let ((array (zeros '(1000 1000) :type 'fixnum)))
+    (iter (for line in-file file using #'read-line)
+          (match (mapcar #'parse-integer (ppcre:split "," line))
+            ((list length dup count)
+             (setf (aref array dup length) count)
+             (when (plusp count)
+               (maximizing dup into maxdup)
+               (maximizing length into maxlength))))
+          (finally
+           (return
+             (aref array `(0 ,(1+ maxdup)) `(0 ,(1+ maxlength))))))))
+
+(defun main (input output &rest argv)
+  (declare (ignorable argv))
+  (let ((name (match (subseq (pathname-name input)
+                             (+ (search "histogram" (pathname-name input)) 9 1))
+                     ("states" "S")
+                     ("transitions" "T"))))
+    (with-plots (s :debug t)
+      (declare (ignorable s))
+      (let* ((array (my-load-csv input))
+             (limit 30)
+             (large (reshape (sum (aref array t `(,(1- limit) t)) :axes 1) (list (length array) 1)))
+             (small (aref array t `(0 ,(1- limit))))
+             (array (concatenate (list small large) :axis -1)))
+        (gp-setup :output output
+                  :terminal `(:pdf :enhanced
+                                   :size
+                                   (2 2) ; inch ; half column, US letterpaper
+                                   ;; (800 800)
+                                   ;; :dashed
+                                   ;; :background :rgb ,(if improved "white" "gray90")
+                                   ;; :monochrome
+                                   :font "Times New Roman, 19")
+                  :style '(data histogram)
+                  :style '(histogram rowstacked)
+                  :style '(fill solid border -1)
+                  :pointsize 0.1
+                  :xrange '(0 30)
+                  ;; :yrange '(-5 15)
+                  :xtics '(0 10)
+                  :ytics `(0 ,(max 1 (* 10 (floor (floor (amax (sum array :axes 0)) 3) 10))))
+                  ;; :logscale :xy
+                  ;; :format '(xy "10^{%T}")
+                  :key '(samplen 2)
+                  :datafile '(separator comma)
+                  ;; :title (format nil "Solutions that contian the ~a \\n seen in the training data" name)
+                  :xlabel "Plan length"
+                  :xlabel '(:offset |0,0.8|)
+                  :xlabel '(:font "Times New Roman, 24")
+                  :ylabel "Number of Plans"
+                  :ylabel '(:offset |1.5,0|)
+                  :ylabel '(:font "Times New Roman, 24"))
+        (iter (for i below (array-dimension array 0))
+              (let ((i i))
+                (plot (lambda ()
+                        (iter (for j below (array-dimension array 1))
+                              (format s "~&~a" (aref array i j))))
+                      :title (format nil "~a=~a" name i))))))))
+
+
+
+
+;;; vim: set ft=lisp lisp:
