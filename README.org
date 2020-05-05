@@ -25,7 +25,7 @@
 This repository contains the source code of LatPlan.
 
 + Asai, M; Muise, C.: 2020. Learning Neural-Symbolic Descriptive Planning Models via Cube-Space Priors: The Voyage Home (to STRIPS).
-  + *Accepted* in IJCAI-2020 (Accept ratio 12.6%). Preprint available soon.
+  + *Accepted* in IJCAI-2020 (Accept ratio 12.6%). https://arxiv.org/abs/2004.12850
 + Asai, M.: 2019. Neural-Symbolic Descriptive Action Model from Images: The Search for STRIPS.
   + https://arxiv.org/abs/1912.05492
 + Asai, M.: 2019. Unsupervised Grounding of Plannable First-Order Logic Representation from Images (code not yet available)
