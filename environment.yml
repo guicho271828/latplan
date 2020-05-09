@@ -1,0 +1,19 @@
+
+name : latplan
+dependencies:
+  - python=3.7
+  - pip
+  - pip:
+      - tensorflow
+      - keras
+      - h5py
+      - matplotlib
+      - progressbar2
+      - keras-adabound
+      - keras-rectified-adam
+      - timeout_decorator
+      - ansicolors
+      - scipy
+      - scikit-image
+      - imageio
+      - pillow

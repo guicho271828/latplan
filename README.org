@@ -39,9 +39,10 @@ This repository contains the source code of LatPlan.
   + In Cognitum Workshop at ICJAI-2017.
   + In Neural-Symbolic Workshop 2017.
 
-[[./install.sh][install.sh]] should install the required libraries on a standard Ubuntu rig.
-It requires =sudo= several times. However Python packages are installed in the user directory.
-(We plan to migrate to =conda= and =pip=-based dependency resolution soon.)
+[[./install.sh][install.sh]] should install the required libraries on a standard Ubuntu rig, except python packages.
+It requires =sudo= several times.
+To install python packages, install =anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html)
+and perform =conda env create -f environment.yml=.
 
 Next, customize the following files for your job scheduler before running.
 The job submission commands are stored in a variable =$common=, which by default
