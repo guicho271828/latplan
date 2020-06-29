@@ -16,7 +16,6 @@ chmod -R +w $probdir            # in the weird case this happens
 
 proj=$(date +%Y%m%d%H%M)ama2
 command="jbsub -mem 8g -queue x86_1h -proj $proj task"
-export PYTHONPATH=$(dirname $(dirname $(readlink -ef $0))):$PYTHONPATH
 export PYTHONUNBUFFERED=1
 export SHELL=/bin/bash
 task (){

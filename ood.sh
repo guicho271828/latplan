@@ -1,14 +1,12 @@
 #!/bin/bash
 
-export dir=$(dirname $(dirname $(readlink -ef $0)))
-
 probdir=${1:-problem-instances}
 
 # common="-j 8 PYTHONPATH=$dir:$PYTHONPATH ./ood.py"
 # common="--dry-run PYTHONPATH=$dir:$PYTHONPATH ./ood.py"
 
 proj=$(date +%Y%m%d%H%M)ood
-common="jbsub -mem 8g -cores 1 -queue x86_1h -proj $proj PYTHONPATH=$dir:$PYTHONPATH ./ood.py"
+common="jbsub -mem 8g -cores 1 -queue x86_1h -proj $proj ./ood.py"
 
 parallel $common puzzle    mnist    3 3 5000 {} {.}.json False ::: $probdir/*/latplan.puzzles.puzzle_mnist/*/*.npz
 parallel $common puzzle    spider   3 3 5000 {} {.}.json False ::: $probdir/*/latplan.puzzles.puzzle_spider/*/*.npz

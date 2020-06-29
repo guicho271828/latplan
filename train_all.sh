@@ -6,8 +6,6 @@ trap exit SIGINT
 
 ulimit -v 16000000000
 
-export dir=$(dirname $(dirname $(readlink -ef $0)))
-export PYTHONPATH=$dir:$PYTHONPATH
 export PYTHONUNBUFFERED=1
 
 task-planning (){

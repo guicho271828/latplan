@@ -90,7 +90,6 @@ split -l $taskperjob $taskfile $taskfile-split/$taskfile.
 
 proj=$(date +%Y%m%d%H%M)ama3
 submit="jbsub -cores $cores -mem ${memperjob}g -queue x86_${hours}h -proj $proj"
-export PYTHONPATH=$(dirname $(dirname $(readlink -ef $0))):$PYTHONPATH
 export PYTHONUNBUFFERED=1
 
 batchtask (){
