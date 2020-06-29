@@ -126,26 +126,28 @@ By default, everything is commented out and nothing runs.
 
 ** file structure
 
-+ config.py, config_cpu.py :: keras/tensorflow configuration.
-+ model.py :: network definitions.
-+ strips.py :: (Bad name!) the program for training an SAE,
-               and writes the propositional encoding of states/transitions to a CSV file.
-+ state_discriminator3.py :: The program for training an SD.
-+ action_autoencoder.py :: The program for training an AAE.
-+ action_discriminator.py :: The program for training an AD.
-+ ama1-planner.py :: Latplan using AMA1.
-+ ama2-planner.py :: Latplan using AMA2.
-+ ama3-planner.py :: Latplan using the visual input (init goal) and a PDDL domain file.
-+ run_ama{1,2,3}_all.sh :: Run all experiments.
-+ various sh files :: supporting scripts.
-+ util/ :: contains general-purpose utility functions for python code.
++ Library code
+  + latplan/model.py :: network definitions.
+  + latplan/util/ :: contains general-purpose utility functions for python code.
+  + latplan/puzzles/ :: code for domain generators/validators.
+    + puzzles/*.py :: each file represents a domain. 
+    + puzzles/model/*.py :: the core model (successor rules etc.) of the domain. this is disentangled from the images.
++ Scripts
+  + config.py, config_cpu.py :: keras/tensorflow configuration.
+  + strips.py :: (Bad name!) the program for training an SAE,
+                 and writes the propositional encoding of states/transitions to a CSV file.
+  + state_discriminator3.py :: The program for training an SD.
+  + action_autoencoder.py :: The program for training an AAE.
+  + action_discriminator.py :: The program for training an AD.
+  + ama1-planner.py :: Latplan using AMA1.
+  + ama2-planner.py :: Latplan using AMA2.
+  + ama3-planner.py :: Latplan using the visual input (init goal) and a PDDL domain file.
+  + run_ama{1,2,3}_all.sh :: Run all experiments.
+  + various sh files :: supporting scripts.
+  + helper/ :: helper scripts for AMA1.
 + tests/ :: test files, mostly the unit tests for domain generator/validator
 + samples/ :: where the learned results should go. Each SAE training results are stored in a subdirectory.
-+ puzzles/ :: code for domain generators/validators.
-  + puzzles/*.py :: each file represents a domain. 
-  + puzzles/model/*.py :: the core model (successor rules etc.) of the domain. this is disentangled from the images.
 + problem-instances/ :: where the input problem isntances / experimental results should go.
-+ helper/ :: helper scripts for AMA1.
 + (git submodule) planner-scripts/ :: My personal scripts for invoking domain-independent planners.
      Not just Fast Downward.
 
