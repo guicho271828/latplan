@@ -39,10 +39,39 @@ This repository contains the source code of LatPlan.
   + In Cognitum Workshop at ICJAI-2017.
   + In Neural-Symbolic Workshop 2017.
 
-[[./install.sh][install.sh]] should install the required libraries on a standard Ubuntu rig, except python packages.
-It requires =sudo= several times.
-To install python packages, install =anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html)
-and perform =conda env create -f environment.yml=.
+* Setup
+
+On Ubuntu, prerequisites can be installed via launching [[./install.sh]] (It requires =sudo= several times).
+OSX users should be able to find the equivalents in homebrew. We listed the requirements.
+
+** General Requirements
+
+Python 3.5 or later is required.
+
++ =mercurial g++ cmake make python flex bison g++-multilib= --- these are required for compiling Fast Downward.
+
++ =git build-essential automake libcurl4-openssl-dev= --- these are required for compiling [Roswell](http://roswell.github.io/). OSX users should use =brew install roswell=.
+
++ =gnuplot= --- for plotting.
+
++ =parallel= --- for running some scripts.
+
+** Python Dependency Installation with Anaconda / Miniconda (recommended)
+
+=anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html) is a
+python version dependency & mini environment management system.
+We recommend using =miniconda=, as it is smaller.
+
+Run =conda env create -f environment.yml= then =conda activate latplan=.
+
+** Python Dependency Installation without Anaconda / Miniconda on Ubuntu
+
+You should install =python3-pip= and =python3-pil= from the APT repository.
+Afterwards, install the following libraries from =pip3 install --user <library-name>=:
+
++ =tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image imageio=
+
+* Running
 
 Next, customize the following files for your job scheduler before running.
 The job submission commands are stored in a variable =$common=, which by default
@@ -89,31 +118,6 @@ By default, everything is commented out and nothing runs.
 ./generate-all-csv.sh
 
 #+end_src
-
-** Required software
-
-Python 3.5 or later is required.
-
-On Ubuntu, prerequisites can be installed via launching [[./install.sh]] .
-The script compiles several C++ and Lisp binaries. However, it does not affect the
-running system (e.g. installing a custom software under =/usr/=) except for
-performing several =apt-get install= from the official ubuntu repository.
-
-The applications installed by the script consists of:
-
-+ =mercurial g++ cmake make python flex bison g++-multilib= --- these are required for compiling Fast Downward.
-
-+ =git build-essential automake libcurl4-openssl-dev= --- these are required for compiling [Roswell](http://roswell.github.io/). OSX users should use =brew install roswell=.
-
-+ =gnuplot= --- for plotting.
-
-+ =parallel= --- for running some scripts. If you haven't used it yourself, give it a try! It is a very nice tool.
-
-+ =python3-pip python3-pil= --- python packages.
-
-+ =tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image imageio= --- more python packages.
-
-+ =bash-completion byobu htop mosh= These are not necessary :) but I just use this script also for setting up the environment in a new machine.
 
 ** file structure
 
