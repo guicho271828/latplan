@@ -24,9 +24,8 @@ git clone -b release https://github.com/roswell/roswell.git
     ros setup
 )
 
-ros install numcl/constantfold numcl/gtype numcl/specialized-function numcl/numcl
-ros install guicho271828/magicffi guicho271828/dataloader guicho271828/remlic guicho271828/dsama
-ros install arrival eazy-gnuplot
+ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot
+ros dynamic-space-size=8000 install guicho271828/magicffi guicho271828/dataloader guicho271828/remlic guicho271828/dsama
 
 make -j 1 -C lisp
 

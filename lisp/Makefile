@@ -2,7 +2,7 @@
 all: $(patsubst %.ros,%.bin,$(wildcard *.ros))
 
 %.bin: %.ros
-	LANG=en_US.utf8 ros build $<
+	LANG=en_US.utf8 ros dynamic-space-size=8000 build $<
 	mv $* $@
 
 clean:
