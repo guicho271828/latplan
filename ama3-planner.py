@@ -118,6 +118,7 @@ def main(domainfile, problem_dir, heuristics):
         log("plotted the plan")
         validation = p.validate_transitions([img_states[0:-1], img_states[1:]])
         print(validation)
+        valid = bool(np.all(validation))
         print(p.validate_states(img_states))
         np.savez_compressed(npzfile,img_states=img_states)
         log("validated the plan")
@@ -138,7 +139,7 @@ def main(domainfile, problem_dir, heuristics):
                 "jsonfile":jsonfile,
                 "statistics":json.loads(echo_out(["helper/fd-parser.awk", logfile])),
                 "parameters":sae.parameters,
-                "valid":bool(np.all(validation)),
+                "valid":valid,
                 "found":True,
                 "exhausted": False,
                 }, f)
