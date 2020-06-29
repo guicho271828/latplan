@@ -180,7 +180,7 @@ def puzzle(type='mnist',width=3,height=3,num_examples=6500,N=None,num_actions=No
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
-    path = os.path.join("puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
     with np.load(path) as data:
         pre_configs = data['pres'][:num_examples]
         suc_configs = data['sucs'][:num_examples]
@@ -207,7 +207,7 @@ def hanoi(disks=7,towers=4,num_examples=6500,N=None,num_actions=None,direct=None
 
     import latplan.puzzles.hanoi as p
     p.setup()
-    path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
     with np.load(path) as data:
         pre_configs = data['pres'][:num_examples]
         suc_configs = data['sucs'][:num_examples]
@@ -235,7 +235,7 @@ def lightsout(type='digital',size=4,num_examples=6500,N=None,num_actions=None,di
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     p.setup()
-    path = os.path.join("puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
     with np.load(path) as data:
         pre_configs = data['pres'][:num_examples]
         suc_configs = data['sucs'][:num_examples]

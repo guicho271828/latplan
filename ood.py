@@ -61,7 +61,7 @@ def common_operation(path,p,num_examples,plannpz,planjson,allow_invalid,*args):
         json.dump(results,f)
 
 def puzzle(type='mnist',width=3,height=3,num_examples=6500,plannpz=None,planjson=None,allow_invalid=False):
-    path = os.path.join("puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
     
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
@@ -70,7 +70,7 @@ def puzzle(type='mnist',width=3,height=3,num_examples=6500,plannpz=None,planjson
     common_operation(path, p, num_examples, plannpz, planjson, allow_invalid, width, height)
 
 def hanoi(disks=7,towers=4,num_examples=6500,plannpz=None,planjson=None,allow_invalid=False):
-    path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
 
     import latplan.puzzles.hanoi as p
     p.setup()
@@ -78,7 +78,7 @@ def hanoi(disks=7,towers=4,num_examples=6500,plannpz=None,planjson=None,allow_in
     common_operation(path, p, num_examples, plannpz, planjson, allow_invalid, disks, towers)
 
 def lightsout(type='digital',size=4,num_examples=6500,plannpz=None,planjson=None,allow_invalid=False):
-    path = os.path.join("puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
     
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))

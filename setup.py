@@ -23,7 +23,7 @@ np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatte
 
 def puzzle(type='mnist',width=3,height=3,limit=None):
     # limit = number that "this much is enough"
-    path = os.path.join("puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["puzzle",type,width,height]))+".npz")
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
@@ -33,7 +33,7 @@ def puzzle(type='mnist',width=3,height=3,limit=None):
     np.savez_compressed(path,pres=pres,sucs=sucs)
 
 def hanoi(disks=7,towers=4,limit=None):
-    path = os.path.join("puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["hanoi",disks,towers]))+".npz")
     import latplan.puzzles.hanoi as p
     p.setup()
     pres = p.generate_random_configs(disks,towers, limit)
@@ -42,7 +42,7 @@ def hanoi(disks=7,towers=4,limit=None):
     np.savez_compressed(path,pres=pres,sucs=sucs)
 
 def lightsout(type='digital',size=4,limit=None):
-    path = os.path.join("puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
+    path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,["lightsout",type,size]))+".npz")
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     p.setup()
