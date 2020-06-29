@@ -1,14 +1,7 @@
 #!/bin/bash
 set -e
 
-# errexit(){
-#     echo $@ >&2
-#     exit 1
-# }
-
-# if ! uname -a | grep Ubuntu ; then
-#     echo "This is not ubuntu! Modify install.sh by yourself" >&2
-# fi
+sudo apt install -y gnuplot parallel
 
 sudo apt install -y mercurial g++ cmake make python flex bison g++-multilib
 git submodule update --init --recursive
@@ -20,7 +13,7 @@ git submodule update --init --recursive
 
 
 # https://github.com/roswell/roswell/wiki/1.-Installation
-sudo apt -y install git build-essential automake libcurl4-openssl-dev
+sudo apt -y install build-essential automake libcurl4-openssl-dev
 git clone -b release https://github.com/roswell/roswell.git
 (
     cd roswell
@@ -33,14 +26,9 @@ git clone -b release https://github.com/roswell/roswell.git
 
 ros install numcl/constantfold numcl/gtype numcl/specialized-function numcl/numcl
 ros install guicho271828/magicffi guicho271828/dataloader guicho271828/remlic guicho271828/dsama
-ros install arrival
-ros install eazy-gnuplot
-
-sudo apt install -y gnuplot
+ros install arrival eazy-gnuplot
 
 make -j 1 -C lisp
-
-sudo apt -y install parallel bash-completion byobu htop mosh git
 
 mkdir -p ~/.keras
 cp keras-tf.json ~/.keras/keras.json
