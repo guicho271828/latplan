@@ -22,3 +22,6 @@ problem-instances-16/
 problem-instances-16-korf/
 problem-instances-cube-aae/
 downward/
+/build/
+/dist/
+/latplan.egg-info/

@@ -69,12 +69,12 @@ We recommend using =miniconda=, as it is smaller.
 
 Run =conda env create -f environment.yml= then =conda activate latplan=.
 
+Also run =./setup.py install=, which install =latplan=.
+
 ** Python Dependency Installation without Anaconda / Miniconda on Ubuntu
 
 You should install =python3-pip= and =python3-pil= from the APT repository.
-Afterwards, install the following libraries from =pip3 install --user <library-name>=:
-
-+ =tensorflow keras h5py matplotlib progressbar2 timeout_decorator ansicolors scipy scikit-image imageio=
+Afterwards, run =./setup.py install=, which installs =latplan=.
 
 * Running
 
