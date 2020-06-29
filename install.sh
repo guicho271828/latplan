@@ -8,7 +8,7 @@ git submodule update --init --recursive
 (
     hg clone http://hg.fast-downward.org downward
     cd downward
-    ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release64
+    ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release
 )
 
 

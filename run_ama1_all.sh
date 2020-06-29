@@ -13,7 +13,7 @@ probdir=problem-instances
     make -C lisp
     git submodule update --init --recursive
     cd downward
-    ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release64
+    ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release
 )
 
 chmod -R +w $probdir            # in the weird case this happens
