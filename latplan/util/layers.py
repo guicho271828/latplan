@@ -5,9 +5,12 @@ import numpy as np
 debug = False
 # debug = True
 
-def Print():
+def Print(msg=None):
     def printer(x):
-        print(x)
+        if msg:
+            print(x,":",msg)
+        else:
+            print(x)
         return x
     return Lambda(printer)
 
