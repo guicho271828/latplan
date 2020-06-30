@@ -1012,8 +1012,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.encoder     = Model(x, z)
         self.autoencoder = Model(x, y)
         self.net = self.autoencoder
-        self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
-        self.custom_log_functions["lr"] = lambda: K.get_value(self.net.optimizer.lr)
 
     def _build_aux_primary(self,input_shape):
         # to be called after the training
@@ -1022,9 +1020,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         w2 = Sequential(self.encoder_net)(y2)
         self.decoder     = Model(z2, y2)
         self.autodecoder = Model(z2, w2)
-
-    def get_features(self, data, **kwargs):
-        return self.features.predict(data, **kwargs)
 
     def plot(self,data,path,verbose=False):
         self.load()
