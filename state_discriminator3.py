@@ -137,22 +137,6 @@ def learn(method):
         net.parameters["method"] = method
         net.save()
 
-    if method == "feature":
-        # decode into image, extract features and learn from it
-        train_image, test_image = sae.decode(train_in), sae.decode(test_in)
-        train_in2, test_in2 = sae.get_features(train_image), sae.get_features(test_image)
-        discriminator,_,_ = grid_search(curry(nn_task, latplan.model.get('PUDiscriminator'), sae.local("_sd3/"),
-                                              train_in2, train_out, test_in2, test_out,),
-                                        default_parameters,
-                                        {
-                                            'num_layers' :[1,2],
-                                            'layer'      :[300,1000],
-                                            'clayer'     :[16],
-                                            'activation' :['relu','tanh'],
-                                        },
-                                        sae.local("_sd3/"),
-                                        report_best= save, shuffle=False,
-        )
     if method == "cae":
         # decode into image, learn a separate cae and learn from it
         train_image, test_image = sae.decode(train_in), sae.decode(test_in)
