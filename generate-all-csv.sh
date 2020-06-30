@@ -1,9 +1,5 @@
 #!/bin/bash
 
-
-./ood.sh
-./ood-histogram.sh
-
 # generate the test loss comparison for ablation study
 ./table4.sh > table4.csv
 # generate the loss comparison for Cube-space AE vs Cube AAE
