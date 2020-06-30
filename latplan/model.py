@@ -833,8 +833,31 @@ class ZeroSuppressMixin:
         return
 
 
+class EarlyStopMixin:
+    def _build(self,input_shape):
+        super()._build(input_shape)
+
+        max_delay = 0.0
+        for key in self.parameters:
+            if "delay" in key:
+                max_delay = max(max_delay, self.parameters[key])
+        self.parameters["earlystop_delay"] = max_delay + 0.1
+
+        self.callbacks.append(
+            ChangeEarlyStopping(
+                epoch_start=self.parameters["epoch"]*self.parameters["earlystop_delay"],
+                verbose=1,))
+
+        self.callbacks.append(
+            LinearEarlyStopping(
+                self.parameters["epoch"],
+                epoch_start = self.parameters["epoch"]*self.parameters["earlystop_delay"],
+                value_start = 1.0-self.parameters["earlystop_delay"],
+                verbose     = 1,))
+
+
 # The variant that takes transitions instead of states
-class TransitionAE(ConvolutionalEncoderMixin, StateAE):
+class TransitionAE(EarlyStopMixin, ConvolutionalEncoderMixin, StateAE):
     def double_mode(self):
         self.mode(False)
     def single_mode(self):
@@ -927,25 +950,6 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
             self.loss = loss
         else:
             self.loss = MSE
-
-
-        max_delay = 0.0
-        for key in self.parameters:
-            if "delay" in key:
-                max_delay = max(max_delay, self.parameters[key])
-        self.parameters["earlystop_delay"] = max_delay + 0.1
-
-        self.callbacks.append(
-            ChangeEarlyStopping(
-                epoch_start=self.parameters["epoch"]*self.parameters["earlystop_delay"],
-                verbose=1,))
-
-        self.callbacks.append(
-            LinearEarlyStopping(
-                self.parameters["epoch"],
-                epoch_start = self.parameters["epoch"]*self.parameters["earlystop_delay"],
-                value_start = 1.0-self.parameters["earlystop_delay"],
-                verbose     = 1,))
 
         self.net = self.d_autoencoder
 
