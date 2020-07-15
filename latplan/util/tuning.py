@@ -2,6 +2,8 @@ import os.path
 from timeout_decorator import timeout, TimeoutError
 import random
 
+from tensorflow.python.framework.errors_impl import ResourceExhaustedError
+
 import signal
 class SignalInterrupt(Exception):
     """Raised when a signal handler was invoked"""
@@ -169,6 +171,8 @@ def grid_search(task, default_config, parameters, path,
                 continue
             try:
                 _iter(config)
+            except ResourceExhaustedError as e:
+                print(e)
             except InvalidHyperparameterError as e:
                 print(e)
     except SignalInterrupt as e:
@@ -310,6 +314,8 @@ def simple_genetic_search(task, default_config, parameters, path,
                     try:
                         open_list, close_list = _iter(next(gen_config))
                         break
+                    except ResourceExhaustedError as e:
+                        print(e)
                     except InvalidHyperparameterError as e:
                         pass
         except StopIteration:   # from gen_config
@@ -342,6 +348,8 @@ def simple_genetic_search(task, default_config, parameters, path,
             
             try:
                 open_list, close_list = _iter(child)
+            except ResourceExhaustedError as e:
+                print(e)
             except InvalidHyperparameterError as e:
                 pass
     except SignalInterrupt as e:
