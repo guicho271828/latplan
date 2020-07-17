@@ -837,6 +837,8 @@ class EarlyStopMixin:
     def _build(self,input_shape):
         super()._build(input_shape)
 
+        # check all hyperparameters and ensure that the earlystop does not activate until all
+        # delayed loss epoch kicks in
         max_delay = 0.0
         for key in self.parameters:
             if "delay" in key:
