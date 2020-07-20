@@ -194,7 +194,12 @@ def _neighbors(parent,parameters):
     return results
 
 def _key(config):
-    return tuple( v for _, v in sorted(config.items()))
+    def tuplize(x):
+        if isinstance(x,list):
+            return tuple(x)
+        else:
+            x
+    return tuple( tuplize(v) for _, v in sorted(config.items()))
 
 def _crossover(parent1,parent2):
     child = {}
