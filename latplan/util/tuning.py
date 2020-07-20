@@ -378,6 +378,8 @@ def reproduce(task, default_config, parameters, path, report=None, report_best=N
     try:
         for _ in range(limit):
             _iter(open_list[0][1],open_list[0][2])
+    except SignalInterrupt as e:
+        print("received",e.signal,", optimization stopped")
     finally:
         _final_report(best)
     return best['artifact'],best['params'],best['eval']
