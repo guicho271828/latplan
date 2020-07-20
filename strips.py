@@ -168,6 +168,7 @@ def run(path,train,val,parameters,train_out=None,val_out=None,):
             default_parameters,
             parameters,
             path,
+            report_best= lambda net: net.save(),
         )
         ae.save()
     else:
