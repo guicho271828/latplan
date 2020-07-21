@@ -1845,15 +1845,6 @@ class ActionDumpMixin:
 
         all_actions_byid = to_id(all_labels)
 
-        # effects obtained directly from the effect vector XXX no longer valid
-        # add_effect = self.add_decoder.predict(all_labels,**kwargs).round().astype(int).reshape((true_num_actions,-1))
-        # del_effect = self.del_decoder.predict(all_labels,**kwargs).round().astype(int).reshape((true_num_actions,-1))
-        # 
-        # save("action_add1.csv",add_effect)
-        # save("action_del1.csv",del_effect)
-        # save("action_add1+ids.csv",np.concatenate((add_effect,all_actions_byid), axis=1))
-        # save("action_del1+ids.csv",np.concatenate((del_effect,all_actions_byid), axis=1))
-
         def extract_effect_from_transitions(transitions):
             pre = transitions[:,:N]
             suc = transitions[:,N:]
@@ -1941,9 +1932,6 @@ class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamm
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
         self.apply  = Model([pre2,act2], wrap(pre2, K.minimum(1-del2, K.maximum(add2, pre2))))
-        self.add_decoder = Model(act2, add2)
-        self.del_decoder = Model(act2, del2)
-
         return z_suc_aae
 
 class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
@@ -1972,9 +1960,6 @@ class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixi
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
         self.apply  = Model([pre2,act2], wrap(pre2, smooth_min(1-del2, smooth_max(add2, pre2))))
-        self.add_decoder = Model(act2, add2)
-        self.del_decoder = Model(act2, del2)
-
         return z_suc_aae
 
 class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
@@ -2003,9 +1988,6 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamming
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
         self.apply  = Model([pre2,act2], wrap(pre2, rounded_sigmoid()(pre2 - 0.5 + add2 - del2)))
-        self.add_decoder = Model(act2, add2)
-        self.del_decoder = Model(act2, del2)
-
         return z_suc_aae
 
 class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
@@ -2034,13 +2016,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
 
-        add2 = wrap(eff2, heavyside()( eff2-1))
-        del2 = wrap(eff2, heavyside()(-eff2-1))
-
         self.apply  = Model([pre2,act2], suc2)
-        self.add_decoder = Model(act2, add2)
-        self.del_decoder = Model(act2, del2)
-
         return z_suc_aae
 
 class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
@@ -2068,13 +2044,7 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammin
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
 
-        add2 = wrap(eff2, heavyside()( eff2-1))
-        del2 = wrap(eff2, heavyside()(-eff2-1))
-
         self.apply  = Model([pre2,act2], suc2)
-        self.add_decoder = Model(act2, add2)
-        self.del_decoder = Model(act2, del2)
-
         return z_suc_aae
 
 # WIP
@@ -2106,13 +2076,7 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammi
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
 
-        add2 = wrap(eff2, heavyside()( eff2-1))
-        del2 = wrap(eff2, heavyside()(-eff2-1))
-
         self.apply  = Model([pre2,act2], suc2)
-        self.add_decoder = Model(act2, add2)
-        self.del_decoder = Model(act2, del2)
-
         return z_suc_aae
 
 # same as NormalizedLogitAddEffectMixin; just the inheritance
@@ -2142,13 +2106,7 @@ class NoSucNormalizedLogitAddEffectMixin(ActionDumpMixin,NoSucBaseActionMixin,Di
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
 
-        add2 = wrap(eff2, heavyside()( eff2-1))
-        del2 = wrap(eff2, heavyside()(-eff2-1))
-
         self.apply  = Model([pre2,act2], suc2)
-        self.add_decoder = Model(act2, add2)
-        self.del_decoder = Model(act2, del2)
-
         return z_suc_aae
 
 # Zero-sup SAE ###############################################################
