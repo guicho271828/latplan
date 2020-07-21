@@ -686,7 +686,7 @@ class ConvolutionalDecoderMixin:
 
 # State Auto Encoder ################################################################
 
-class StateAE(FullConnectedDecoderMixin, FullConnectedEncoderMixin, AE):
+class StateAE(EarlyStopMixin, FullConnectedDecoderMixin, FullConnectedEncoderMixin, AE):
     """An AE whose latent layer is GumbelSofmax.
 Fully connected layers only, no convolutions.
 Note: references to self.parameters[key] are all hyperparameters."""
@@ -842,7 +842,7 @@ class EarlyStopMixin:
 
 
 # The variant that takes transitions instead of states
-class TransitionAE(EarlyStopMixin, ConvolutionalEncoderMixin, StateAE):
+class TransitionAE(ConvolutionalEncoderMixin, StateAE):
     def double_mode(self):
         self.mode(False)
     def single_mode(self):
