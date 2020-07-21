@@ -54,3 +54,25 @@ def puzzle_module(directory):
         p = importlib.import_module('latplan.puzzles.{}_{}'.format(args[0],args[1]))
     p.setup()
     return p
+
+def ensure_list(x):
+    if type(x) is not list:
+        return [x]
+    else:
+        return x
+
+import json
+import numpy as np
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
+

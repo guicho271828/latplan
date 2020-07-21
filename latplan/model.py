@@ -26,21 +26,9 @@ from .util.distances import *
 from .util.layers    import *
 from .util.perminv   import *
 from .util.tuning    import InvalidHyperparameterError
+from .util           import ensure_list, NpEncoder
 
 # utilities ###############################################################
-
-class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return super(NpEncoder, self).default(obj)
 
 def get(name):
     return globals()[name]
@@ -61,11 +49,6 @@ def load(directory,allow_failure=False):
         classobj = get(get_ae_type(directory))
     return classobj(directory).load(allow_failure=allow_failure)
 
-def ensure_list(x):
-    if type(x) is not list:
-        return [x]
-    else:
-        return x
 
 class Network:
     """Base class for various neural networks including GANs, AEs and Classifiers.
