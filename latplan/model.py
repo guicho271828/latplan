@@ -1885,7 +1885,7 @@ class ActionDumpMixin:
         return
 
 class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect depends on both the current state and the action labels."
+    "The effect depends on both the current state and the action labels -- Same as AAE in AAAI18."
     def _apply(self,z_pre,z_suc,action):
 
         self.action_decoder_net = [
@@ -1907,7 +1907,7 @@ class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin,HammingLoggerMixin)
         return z_suc_aae
 
 class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect only depends on the action labels. Add/delete effects are directly modeled as binary min/max."
+    "The effect depends only on the action labels. Add/delete effects are directly modeled as binary min/max."
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
@@ -1935,7 +1935,7 @@ class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamm
         return z_suc_aae
 
 class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect only depends on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
+    "The effect depends only on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
@@ -1963,7 +1963,7 @@ class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixi
         return z_suc_aae
 
 class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect only depends on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
+    "The effect depends only on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
@@ -1991,7 +1991,7 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamming
         return z_suc_aae
 
 class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
@@ -2020,7 +2020,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
         return z_suc_aae
 
 class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique, but without batchnorm (s_t shifted from [0,1] to [-1/2,1/2].)"
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
@@ -2047,11 +2047,9 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammin
         self.apply  = Model([pre2,act2], suc2)
         return z_suc_aae
 
-# WIP
-
 
 class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique. Uses batchnorm in effect, but not in s_t (shifted from [0,1] to [-1/2,1/2].)"
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
@@ -2079,7 +2077,8 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammi
         self.apply  = Model([pre2,act2], suc2)
         return z_suc_aae
 
-# same as NormalizedLogitAddEffectMixin; just the inheritance
+# same as NormalizedLogitAddEffectMixin; just the inheritance difference.
+# Action prediction takes only the current state.
 class NoSucNormalizedLogitAddEffectMixin(ActionDumpMixin,NoSucBaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
     def _apply(self,z_pre,z_suc,action):
