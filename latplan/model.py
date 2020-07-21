@@ -684,6 +684,125 @@ class ConvolutionalDecoderMixin:
                 Cropping2D(crop),
                 Reshape(input_shape),]
 
+
+# Mixins ################################################################
+
+class ZeroSuppressMixin:
+    def _build(self,input_shape):
+        super()._build(input_shape)
+
+        alpha = StepSchedule(schedule={
+            0:0,
+            (self.parameters["epoch"]*self.parameters["zerosuppress_delay"]):self.parameters["zerosuppress"],
+        })
+        self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
+
+        zerosuppress_loss = K.mean(self.encoder.output)
+
+        self.net.add_loss(K.in_train_phase(zerosuppress_loss * alpha.variable, 0.0))
+
+        def activation(x, y):
+            return zerosuppress_loss
+
+        # def zerosuppres(x, y):
+        #     return alpha.variable
+
+        self.metrics.append(activation)
+        # self.metrics.append(zerosuppress)
+        return
+
+
+class EarlyStopMixin:
+    def _build(self,input_shape):
+        super()._build(input_shape)
+
+        # check all hyperparameters and ensure that the earlystop does not activate until all
+        # delayed loss epoch kicks in
+        max_delay = 0.0
+        for key in self.parameters:
+            if "delay" in key:
+                max_delay = max(max_delay, self.parameters[key])
+        self.parameters["earlystop_delay"] = max_delay + 0.1
+
+        self.callbacks.append(
+            ChangeEarlyStopping(
+                epoch_start=self.parameters["epoch"]*self.parameters["earlystop_delay"],
+                verbose=1,))
+
+        self.callbacks.append(
+            LinearEarlyStopping(
+                self.parameters["epoch"],
+                epoch_start = self.parameters["epoch"]*self.parameters["earlystop_delay"],
+                value_start = 1.0-self.parameters["earlystop_delay"],
+                verbose     = 1,))
+
+
+class HammingLoggerMixin:
+    def _report(self,test_both,**opts):
+        super()._report(test_both,**opts)
+        test_both(["hamming"],
+                  lambda data: \
+                    float( \
+                      np.mean( \
+                        abs(self.encode(data[:,0,...]) \
+                            - self.encode(data[:,1,...])))))
+        return
+
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        def hamming(x, y):
+            return K.mean(mae(self.encoder.output[:,0,...],
+                              self.encoder.output[:,1,...]))
+        self.metrics.append(hamming)
+        return
+
+class LocalityMixin:
+    def _build(self,input_shape):
+        super()._build(input_shape)
+
+        self.locality_alpha = StepSchedule(schedule={
+            0:0,
+            (self.parameters["epoch"]*self.parameters["locality_delay"]):self.parameters["locality"],
+        })
+        self.callbacks.append(LambdaCallback(on_epoch_end=self.locality_alpha.update))
+
+        def locality(x, y):
+            return self.locality_alpha.variable
+
+        self.metrics.append(locality)
+        return
+
+class HammingMixin(LocalityMixin, HammingLoggerMixin):
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        loss = K.mean(mae(self.encoder.output[:,0,...],
+                          self.encoder.output[:,1,...]))
+        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
+        return
+
+class CosineMixin (LocalityMixin, HammingLoggerMixin):
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        loss = K.mean(keras.losses.cosine_proximity(self.encoder.output[:,0,...],
+                                                    self.encoder.output[:,1,...]))
+        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
+        def cosine(x, y):
+            return loss
+        self.metrics.append(cosine)
+        return
+
+class PoissonMixin(LocalityMixin, HammingLoggerMixin):
+    def _build(self,input_shape):
+        super()._build(input_shape)
+        loss = K.mean(keras.losses.poisson(self.encoder.output[:,0,...],
+                                           self.encoder.output[:,1,...]))
+        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
+        def poisson(x, y):
+            return loss
+        self.metrics.append(poisson)
+        return
+
+
 # State Auto Encoder ################################################################
 
 class StateAE(EarlyStopMixin, FullConnectedDecoderMixin, FullConnectedEncoderMixin, AE):
@@ -789,59 +908,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         from .util.plot import plot_grid
         plot_grid(z, w=6, path=path, verbose=verbose)
 
-# Mixins ################################################################
 
-class ZeroSuppressMixin:
-    def _build(self,input_shape):
-        super()._build(input_shape)
-
-        alpha = StepSchedule(schedule={
-            0:0,
-            (self.parameters["epoch"]*self.parameters["zerosuppress_delay"]):self.parameters["zerosuppress"],
-        })
-        self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
-
-        zerosuppress_loss = K.mean(self.encoder.output)
-
-        self.net.add_loss(K.in_train_phase(zerosuppress_loss * alpha.variable, 0.0))
-
-        def activation(x, y):
-            return zerosuppress_loss
-
-        # def zerosuppres(x, y):
-        #     return alpha.variable
-
-        self.metrics.append(activation)
-        # self.metrics.append(zerosuppress)
-        return
-
-
-class EarlyStopMixin:
-    def _build(self,input_shape):
-        super()._build(input_shape)
-
-        # check all hyperparameters and ensure that the earlystop does not activate until all
-        # delayed loss epoch kicks in
-        max_delay = 0.0
-        for key in self.parameters:
-            if "delay" in key:
-                max_delay = max(max_delay, self.parameters[key])
-        self.parameters["earlystop_delay"] = max_delay + 0.1
-
-        self.callbacks.append(
-            ChangeEarlyStopping(
-                epoch_start=self.parameters["epoch"]*self.parameters["earlystop_delay"],
-                verbose=1,))
-
-        self.callbacks.append(
-            LinearEarlyStopping(
-                self.parameters["epoch"],
-                epoch_start = self.parameters["epoch"]*self.parameters["earlystop_delay"],
-                value_start = 1.0-self.parameters["earlystop_delay"],
-                verbose     = 1,))
-
-
-# The variant that takes transitions instead of states
 class TransitionAE(ConvolutionalEncoderMixin, StateAE):
     def double_mode(self):
         self.mode(False)
@@ -951,70 +1018,6 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         save("actions.csv", data)
         return
 
-class HammingLoggerMixin:
-    def _report(self,test_both,**opts):
-        super()._report(test_both,**opts)
-        test_both(["hamming"],
-                  lambda data: \
-                    float( \
-                      np.mean( \
-                        abs(self.encode(data[:,0,...]) \
-                            - self.encode(data[:,1,...])))))
-        return
-
-    def _build(self,input_shape):
-        super()._build(input_shape)
-        def hamming(x, y):
-            return K.mean(mae(self.encoder.output[:,0,...],
-                              self.encoder.output[:,1,...]))
-        self.metrics.append(hamming)
-        return
-
-class LocalityMixin:
-    def _build(self,input_shape):
-        super()._build(input_shape)
-
-        self.locality_alpha = StepSchedule(schedule={
-            0:0,
-            (self.parameters["epoch"]*self.parameters["locality_delay"]):self.parameters["locality"],
-        })
-        self.callbacks.append(LambdaCallback(on_epoch_end=self.locality_alpha.update))
-
-        def locality(x, y):
-            return self.locality_alpha.variable
-
-        self.metrics.append(locality)
-        return
-
-class HammingMixin(LocalityMixin, HammingLoggerMixin):
-    def _build(self,input_shape):
-        super()._build(input_shape)
-        loss = K.mean(mae(self.encoder.output[:,0,...],
-                          self.encoder.output[:,1,...]))
-        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
-        return
-
-class CosineMixin (LocalityMixin, HammingLoggerMixin):
-    def _build(self,input_shape):
-        super()._build(input_shape)
-        loss = K.mean(keras.losses.cosine_proximity(self.encoder.output[:,0,...],
-                                                    self.encoder.output[:,1,...]))
-        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
-        def cosine(x, y):
-            return loss
-        self.metrics.append(cosine)
-        return
-
-class PoissonMixin(LocalityMixin, HammingLoggerMixin):
-    def _build(self,input_shape):
-        super()._build(input_shape)
-        loss = K.mean(keras.losses.poisson(self.encoder.output[:,0,...],
-                                           self.encoder.output[:,1,...]))
-        self.net.add_loss(K.in_train_phase(loss * self.locality_alpha.variable, 0.0))
-        def poisson(x, y):
-            return loss
-        self.metrics.append(poisson)
-        return
 
 # Transition AE + Action AE double wielding! #################################
 
