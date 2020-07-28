@@ -1764,6 +1764,7 @@ class DetActionMixin:
 # effect mapping variations
 
 class DirectLossMixin:
+    "Additional loss for the latent space successor prediction."
     def _build(self,input_shape):
         super()._build(input_shape)
 
@@ -2033,7 +2034,6 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammin
         self.apply  = Model([pre2,act2], suc2)
         return z_suc_aae
 
-
 class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique. Uses batchnorm in effect, but not in s_t (shifted from [0,1] to [-1/2,1/2].)"
     def _apply(self,z_pre,z_suc,action):
@@ -2063,10 +2063,11 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammi
         self.apply  = Model([pre2,act2], suc2)
         return z_suc_aae
 
-# same as NormalizedLogitAddEffectMixin; just the inheritance difference.
-# Action prediction takes only the current state.
 class NoSucNormalizedLogitAddEffectMixin(ActionDumpMixin,NoSucBaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "The effect only depends on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+    "
+Same as NormalizedLogitAddEffectMixin, but the action prediction takes only the current state.
+Code-wise, there is only the inheritance difference.
+The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
@@ -2093,6 +2094,8 @@ class NoSucNormalizedLogitAddEffectMixin(ActionDumpMixin,NoSucBaseActionMixin,Di
 
         self.apply  = Model([pre2,act2], suc2)
         return z_suc_aae
+
+
 
 # Zero-sup SAE ###############################################################
 
