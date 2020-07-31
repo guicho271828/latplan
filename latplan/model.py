@@ -841,12 +841,12 @@ class StateAE(EarlyStopMixin, FullConnectedDecoderMixin, FullConnectedEncoderMix
 Fully connected layers only, no convolutions.
 Note: references to self.parameters[key] are all hyperparameters."""
     def _build(self,input_shape):
-        _encoder = self.build_encoder(input_shape)
-        _decoder = self.build_decoder(input_shape)
+        self.encoder_net = self.build_encoder(input_shape)
+        self.decoder_net = self.build_decoder(input_shape)
 
         x = Input(shape=input_shape, name="autoencoder")
-        z = Sequential(_encoder)(x)
-        y = Sequential(_decoder)(z)
+        z = Sequential(self.encoder_net)(x)
+        y = Sequential(self.decoder_net)(z)
 
         self.loss = BCE
         self.metrics.append(BCE)
