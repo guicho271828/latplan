@@ -2152,9 +2152,7 @@ class ZeroSuppressConvolutional2StateAE(ZeroSuppressMixin, ConvolutionalDecoderM
     pass
 # Transition SAE ################################################################
 
-class VanillaTransitionAE(ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
-    pass
-class VanillaTransitionAE2(ConvolutionalDecoderMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
+class VanillaTransitionAE(              ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
 class HammingTransitionAE(HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
