@@ -68,6 +68,7 @@ This dict can be used while building the network, making it easier to perform a 
         subprocess.call(["mkdir","-p",path])
         self.path = path
         self.built = False
+        self.built_aux = False
         self.compiled = False
         self.loaded = False
         self.verbose = True
@@ -103,6 +104,32 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def _build(self,*args,**kwargs):
         """An interface for building a network.
 This function is called by build() only when the network is not build yet.
+Users may define a method for each subclass for adding a new build-time feature.
+Each method should call the _build() method of the superclass in turn.
+Users are not expected to call this method directly. Call build() instead.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
+        pass
+
+    def build_aux(self,*args,**kwargs):
+        """An interface for building an additional network not required for training.
+To be used after the training.
+Input-shape: list of dimensions.
+Users should not overload this method; Define _build() for each subclass instead.
+This function calls _build bottom-up from the least specialized class.
+Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
+        if self.built_aux:
+            if self.verbose:
+                print("Avoided building {} twice.".format(self))
+            return
+        self._build_aux(*args,**kwargs)
+        self.built_aux = True
+        return self
+
+    def _build_aux(self,*args,**kwargs):
+        """An interface for building an additional network not required for training.
+To be used after the training.
+Input-shape: list of dimensions.
+This function is called by build_aux() only when the network is not build yet.
 Users may define a method for each subclass for adding a new build-time feature.
 Each method should call the _build() method of the superclass in turn.
 Users are not expected to call this method directly. Call build() instead.
@@ -461,18 +488,22 @@ The latter two are used for verifying the performance of the AE.
 
     def encode(self,data,**kwargs):
         self.load()
+        self.build_aux()
         return self.encoder.predict(data,**kwargs)
 
     def decode(self,data,**kwargs):
         self.load()
+        self.build_aux()
         return self.decoder.predict(data,**kwargs)
 
     def autoencode(self,data,**kwargs):
         self.load()
+        self.build_aux()
         return self.autoencoder.predict(data,**kwargs)
 
     def autodecode(self,data,**kwargs):
         self.load()
+        self.build_aux()
         return self.autodecoder.predict(data,**kwargs)
 
     def summary(self,verbose=False):
@@ -837,6 +868,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
     def plot(self,data,path,verbose=False):
         self.load()
+        self.build_aux()
         x = data
         z = self.encode(x)
         y = self.decode(z)
@@ -870,6 +902,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
     def plot_autodecode(self,data,path,verbose=False):
         self.load()
+        self.build_aux()
         z = data
         x = self.decode(z)
 
@@ -901,6 +934,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
     def plot_variance(self,data,path,verbose=False):
         self.load()
+        self.build_aux()
         x = data
         samples = 100
         z = np.array([ np.round(self.encode(x)) for i in range(samples)])
