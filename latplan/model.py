@@ -844,24 +844,26 @@ Note: references to self.parameters[key] are all hyperparameters."""
         _encoder = self.build_encoder(input_shape)
         _decoder = self.build_decoder(input_shape)
 
-        x = Input(shape=input_shape)
+        x = Input(shape=input_shape, name="autoencoder")
         z = Sequential(_encoder)(x)
         y = Sequential(_decoder)(z)
-
-        z2 = Input(shape=K.int_shape(z)[1:])
-        y2 = Sequential(_decoder)(z2)
-        w2 = Sequential(_encoder)(y2)
 
         self.loss = BCE
         self.metrics.append(BCE)
         self.metrics.append(MSE)
         self.encoder     = Model(x, z)
-        self.decoder     = Model(z2, y2)
         self.autoencoder = Model(x, y)
-        self.autodecoder = Model(z2, w2)
         self.net = self.autoencoder
         self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
         self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
+
+    def _build_aux(self,input_shape):
+        # to be called after the training
+        z2 = Input(shape=self.zdim(), name="autodecoder")
+        y2 = Sequential(self.decoder_net)(z2)
+        w2 = Sequential(self.encoder_net)(y2)
+        self.decoder     = Model(z2, y2)
+        self.autodecoder = Model(z2, w2)
 
     def get_features(self, data, **kwargs):
         return self.features.predict(data, **kwargs)
@@ -950,15 +952,17 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         self.mode(True)
     def mode(self, single):
         if single:
-            self.encoder     = self.s_encoder     
-            self.decoder     = self.s_decoder     
-            self.autoencoder = self.s_autoencoder 
-            self.autodecoder = self.s_autodecoder
+            if self.built_aux:
+                self.encoder     = self.s_encoder
+                self.decoder     = self.s_decoder
+                self.autoencoder = self.s_autoencoder
+                self.autodecoder = self.s_autodecoder
         else:
-            self.encoder     = self.d_encoder     
-            self.decoder     = self.d_decoder     
-            self.autoencoder = self.d_autoencoder 
-            self.autodecoder = self.d_autodecoder 
+            self.encoder     = self.d_encoder
+            self.autoencoder = self.d_autoencoder
+            if self.built_aux:
+                self.decoder     = self.d_decoder
+                self.autodecoder = self.d_autodecoder
 
     def as_single(self, fn, data, *args, **kwargs):
         self.single_mode()
@@ -1002,31 +1006,12 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         self.encoder_net = self.build_encoder(input_shape[1:])
         self.decoder_net = self.build_decoder(input_shape[1:])
 
-        x = Input(shape=input_shape[1:])
-        z = Sequential(self.encoder_net)(x)
-        y = Sequential(self.decoder_net)(z)
-
-        z2 = Input(shape=K.int_shape(z)[1:])
-        y2 = Sequential(self.decoder_net)(z2)
-        w2 = Sequential(self.encoder_net)(y2)
-
-        self.s_encoder     = Model(x, z)
-        self.s_decoder     = Model(z2, y2)
-        self.s_autoencoder = Model(x, y)
-        self.s_autodecoder = Model(z2, w2)
-
-        x               = Input(shape=input_shape)
+        x               = Input(shape=input_shape, name="double_input")
         z, z_pre, z_suc = dapply(x, Sequential(self.encoder_net))
         y, _,     _     = dapply(z, Sequential(self.decoder_net))
 
-        z2       = Input(shape=K.int_shape(z)[1:])
-        y2, _, _ = dapply(z2, Sequential(self.decoder_net))
-        w2, _, _ = dapply(y2, Sequential(self.encoder_net))
-
         self.d_encoder     = Model(x, z)
-        self.d_decoder     = Model(z2, y2)
         self.d_autoencoder = Model(x, y)
-        self.d_autodecoder = Model(z2, w2)
 
         if "loss" in self.parameters:
             specified = eval(self.parameters["loss"])
@@ -1041,6 +1026,27 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
 
         self.double_mode()
         return
+
+    def _build_aux(self,input_shape):
+        x = Input(shape=input_shape[1:], name="single_input")
+        z = Sequential(self.encoder_net)(x)
+        y = Sequential(self.decoder_net)(z)
+
+        z2 = Input(shape=K.int_shape(z)[1:], name="single_input_decoder")
+        y2 = Sequential(self.decoder_net)(z2)
+        w2 = Sequential(self.encoder_net)(y2)
+
+        self.s_encoder     = Model(x, z)
+        self.s_decoder     = Model(z2, y2)
+        self.s_autoencoder = Model(x, y)
+        self.s_autodecoder = Model(z2, w2)
+
+        z2       = Input(shape=(2,*self.zdim()), name="double_input_decoder")
+        y2, _, _ = dapply(z2, Sequential(self.decoder_net))
+        w2, _, _ = dapply(y2, Sequential(self.encoder_net))
+
+        self.d_decoder     = Model(z2, y2)
+        self.d_autodecoder = Model(z2, w2)
 
     def dump_actions(self,pre,suc,**kwargs):
         def save(name,data):
