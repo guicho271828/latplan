@@ -2161,21 +2161,21 @@ class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConcreteLatentMixin, 
 class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
 
-class ConcreteDetConditionalEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, ConditionalEffectMixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetConditionalEffectTransitionAE              (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, ConditionalEffectMixin, TransitionAE):
     pass
-class ConcreteDetBoolMinMaxEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, BoolMinMaxEffectMixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetBoolMinMaxEffectTransitionAE               (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolMinMaxEffectMixin, TransitionAE):
     pass
-class ConcreteDetBoolSmoothMinMaxEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetBoolSmoothMinMaxEffectTransitionAE         (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin, TransitionAE):
     pass
-class ConcreteDetBoolAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, BoolAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetBoolAddEffectTransitionAE                  (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolAddEffectMixin, TransitionAE):
     pass
-class ConcreteDetLogitAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, LogitAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetLogitAddEffectTransitionAE                 (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffectMixin, TransitionAE):
     pass
-class ConcreteDetLogitAddEffect2TransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, LogitAddEffect2Mixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetLogitAddEffect2TransitionAE                (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffect2Mixin, TransitionAE):
     pass
-class ConcreteDetNormalizedLogitAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, NormalizedLogitAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetNormalizedLogitAddEffectTransitionAE       (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NormalizedLogitAddEffectMixin, TransitionAE):
     pass
-class ConcreteDetNoSucNormalizedLogitAddEffectTransitionAE    (HammingMixin, ZeroSuppressMixin, DetActionMixin, NoSucNormalizedLogitAddEffectMixin, ConcreteLatentMixin, TransitionAE):
+class ConcreteDetNoSucNormalizedLogitAddEffectTransitionAE  (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NoSucNormalizedLogitAddEffectMixin, TransitionAE):
     pass
 
 
