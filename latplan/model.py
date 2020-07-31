@@ -2154,6 +2154,8 @@ class ZeroSuppressConvolutional2StateAE(ZeroSuppressMixin, ConvolutionalDecoderM
 
 class VanillaTransitionAE(              ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
+
+# earlier attempts to "sparcify" the transisions. No longer used
 class HammingTransitionAE(HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
 class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
@@ -2161,6 +2163,8 @@ class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConcreteLatentMixin, 
 class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
     pass
 
+
+# IJCAI2020 papers
 class ConcreteDetConditionalEffectTransitionAE              (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, ConditionalEffectMixin, TransitionAE):
     pass
 class ConcreteDetBoolMinMaxEffectTransitionAE               (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolMinMaxEffectMixin, TransitionAE):
