@@ -25,7 +25,7 @@ git clone -b release https://github.com/roswell/roswell.git
 )
 
 ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot
-ros dynamic-space-size=8000 install guicho271828/magicffi guicho271828/dataloader guicho271828/remlic guicho271828/dsama
+ros dynamic-space-size=8000 install guicho271828/magicffi guicho271828/dataloader
 
 make -j 1 -C lisp
 
