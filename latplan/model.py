@@ -2104,10 +2104,9 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammi
         return z_suc_aae
 
 class NoSucNormalizedLogitAddEffectMixin(ActionDumpMixin,NoSucBaseActionMixin,DirectLossMixin,HammingLoggerMixin):
-    "
-Same as NormalizedLogitAddEffectMixin, but the action prediction takes only the current state.
+    """Same as NormalizedLogitAddEffectMixin, but the action prediction takes only the current state.
 Code-wise, there is only the inheritance difference.
-The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
+The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."""
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
