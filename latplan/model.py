@@ -71,7 +71,6 @@ This dict can be used while building the network, making it easier to perform a 
         self.built_aux = False
         self.compiled = False
         self.loaded = False
-        self.verbose = True
         self.parameters = parameters
         if "full_epoch" not in parameters:
             if "epoch" in self.parameters:
@@ -94,11 +93,12 @@ Users should not overload this method; Define _build() for each subclass instead
 This function calls _build bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         if self.built:
-            if self.verbose:
-                print("Avoided building {} twice.".format(self))
+            print("Avoided building {} twice.".format(self))
             return
+        print("Building the network")
         self._build(*args,**kwargs)
         self.built = True
+        print("Network built")
         return self
 
     def _build(self,*args,**kwargs):
@@ -118,11 +118,12 @@ Users should not overload this method; Define _build() for each subclass instead
 This function calls _build bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         if self.built_aux:
-            if self.verbose:
-                print("Avoided building {} twice.".format(self))
+            print("Avoided building {} twice.".format(self))
             return
+        print("Building the auxiliary network")
         self._build_aux(*args,**kwargs)
         self.built_aux = True
+        print("Auxiliary network built")
         return self
 
     def _build_aux(self,*args,**kwargs):
@@ -139,11 +140,12 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def compile(self,*args,**kwargs):
         """An interface for compiling a network."""
         if self.compiled:
-            if self.verbose:
-                print("Avoided compiling {} twice.".format(self))
+            print("Avoided compiling {} twice.".format(self))
             return
+        print("Compiling the network")
         self._compile(*args,**kwargs)
         self.compiled = True
+        print("Network compiled")
         return self
 
     def _compile(self,optimizers):
@@ -163,8 +165,9 @@ into a full path."""
 Users should not overload this method; Define _save() for each subclass instead.
 This function calls _save bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
-        print("Saving to {}".format(self.local('')))
+        print("Saving the network to {}".format(self.local('')))
         self._save()
+        print("Network saved")
         return self
 
     def _save(self):
@@ -192,17 +195,23 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
 Users should not overload this method; Define _load() for each subclass instead.
 This function calls _load bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
+        if self.loaded:
+            print("Avoided loading {} twice.".format(self))
+            return
+
         if allow_failure:
             try:
-                if not self.loaded:
-                    self._load()
-                    self.loaded = True
+                print("Loading the network from {} (with failure allowed)".format(self.local('')))
+                self._load()
+                self.loaded = True
+                print("Network loaded")
             except Exception as e:
                 print("Exception {} during load(), ignored.".format(e))
         else:
-            if not self.loaded:
-                self._load()
-                self.loaded = True
+            print("Loading the network from {} (with failure not allowed)".format(self.local('')))
+            self._load()
+            self.loaded = True
+            print("Network loaded")
         return self
 
     def _load(self):
