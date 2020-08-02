@@ -1921,12 +1921,15 @@ class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin,HammingLoggerMixin)
 
         z_suc_aae = ConditionalSequential(self.action_decoder_net, z_pre, axis=1)(flatten(action))
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         self.apply  = Model([pre2,act2], ConditionalSequential(self.action_decoder_net, pre2, axis=1)(flatten(act2)))
+        return
 
-        return z_suc_aae
 
 class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect depends only on the action labels. Add/delete effects are directly modeled as binary min/max."
@@ -1947,14 +1950,18 @@ class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamm
         z_del     = wrap(z_eff, z_eff[...,1])
         z_suc_aae = wrap(z_pre, K.minimum(1-z_del, K.maximum(z_add, z_pre)))
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
         self.apply  = Model([pre2,act2], wrap(pre2, K.minimum(1-del2, K.maximum(add2, pre2))))
-        return z_suc_aae
+        return
+
 
 class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect depends only on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
@@ -1975,14 +1982,17 @@ class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixi
         z_del     = wrap(z_eff, z_eff[...,1])
         z_suc_aae = wrap(z_pre, smooth_min(1-z_del, smooth_max(z_add, z_pre)))
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
         self.apply  = Model([pre2,act2], wrap(pre2, smooth_min(1-del2, smooth_max(add2, pre2))))
-        return z_suc_aae
+        return
 
 class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect depends only on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
@@ -2003,14 +2013,17 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamming
         z_del     = wrap(z_eff, z_eff[...,1])
         z_suc_aae = wrap(z_pre, rounded_sigmoid()(z_pre - 0.5 + z_add - z_del))
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
         self.apply  = Model([pre2,act2], wrap(pre2, rounded_sigmoid()(pre2 - 0.5 + add2 - del2)))
-        return z_suc_aae
+        return
 
 class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
@@ -2030,16 +2043,18 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
         l_suc_aae = add([l_pre,l_eff])
         z_suc_aae = rounded_sigmoid()(l_suc_aae)
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
-
         self.apply  = Model([pre2,act2], suc2)
-        return z_suc_aae
+        return
 
 class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique, but without batchnorm (s_t shifted from [0,1] to [-1/2,1/2].)"
@@ -2058,16 +2073,18 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammin
         l_suc_aae = add([l_pre,l_eff])
         z_suc_aae = rounded_sigmoid()(l_suc_aae)
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
-
         self.apply  = Model([pre2,act2], suc2)
-        return z_suc_aae
+        return
 
 class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique. Uses batchnorm in effect, but not in s_t (shifted from [0,1] to [-1/2,1/2].)"
@@ -2087,16 +2104,18 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammi
         l_suc_aae = add([l_pre,l_eff])
         z_suc_aae = rounded_sigmoid()(l_suc_aae)
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
-
         self.apply  = Model([pre2,act2], suc2)
-        return z_suc_aae
+        return
 
 class NoSucNormalizedLogitAddEffectMixin(ActionDumpMixin,NoSucBaseActionMixin,DirectLossMixin,HammingLoggerMixin):
     """Same as NormalizedLogitAddEffectMixin, but the action prediction takes only the current state.
@@ -2118,17 +2137,18 @@ The effect depends only on the action labels. Add/delete effects are implicitly 
         l_suc_aae = add([l_pre,l_eff])
         z_suc_aae = rounded_sigmoid()(l_suc_aae)
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
+        return z_suc_aae
 
+    def _build_aux(self, input_shape):
+        super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
         act2 = Input(shape=(1,self.parameters['num_actions'],))
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
         suc2 = rounded_sigmoid()(lsuc2)
-
         self.apply  = Model([pre2,act2], suc2)
-        return z_suc_aae
-
+        return
 
 
 # Zero-sup SAE ###############################################################
