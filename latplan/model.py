@@ -215,6 +215,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             data = json.load(f)
             self.parameters = data["parameters"]
             self.build(tuple(data["input_shape"]))
+            self.build_aux(tuple(data["input_shape"]))
         for i, net in enumerate(self.nets):
             net.load_weights(self.local("net{}.h5".format(i)))
 
@@ -388,6 +389,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         self.loaded = True
         if save:
             self.save()
+        self.build_aux(train_data.shape[1:]) # depends on self.optimizer
         return self
 
     def evaluate(self,*args,**kwargs):
@@ -488,22 +490,18 @@ The latter two are used for verifying the performance of the AE.
 
     def encode(self,data,**kwargs):
         self.load()
-        self.build_aux()
         return self.encoder.predict(data,**kwargs)
 
     def decode(self,data,**kwargs):
         self.load()
-        self.build_aux()
         return self.decoder.predict(data,**kwargs)
 
     def autoencode(self,data,**kwargs):
         self.load()
-        self.build_aux()
         return self.autoencoder.predict(data,**kwargs)
 
     def autodecode(self,data,**kwargs):
         self.load()
-        self.build_aux()
         return self.autodecoder.predict(data,**kwargs)
 
     def summary(self,verbose=False):
@@ -870,7 +868,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
     def plot(self,data,path,verbose=False):
         self.load()
-        self.build_aux()
         x = data
         z = self.encode(x)
         y = self.decode(z)
@@ -904,7 +901,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
     def plot_autodecode(self,data,path,verbose=False):
         self.load()
-        self.build_aux()
         z = data
         x = self.decode(z)
 
@@ -936,7 +932,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
     def plot_variance(self,data,path,verbose=False):
         self.load()
-        self.build_aux()
         x = data
         samples = 100
         z = np.array([ np.round(self.encode(x)) for i in range(samples)])
