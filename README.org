@@ -24,6 +24,8 @@
   + The repository is now reorganized so that the library code goes to =latplan= directory and all other scripts remain in the root directory.
     During this migration I used [[https://github.com/newren/git-filter-repo][git-filter-repo]] utility, which rewrites the history.
     This may have broken the older tags --- I will inspect the breakage and fix them soon.
++ *NEWS* Updates on version 4.1.1, 4.1.2: The project is loadable with Anaconda, is pip-installable (somewhat).
++ *NEWS* Updates on version 4.1.3: Minor refactoring. Released the trained weights
 
 # [[https://travis-ci.org/guicho271828/latplan][https://travis-ci.org/guicho271828/latplan.svg?branch=master]]
 
