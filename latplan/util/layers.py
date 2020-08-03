@@ -14,6 +14,25 @@ def Print(msg=None):
         return x
     return Lambda(printer)
 
+def list_layer_io(net):
+    from keras.models import Model
+    print(net)
+    if isinstance(net, list):
+        for subnet in net:
+            list_layer_io(subnet)
+    elif isinstance(net, Model):
+        net.summary()
+    elif isinstance(net, Layer):
+        print("  <-")
+        for i in range(len(net._inbound_nodes)):
+            print(net._get_node_attribute_at_index(i, 'input_tensors', 'input'))
+        print("  ->")
+        for i in range(len(net._inbound_nodes)):
+            print(net._get_node_attribute_at_index(i, 'output_tensors', 'output'))
+        # print(net.input)
+    else:
+        print("nothing can be displayed")
+
 from functools import reduce
 def Sequential (array):
     def apply1(arg,f):
