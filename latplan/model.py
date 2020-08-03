@@ -1036,7 +1036,7 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         z = Sequential(self.encoder_net)(x)
         y = Sequential(self.decoder_net)(z)
 
-        z2 = Input(shape=K.int_shape(z)[1:], name="single_input_decoder")
+        z2 = Input(shape=self.zdim(), name="single_input_decoder")
         y2 = Sequential(self.decoder_net)(z2)
         w2 = Sequential(self.encoder_net)(y2)
 
