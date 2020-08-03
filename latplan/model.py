@@ -950,32 +950,17 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
 class TransitionAE(ConvolutionalEncoderMixin, StateAE):
     def double_mode(self):
-        self.mode(False)
+        pass
     def single_mode(self):
-        self.mode(True)
+        pass
     def mode(self, single):
-        if single:
-            if self.built_aux:
-                self.encoder     = self.s_encoder
-                self.decoder     = self.s_decoder
-                self.autoencoder = self.s_autoencoder
-                self.autodecoder = self.s_autodecoder
-        else:
-            self.encoder     = self.d_encoder
-            self.autoencoder = self.d_autoencoder
-            if self.built_aux:
-                self.decoder     = self.d_decoder
-                self.autodecoder = self.d_autodecoder
+        pass
 
     def as_single(self, fn, data, *args, **kwargs):
-        self.single_mode()
-        try:
-            if data.shape[1] == 2:
-                return fn(data[:, 0, ...],*args,**kwargs)
-            else:
-                return fn(data,*args,**kwargs)
-        finally:
-            self.double_mode()
+        if data.shape[1] == 2:
+            return fn(data[:, 0, ...],*args,**kwargs)
+        else:
+            return fn(data,*args,**kwargs)
 
     def plot(self, data, *args, **kwargs):
         return self.as_single(super().plot, data, *args, **kwargs)
@@ -985,15 +970,10 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         return self.as_single(super().plot_variance, data, *args, **kwargs)
 
     def adaptively(self, fn, data, *args, **kwargs):
-        try:
-            if data.shape[1] == 2:
-                self.double_mode()
-                return fn(data,*args,**kwargs)
-            else:
-                self.single_mode()
-                return fn(data,*args,**kwargs)
-        finally:
-            self.double_mode()
+        if data.shape[1] == 2:
+            return fn(data,*args,**kwargs)
+        else:
+            return fn(np.expand_dims(data,1).repeat(2, axis=1),*args,**kwargs)[:,0]
 
     def encode(self, data, *args, **kwargs):
         return self.adaptively(super().encode, data, *args, **kwargs)
@@ -1013,8 +993,8 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         z, z_pre, z_suc = dapply(x, Sequential(self.encoder_net))
         y, _,     _     = dapply(z, Sequential(self.decoder_net))
 
-        self.d_encoder     = Model(x, z)
-        self.d_autoencoder = Model(x, y)
+        self.encoder     = Model(x, z)
+        self.autoencoder = Model(x, y)
 
         if "loss" in self.parameters:
             specified = eval(self.parameters["loss"])
@@ -1025,31 +1005,20 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         else:
             self.loss = MSE
 
-        self.net = self.d_autoencoder
+        self.net = self.autoencoder
 
         self.double_mode()
         return
 
     def _build_aux(self,input_shape):
-        x = Input(shape=input_shape[1:], name="single_input")
-        z = Sequential(self.encoder_net)(x)
-        y = Sequential(self.decoder_net)(z)
-
-        z2 = Input(shape=self.zdim(), name="single_input_decoder")
-        y2 = Sequential(self.decoder_net)(z2)
-        w2 = Sequential(self.encoder_net)(y2)
-
-        self.s_encoder     = Model(x, z)
-        self.s_decoder     = Model(z2, y2)
-        self.s_autoencoder = Model(x, y)
-        self.s_autodecoder = Model(z2, w2)
 
         z2       = Input(shape=(2,*self.zdim()), name="double_input_decoder")
         y2, _, _ = dapply(z2, Sequential(self.decoder_net))
         w2, _, _ = dapply(y2, Sequential(self.encoder_net))
 
-        self.d_decoder     = Model(z2, y2)
-        self.d_autodecoder = Model(z2, w2)
+        self.decoder     = Model(z2, y2)
+        self.autodecoder = Model(z2, w2)
+        return
 
     def dump_actions(self,pre,suc,**kwargs):
         def save(name,data):
@@ -1195,8 +1164,8 @@ class BaseActionMixin:
 
         x = self.net.input      # keras has a bug, we can't make a new Input here
         _, x_pre, x_suc = dapply(x, lambda x: x)
-        z, z_pre, z_suc = dapply(self.d_encoder.output,     lambda x: x)
-        y, y_pre, y_suc = dapply(self.d_autoencoder.output, lambda x: x)
+        z, z_pre, z_suc = dapply(self.encoder.output,     lambda x: x)
+        y, y_pre, y_suc = dapply(self.autoencoder.output, lambda x: x)
 
         if self.parameters["stop_gradient"]:
             z_pre = wrap(z_pre, K.stop_gradient(z_pre))
