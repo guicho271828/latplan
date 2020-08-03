@@ -878,9 +878,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.load()
         x = data
         z = self.encode(x)
-        y = self.decode(z)
-        b = np.round(z)
-        by = self.decode(b)
+        y = self.autoencode(x)
 
         xg = gaussian(x)
         xs = salt(x)
@@ -891,21 +889,19 @@ Note: references to self.parameters[key] are all hyperparameters."""
         yp = self.autoencode(xp)
 
         dy  = ( y-x+1)/2
-        dby = (by-x+1)/2
         dyg = (yg-x+1)/2
         dys = (ys-x+1)/2
         dyp = (yp-x+1)/2
 
         from .util.plot import plot_grid, squarify
         _z = squarify(z)
-        _b = squarify(b)
 
         images = []
         from .util.plot import plot_grid
-        for seq in zip(x, _z, y, dy, _b, by, dby, xg, yg, dyg, xs, ys, dys, xp, yp, dyp):
+        for seq in zip(x, _z, y, dy, xg, yg, dyg, xs, ys, dys, xp, yp, dyp):
             images.extend(seq)
-        plot_grid(images, w=16, path=path, verbose=verbose)
-        return x,z,y,b,by
+        plot_grid(images, w=13, path=path, verbose=verbose)
+        return x,z,y
 
     def plot_autodecode(self,data,path,verbose=False):
         self.load()
@@ -1033,18 +1029,18 @@ class BaseActionMixin:
 
         x = data
         z = self.encode(x)
-        y = self.decode(z)
+        y = self.autoencode(x)
 
         x_pre, x_suc = x[:,0,...], x[:,1,...]
         z_pre, z_suc = z[:,0,...], z[:,1,...]
-        y_pre, y_suc = y[:,0,...], y[:,1,...]
+        y_pre, y_suc_aae = y[:,0,...], y[:,1,...]
+        y_suc = self.autoencode(x_suc) # run adaptively
 
         self.plot(x_pre,pre_path,verbose=verbose)
         self.plot(x_suc,suc_path,verbose=verbose)
 
         action    = self.encode_action(np.concatenate([z_pre,z_suc],axis=1))
         z_suc_aae = self.decode_action([z_pre, action])
-        y_suc_aae = self.decode(z_suc_aae)
 
         from .util.plot import plot_grid, squarify
 
