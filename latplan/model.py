@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Networks named like XXX2 uses gumbel softmax for the output layer too,
-assuming the input/output image is binarized
+Model classes for latplan.
 """
 
 import json
