@@ -25,6 +25,13 @@ class NonDetActionMixin:
         return Sequential(self.action_encoder_net)(z_pre)
 
 
+
+# idea that has not been implemented/tested AFAIR
+# kept here just as a future reminder
+class NoSucActionMixin:
+    pass
+
+
 class DiffDetActionMixin(DetActionMixin):
     "Deterministic mapping from a state difference to an action"
     def _action(self,z_pre,z_suc):
