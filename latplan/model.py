@@ -956,19 +956,6 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
     def mode(self, single):
         pass
 
-    def as_single(self, fn, data, *args, **kwargs):
-        if data.shape[1] == 2:
-            return fn(data[:, 0, ...],*args,**kwargs)
-        else:
-            return fn(data,*args,**kwargs)
-
-    def plot(self, data, *args, **kwargs):
-        return self.as_single(super().plot, data, *args, **kwargs)
-    def plot_autodecode(self, data, *args, **kwargs):
-        return self.as_single(super().plot_autodecode, data, *args, **kwargs)
-    def plot_variance(self, data, *args, **kwargs):
-        return self.as_single(super().plot_variance, data, *args, **kwargs)
-
     def adaptively(self, fn, data, *args, **kwargs):
         if data.shape[1] == 2:
             return fn(data,*args,**kwargs)
@@ -1038,7 +1025,7 @@ class BaseActionMixin:
         return self.action.predict(data,**kwargs)
     def decode_action(self,data,**kwargs):
         return self.apply.predict(data,**kwargs)
-    def plot(self,data,path,verbose=False):
+    def plot_transitions(self,data,path,verbose=False):
         import os.path
         basename, ext = os.path.splitext(path)
         pre_path = basename+"_pre"+ext
@@ -1052,8 +1039,8 @@ class BaseActionMixin:
         z_pre, z_suc = z[:,0,...], z[:,1,...]
         y_pre, y_suc = y[:,0,...], y[:,1,...]
 
-        super().plot(x_pre,pre_path,verbose=verbose)
-        super().plot(x_suc,suc_path,verbose=verbose)
+        self.plot(x_pre,pre_path,verbose=verbose)
+        self.plot(x_suc,suc_path,verbose=verbose)
 
         action    = self.encode_action(np.concatenate([z_pre,z_suc],axis=1))
         z_suc_aae = self.decode_action([z_pre, action])
