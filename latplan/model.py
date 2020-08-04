@@ -107,6 +107,9 @@ Users may define a method for each subclass for adding a new build-time feature.
 Each method should call the _build() method of the superclass in turn.
 Users are not expected to call this method directly. Call build() instead.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
+        return self._build_primary(*args,**kwargs)
+
+    def _build_primary(self,*args,**kwargs):
         pass
 
     def build_aux(self,*args,**kwargs):
@@ -134,6 +137,9 @@ Users may define a method for each subclass for adding a new build-time feature.
 Each method should call the _build() method of the superclass in turn.
 Users are not expected to call this method directly. Call build() instead.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
+        return self._build_aux_primary(*args,**kwargs)
+
+    def _build_aux_primary(self,*args,**kwargs):
         pass
 
     def compile(self,*args,**kwargs):
@@ -846,7 +852,7 @@ class StateAE(EarlyStopMixin, FullConnectedDecoderMixin, FullConnectedEncoderMix
     """An AE whose latent layer is GumbelSofmax.
 Fully connected layers only, no convolutions.
 Note: references to self.parameters[key] are all hyperparameters."""
-    def _build(self,input_shape):
+    def _build_primary(self,input_shape):
         self.encoder_net = self.build_encoder(input_shape)
         self.decoder_net = self.build_decoder(input_shape)
 
@@ -863,7 +869,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
         self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
 
-    def _build_aux(self,input_shape):
+    def _build_aux_primary(self,input_shape):
         # to be called after the training
         z2 = Input(shape=self.zdim(), name="autodecoder")
         y2 = Sequential(self.decoder_net)(z2)
@@ -967,7 +973,17 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
     def autodecode(self, data, *args, **kwargs):
         return self.adaptively(super().autodecode, data, *args, **kwargs)
 
+
     def _build(self,input_shape):
+        self.original_input_shape = input_shape
+        super()._build(input_shape[1:])
+
+    def _build_aux(self,input_shape):
+        self.original_input_shape = input_shape
+        super()._build_aux(input_shape[1:])
+
+    def _build_primary(self,input_shape):
+        input_shape = self.original_input_shape
         # [batch, 2, ...] -> [batch, ...]
         self.encoder_net = self.build_encoder(input_shape[1:])
         self.decoder_net = self.build_decoder(input_shape[1:])
@@ -993,7 +1009,8 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         self.double_mode()
         return
 
-    def _build_aux(self,input_shape):
+    def _build_aux_primary(self,input_shape):
+        input_shape = self.original_input_shape
 
         z2       = Input(shape=(2,*self.zdim()), name="double_input_decoder")
         y2, _, _ = dapply(z2, Sequential(self.decoder_net))
