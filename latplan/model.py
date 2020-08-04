@@ -1090,9 +1090,6 @@ class BaseActionMixin:
         z_suc_aae = self.decode_action([z_pre, action])
         y_suc_aae = self.decode(z_suc_aae)
 
-        z_suc_min = np.minimum(z_suc, z_suc_aae)
-        y_suc_min = self.decode(z_suc_min)
-
         from .util.plot import plot_grid, squarify
 
         def diff(src,dst):
@@ -1106,7 +1103,6 @@ class BaseActionMixin:
         _z_pre     = squarify(z_pre)
         _z_suc     = squarify(z_suc)
         _z_suc_aae = squarify(z_suc_aae)
-        _z_suc_min = squarify(z_suc_min)
 
         _plot(basename+"_transition"+ext,
               [x_pre, x_suc,
