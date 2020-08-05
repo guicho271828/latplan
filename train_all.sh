@@ -115,23 +115,23 @@ task-fixedactions (){
 # for training the NN from the scratch using GA-based hyperparameter tuner (takes ~24hrs)
 
 proj=$(date +%Y%m%d%H%M)sae-planning
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_24h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_24h -proj $proj -require 'k80||v100'"
 # task-planning      learn_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)sae-ablation
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_24h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_24h -proj $proj -require 'k80||v100'"
 # task-ablation     learn_summary
 
 proj=$(date +%Y%m%d%H%M)sae-vanilla
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_24h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_24h -proj $proj -require 'k80||v100'"
 # task-vanilla      learn_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)sae-16puzzle
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj -require 'k80||v100'"
 # task-16puzzle     learn_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)sae-fixedactions
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj -require 'k80||v100'"
 # task-fixedactions     learn 300
 # task-fixedactions     learn 200
 # task-fixedactions     learn 100
@@ -142,23 +142,23 @@ common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj
 # for training the NN 3 times with the best hyperparameter found in the result log (takes ~2hrs)
 
 proj=$(date +%Y%m%d%H%M)reproduce-planning
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj -require 'k80||v100'"
 # task-planning      reproduce_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)reproduce-ablation
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj -require 'k80||v100'"
 # task-ablation     reproduce_summary
 
 proj=$(date +%Y%m%d%H%M)reproduce-vanilla
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj -require 'k80||v100'"
 # task-vanilla      reproduce_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)reproduce-16puzzle
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj -require 'k80||v100'"
 # task-16puzzle     reproduce_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)sae-fixedactions
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj $proj -require 'k80||v100'"
 # task-fixedactions     reproduce 300
 # task-fixedactions     reproduce 200
 # task-fixedactions     reproduce 100
@@ -169,23 +169,23 @@ common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_6h -proj
 # regenerate the summary from the stored weights
 
 proj=$(date +%Y%m%d%H%M)dump-planning
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj -require 'k80||v100'"
 # task-planning      dump_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)dump-ablation
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj -require 'k80||v100'"
 # task-ablation     dump_summary
 
 proj=$(date +%Y%m%d%H%M)dump-vanilla
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj -require 'k80||v100'"
 # task-vanilla      dump_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)dump-16puzzle
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj -require 'k80||v100'"
 # task-16puzzle     dump_plot_dump_summary
 
 proj=$(date +%Y%m%d%H%M)dump-fixedactions
-common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj"
+common="parallel -j 1 --keep-order jbsub -mem 32g -cores 1+1 -queue x86_1h -proj $proj -require 'k80||v100'"
 # task-fixedactions     summary 300
 # task-fixedactions     summary 200
 # task-fixedactions     summary 100
