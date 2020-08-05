@@ -156,8 +156,15 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def _compile(self,optimizers):
         """An interface for compileing a network."""
         # default method.
+        print(f"there are {len(self.nets)} networks.")
+        print(f"there are {len(optimizers)} optimizers.")
+        print(f"there are {len(self.losses)} losses.")
+        assert len(self.nets) == len(optimizers)
+        assert len(self.nets) == len(self.losses)
         for net, o, loss in zip(self.nets, optimizers, self.losses):
+            print(f"compiling {net} with {o}, {loss}.")
             net.compile(optimizer=o, loss=loss, metrics=self.metrics)
+        return
 
     def local(self,path):
         """A convenient method for converting a relative path to the learned result directory
