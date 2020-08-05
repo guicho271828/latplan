@@ -22,12 +22,12 @@ suffix="*"
 
 proj=$(date +%Y%m%d%H%M)al4-$base-$suffix
 common="jbsub -mem 32g -cores 16 -queue x86_6h -proj $proj"
-# parallel $common actionlearner4 ::: $base/*$suffix/ ::: 3 ::: actions_both+ids.csv ::: 0 ::: 1.00
+# parallel $common actionlearner4 ::: $base/*$suffix/ ::: 4 ::: actions_both+ids.csv ::: 0 ::: 1.00
 
 base=samples-16
 suffix="*"
 
 proj=$(date +%Y%m%d%H%M)al4-$base-$suffix
 common="jbsub -mem 32g -cores 16 -queue x86_6h -proj $proj"
-# parallel $common actionlearner4 ::: $base/*$suffix/ ::: 3 ::: actions_both+ids.csv ::: 0 ::: 1.00
+# parallel $common actionlearner4 ::: $base/*$suffix/ ::: 4 ::: actions_both+ids.csv ::: 0 ::: 1.00
 
