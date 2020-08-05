@@ -302,7 +302,8 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             val_data_to  = val_data
 
         self.max_epoch = epoch
-        self.build(train_data.shape[1:]) # depends on self.optimizer
+        input_shape = train_data.shape[1:]
+        self.build(input_shape)
         print("parameters",self.parameters)
 
         def replicate(thing):
@@ -403,7 +404,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         self.loaded = True
         if save:
             self.save()
-        self.build_aux(train_data.shape[1:]) # depends on self.optimizer
+        self.build_aux(input_shape)
         return self
 
     def evaluate(self,*args,**kwargs):
