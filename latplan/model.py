@@ -25,6 +25,7 @@ from .util.distances import *
 from .util.layers    import *
 from .util.perminv   import *
 from .util.tuning    import InvalidHyperparameterError
+from .util.plot      import plot_grid, squarify
 from .util           import ensure_list, NpEncoder
 
 # utilities ###############################################################
@@ -48,6 +49,13 @@ def load(directory,allow_failure=False):
         classobj = get(get_ae_type(directory))
     return classobj(directory).load(allow_failure=allow_failure)
 
+
+def _plot(path,columns):
+    rows = []
+    for seq in zip(*columns):
+        rows.extend(seq)
+    plot_grid(rows, w=len(columns), path=path, verbose=True)
+    return
 
 class Network:
     """Base class for various neural networks including GANs, AEs and Classifiers.
@@ -907,14 +915,9 @@ Note: references to self.parameters[key] are all hyperparameters."""
         dys = (ys-x+1)/2
         dyp = (yp-x+1)/2
 
-        from .util.plot import plot_grid, squarify
         _z = squarify(z)
 
-        images = []
-        from .util.plot import plot_grid
-        for seq in zip(x, _z, y, dy, xg, yg, dyg, xs, ys, dys, xp, yp, dyp):
-            images.extend(seq)
-        plot_grid(images, w=13, path=path, verbose=verbose)
+        _plot(path, (x, _z, y, dy, xg, yg, dyg, xs, ys, dys, xp, yp, dyp))
         return x,z,y
 
     def plot_autodecode(self,data,path,verbose=False):
@@ -934,18 +937,13 @@ Note: references to self.parameters[key] are all hyperparameters."""
 
         M, N = self.parameters['M'], self.parameters['N']
 
-        from .util.plot import plot_grid, squarify
         _z   = squarify(z)
         _z2  = squarify(z2)
         _z2r = squarify(z2r)
         _z3  = squarify(z3)
         _z3r = squarify(z3r)
 
-        images = []
-        from .util.plot import plot_grid
-        for seq in zip(_z, x, _z2, _z2r, x2, x2r, _z3, _z3r, x3, x3r):
-            images.extend(seq)
-        plot_grid(images, w=10, path=path, verbose=verbose)
+        _plot(path, (_z, x, _z2, _z2r, x2, x2r, _z3, _z3r, x3, x3r))
         return _z, x, _z2, _z2r
 
     def plot_variance(self,data,path,verbose=False):
@@ -954,7 +952,6 @@ Note: references to self.parameters[key] are all hyperparameters."""
         samples = 100
         z = np.array([ np.round(self.encode(x)) for i in range(samples)])
         z = np.einsum("sbz->bsz",z)
-        from .util.plot import plot_grid
         plot_grid(z, w=6, path=path, verbose=verbose)
 
 
@@ -1067,15 +1064,8 @@ class BaseActionMixin:
         action    = self.encode_action(np.concatenate([z_pre,z_suc],axis=1))
         z_suc_aae = self.decode_action([z_pre, action])
 
-        from .util.plot import plot_grid, squarify
-
         def diff(src,dst):
             return (dst - src + 1)/2
-        def _plot(path,columns):
-            rows = []
-            for seq in zip(*columns):
-                rows.extend(seq)
-            plot_grid(rows, w=len(columns), path=path, verbose=verbose)
 
         _z_pre     = squarify(z_pre)
         _z_suc     = squarify(z_suc)
@@ -2057,7 +2047,6 @@ We again use gumbel-softmax for representing A."""
         b = np.round(z)
         by = self.decode([x[:,:dim],b])
 
-        from .util.plot import plot_grid, squarify
         x_pre, x_suc = squarify(x[:,:dim]), squarify(x[:,dim:])
         y_pre, y_suc = squarify(y[:,:dim]), squarify(y[:,dim:])
         by_pre, by_suc = squarify(by[:,:dim]), squarify(by[:,dim:])
@@ -2068,15 +2057,15 @@ We again use gumbel-softmax for representing A."""
             y_pre_im, y_suc_im = sae.decode(y[:,:dim]), sae.decode(y[:,dim:])
             by_pre_im, by_suc_im = sae.decode(by[:,:dim]), sae.decode(by[:,dim:])
             y_suc_r_im, by_suc_r_im = sae.decode(y[:,dim:].round()), sae.decode(by[:,dim:].round())
-            images = []
-            for seq in zip(x_pre_im, x_suc_im, squarify(np.squeeze(z)), y_pre_im, y_suc_im, y_suc_r_im, squarify(np.squeeze(b)), by_pre_im, by_suc_im, by_suc_r_im):
-                images.extend(seq)
-            plot_grid(images, w=10, path=self.local(path), verbose=verbose)
+            _plot(self.local(path),
+                  (x_pre_im, x_suc_im, squarify(np.squeeze(z)),
+                   y_pre_im, y_suc_im, y_suc_r_im, squarify(np.squeeze(b)),
+                   by_pre_im, by_suc_im, by_suc_r_im))
         else:
-            images = []
-            for seq in zip(x_pre, x_suc, squarify(np.squeeze(z)), y_pre, y_suc, y_suc_r, squarify(np.squeeze(b)), by_pre, by_suc, by_suc_r):
-                images.extend(seq)
-            plot_grid(images, w=10, path=self.local(path), verbose=verbose)
+            _plot(self.local(path),
+                  (x_pre, x_suc, squarify(np.squeeze(z)),
+                   y_pre, y_suc, y_suc_r, squarify(np.squeeze(b)),
+                   by_pre, by_suc, by_suc_r))
         return x,z,y,b,by
 
 class CubeActionAE(ActionAE):
