@@ -33,8 +33,8 @@ def list_layer_io(net):
     else:
         print("nothing can be displayed")
 
-from functools import reduce
 def Sequential (array):
+    from functools import reduce
     def apply1(arg,f):
         if debug:
             print("applying {}({})".format(f,arg))
@@ -45,6 +45,7 @@ def Sequential (array):
     return lambda x: reduce(apply1, array, x)
 
 def ConditionalSequential (array, condition, **kwargs):
+    from functools import reduce
     def apply1(arg,f):
         if debug:
             print("applying {}({})".format(f,arg))
