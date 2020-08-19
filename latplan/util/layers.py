@@ -66,6 +66,7 @@ def wrap(x,y,**kwargs):
     "wrap arbitrary operation"
     return Lambda(lambda x:y,**kwargs)(x)
 
+
 def flatten(x):
     if K.ndim(x) >= 3:
         try:
@@ -75,6 +76,26 @@ def flatten(x):
             return Flatten()(x)
     else:
         return x
+def flatten1D(x):
+    def fn(x):
+        if K.ndim(x) == 3:
+            return x
+        elif K.ndim(x) > 3:
+            s = K.shape(x)
+            return K.reshape(x, [K.shape(x)[0],int(np.prod(K.int_shape(x)[1:-1])),K.int_shape(x)[-1]])
+        else:
+            raise Exception(f"unsupported shape {K.shape(x)}")
+    return Lambda(fn)(x)
+def flatten2D(x):
+    def fn(x):
+        if K.ndim(x) == 4:
+            return x
+        elif K.ndim(x) > 4:
+            return K.reshape(x, [K.shape(x)[0],int(np.prod(K.int_shape(x)[1:-2])),K.int_shape(x)[-2],K.int_shape(x)[-1]])
+        else:
+            raise Exception(f"unsupported shape {K.shape(x)}")
+    return Lambda(fn)(x)
+
 
 def set_trainable (model, flag):
     from collections.abc import Iterable
