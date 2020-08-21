@@ -49,7 +49,7 @@ def ConditionalSequential (array, condition, **kwargs):
     def apply1(arg,f):
         if debug:
             print("applying {}({})".format(f,arg))
-        concat = Concatenate(**kwargs)([flatten(condition), flatten(arg)])
+        concat = Concatenate(**kwargs)([condition, arg])
         return f(concat)
     return lambda x: reduce(apply1, array, x)
 
