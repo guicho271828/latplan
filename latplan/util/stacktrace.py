@@ -15,11 +15,21 @@ def print_object(o,include_private=False):
           and not isinstance(get(key),types.FunctionType) \
           and not isinstance(get(key),types.ModuleType)   \
           and not isinstance(get(key),type)
-    def printer(thing):
+    def remove_array(thing):
         if isinstance(thing,np.ndarray):
             return "<numpy.ndarray {:8s} {}>".format(str(thing.dtype),thing.shape)
         else:
-            return repr(thing)
+            return thing
+
+    def printer(thing):
+        if isinstance(thing,list):
+            return [printer(remove_array(o)) for o in thing]
+        elif isinstance(thing,tuple):
+            return tuple([printer(remove_array(o)) for o in thing])
+        elif isinstance(thing,dict):
+            return {k:printer(remove_array(v)) for k,v in thing.items()}
+        else:
+            return remove_array(thing)
     
     for key in o:
         try:
@@ -30,7 +40,7 @@ def print_object(o,include_private=False):
     for key in o:
         try:
             if include(key):
-                print("{} = {}".format(key.rjust(maxlen+4),printer(get(key))),file=sys.stderr)
+                print("{} = {}".format(key.rjust(maxlen+4),repr(printer(get(key)))),file=sys.stderr)
         except Exception as e:
             print("{} = Error printing object : {}".format(key.rjust(maxlen),e),file=sys.stderr)
 
