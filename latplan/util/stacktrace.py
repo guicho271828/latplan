@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os.path
 import sys, traceback, types, linecache
 import numpy as np
 
@@ -57,7 +58,7 @@ def format(exit=True):
         f_locals = f.f_locals
         f_line = linecache.getline(f_filename, f_lineno).strip()
 
-        print(" ","File",f_filename,"line",f_lineno,"function",f_name,":",f_line,file=sys.stderr)
+        print(" ","File",os.path.relpath(f_filename),"line",f_lineno,"function",f_name,":",f_line,file=sys.stderr)
         print_object(f_locals)
         print(file=sys.stderr)
         
