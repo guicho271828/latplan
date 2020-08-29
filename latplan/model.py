@@ -792,7 +792,6 @@ class EarlyStopMixin:
             LinearEarlyStopping(
                 self.parameters["epoch"],
                 epoch_start = self.parameters["epoch"]*self.parameters["earlystop_delay"],
-                value_start = 1.0-self.parameters["earlystop_delay"],
                 verbose     = 1,))
 
 

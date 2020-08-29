@@ -256,7 +256,7 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
                  epoch_end,
                  epoch_start=0,
                  monitor='val_loss',
-                 value_start=1.0, value_end=0.0,
+                 ub_ratio_start=1.0, ub_ratio_end=0.0, # note: relative to the loss at epoch 0
                  sample_epochs=20, verbose=0):
         super().__init__()
         self.monitor = monitor
@@ -264,8 +264,8 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
         self.history = []
         self.epoch_end     = epoch_end
         self.epoch_start   = epoch_start
-        self.value_end     = value_end
-        self.value_start   = value_start
+        self.ub_ratio_end     = ub_ratio_end
+        self.ub_ratio_start   = ub_ratio_start
         self.sample_epochs = sample_epochs
         self.stopped_epoch = 0
 
@@ -276,7 +276,12 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
             warnings.warn('Early stopping requires %s available!' %
                           (self.monitor), RuntimeWarning)
 
-        ub = self.value_start + (self.value_end - self.value_start) / (self.epoch_end - self.epoch_start) * (epoch - self.epoch_start)
+        if epoch == 0:
+            self.value_start = current
+
+        progress_ratio = (epoch - self.epoch_start) / (self.epoch_end - self.epoch_start)
+        ub_ratio = self.ub_ratio_start + (self.ub_ratio_end - self.ub_ratio_start) * progress_ratio
+        ub = self.value_start * ub_ratio
 
         self.history.append(current) # to the last
         if len(self.history) > self.sample_epochs:
