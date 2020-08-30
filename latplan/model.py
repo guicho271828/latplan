@@ -1533,7 +1533,7 @@ class ActionDumpMixin:
 
         return
 
-class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin):
     "The effect depends on both the current state and the action labels -- Same as AAE in AAAI18."
     def _apply(self,z_pre,z_suc,action):
 
@@ -1558,7 +1558,7 @@ class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin,HammingLoggerMixin)
         return
 
 
-class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     "The effect depends only on the action labels. Add/delete effects are directly modeled as binary min/max."
     def _apply(self,z_pre,z_suc,action):
 
@@ -1590,7 +1590,7 @@ class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamm
         return
 
 
-class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     "The effect depends only on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
     def _apply(self,z_pre,z_suc,action):
 
@@ -1621,7 +1621,7 @@ class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixi
         self.apply  = Model([pre2,act2], wrap(pre2, smooth_min(1-del2, smooth_max(add2, pre2))))
         return
 
-class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     "The effect depends only on the action labels. Add/delete effects are directly modeled as binary smooth min/max."
     def _apply(self,z_pre,z_suc,action):
 
@@ -1652,7 +1652,7 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamming
         self.apply  = Model([pre2,act2], wrap(pre2, rounded_sigmoid()(pre2 - 0.5 + add2 - del2)))
         return
 
-class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique with batchnorm."
     def _apply(self,z_pre,z_suc,action):
 
@@ -1683,7 +1683,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
         self.apply  = Model([pre2,act2], suc2)
         return
 
-class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique, but without batchnorm (s_t shifted from [0,1] to [-1/2,1/2].)"
     def _apply(self,z_pre,z_suc,action):
 
@@ -1713,7 +1713,7 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammin
         self.apply  = Model([pre2,act2], suc2)
         return
 
-class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,HammingLoggerMixin):
+class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     "The effect depends only on the action labels. Add/delete effects are implicitly modeled by back2logit technique. Uses batchnorm in effect, but not in s_t (shifted from [0,1] to [-1/2,1/2].)"
     def _apply(self,z_pre,z_suc,action):
 
@@ -1773,19 +1773,19 @@ class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConcreteLatentMixin, 
 
 
 # IJCAI2020 papers
-class ConcreteDetConditionalEffectTransitionAE              (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, ConditionalEffectMixin,        ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+class ConcreteDetConditionalEffectTransitionAE              (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, ConditionalEffectMixin,        ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetBoolMinMaxEffectTransitionAE               (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolMinMaxEffectMixin,         ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+class ConcreteDetBoolMinMaxEffectTransitionAE               (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolMinMaxEffectMixin,         ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetBoolSmoothMinMaxEffectTransitionAE         (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin,   ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+class ConcreteDetBoolSmoothMinMaxEffectTransitionAE         (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin,   ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetBoolAddEffectTransitionAE                  (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolAddEffectMixin,            ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+class ConcreteDetBoolAddEffectTransitionAE                  (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolAddEffectMixin,            ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetLogitAddEffectTransitionAE                 (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffectMixin,           ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+class ConcreteDetLogitAddEffectTransitionAE                 (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffectMixin,           ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetLogitAddEffect2TransitionAE                (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffect2Mixin,          ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+class ConcreteDetLogitAddEffect2TransitionAE                (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffect2Mixin,          ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetNormalizedLogitAddEffectTransitionAE       (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NormalizedLogitAddEffectMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+class ConcreteDetNormalizedLogitAddEffectTransitionAE       (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NormalizedLogitAddEffectMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
 
 
