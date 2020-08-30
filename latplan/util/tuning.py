@@ -329,7 +329,7 @@ def simple_genetic_search(task, default_config, parameters, path,
         print("Simple GA: Generated the initial population")
         while len(open_list) < limit:
             mutation_ratio = open_list[0][0] / open_list[population-1][0]
-            assert mutation_ratio < 1
+            assert mutation_ratio <= 1
             print("Simple GA: best",open_list[0][0],
                   "worst",open_list[population-1][0],
                   "current mutation ratio",mutation_ratio)
