@@ -1000,11 +1000,7 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         self.autoencoder = Model(x, y)
 
         if "loss" in self.parameters:
-            specified = eval(self.parameters["loss"])
-            def loss(x,y):
-                return K.in_train_phase(specified(x,y), MSE(x,y))
-
-            self.loss = loss
+            self.loss = eval(self.parameters["loss"])
         else:
             self.loss = MSE
 
