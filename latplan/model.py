@@ -1435,13 +1435,9 @@ class DirectLossMixin:
         return
     def apply_direct_loss(self,true,pred):
         dummy = Lambda(lambda x: x)
-
-        loss = K.mean(mae(true, pred))
-        def direct(x, y):
-            return loss
-
-        self.metrics.append(direct)
-
+        if "direct_loss" not in self.parameters:
+            self.parameters["direct_loss"] = "MAE"
+        loss = K.mean(eval(self.parameters["direct_loss"])(true, pred))
         # direct loss should be treated as the real loss
         dummy.add_loss(K.in_train_phase(loss * self.direct_alpha.variable, loss))
         return dummy(pred)
