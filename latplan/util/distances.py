@@ -29,6 +29,22 @@ def SE(x, y):
     "Square Error"
     return K.sum(K.square(K.batch_flatten(x) - K.batch_flatten(y)), axis=-1)
 
+
+# Symmetric Cross Entropy for Robust Learning with Noisy Labels
+# ICCV 2019
+def SymmetricBCE(x, y):
+    return BCE(x,y) + BCE(y,x)
+
+def SymmetricBCE_hard(x, y):
+    x2 = x
+    x2 = K.round(x2)
+    x2 = K.stop_gradient(x2)
+    y2 = y
+    y2 = K.round(y2)
+    y2 = K.stop_gradient(y2)
+    return BCE(x2,y) + BCE(y2,x)
+
+
 # Hausdorff distance
 # (Piramuthu 1999) The Hausdor Distance Measure for Feature Selection in Learning Applications
 # Hausdorff distance is defined by sup_x inf_y d(x,y).
