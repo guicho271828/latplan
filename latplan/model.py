@@ -1192,6 +1192,12 @@ class BaseActionMixin:
 
         self.net = Model(x, dmerge(y_pre, y_suc_aae))
 
+        if "loss" in self.parameters:
+            state_loss_fn = eval(self.parameters["loss"])
+            self.net.add_loss(K.mean(state_loss_fn(x_suc, y_suc)))
+        else:
+            self.net.add_loss(K.mean(MSE(x_suc, y_suc)))
+
         self.add_metrics(x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae, v_suc_aae=v_suc_aae, w_suc_aae=w_suc_aae)
         return
 
