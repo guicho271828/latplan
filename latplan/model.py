@@ -1099,7 +1099,7 @@ class BaseActionMixin:
 
         return
 
-    def add_metrics(self, x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae, l_pre=None, l_suc=None, l_suc_aae=None, w_suc_aae=None, v_suc_aae=None,):
+    def add_metrics(self, x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae,):
         # x: inputs
         # l: logits to latent
         # z: latent
@@ -1113,16 +1113,9 @@ class BaseActionMixin:
             return mse(x_suc,y_suc_aae)
         def mse_y2y3(true,pred):
             return mse(y_suc,y_suc_aae)
-        def mse_y2v3(true,pred):
-            return mse(y_suc,v_suc_aae)
 
         def mae_z2z3(true, pred):
             return K.mean(mae(K.round(z_suc), K.round(z_suc_aae)))
-        def mae_z2w3(true, pred):
-            return K.mean(mae(K.round(z_suc), K.round(w_suc_aae)))
-
-        def mse_l2l3(true, pred):
-            return K.mean(mse(l_suc, l_suc_aae))
 
         def avg_z2(x, y):
             return K.mean(z_suc)
@@ -1133,13 +1126,7 @@ class BaseActionMixin:
         self.metrics.append(mse_x2y2)
         self.metrics.append(mse_x2y3)
         self.metrics.append(mse_y2y3)
-        if (v_suc_aae is not None):
-            self.metrics.append(mse_y2v3)
         self.metrics.append(mae_z2z3)
-        if (w_suc_aae is not None):
-            self.metrics.append(mae_z2w3)
-        if (l_suc is not None) and (l_suc_aae is not None):
-            self.metrics.append(mse_l2l3)
 
         # self.metrics.append(avg_z2)
         self.metrics.append(avg_z3)
@@ -1184,12 +1171,6 @@ class BaseActionMixin:
         z_suc_aae = self._apply(z_pre,z_suc,action)
         y_suc_aae = Sequential(self.decoder_net)(z_suc_aae)
 
-        # denoising loop
-        v_suc_aae = y_suc_aae
-        for i in range(3):
-            w_suc_aae = Sequential(self.encoder_net)(v_suc_aae)
-            v_suc_aae = Sequential(self.decoder_net)(w_suc_aae)
-
         self.net = Model(x, dmerge(y_pre, y_suc_aae))
 
         if "loss" in self.parameters:
@@ -1198,7 +1179,7 @@ class BaseActionMixin:
         else:
             self.net.add_loss(K.mean(MSE(x_suc, y_suc)))
 
-        self.add_metrics(x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae, v_suc_aae=v_suc_aae, w_suc_aae=w_suc_aae)
+        self.add_metrics(x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae)
         return
 
     def _report(self,test_both,**opts):
