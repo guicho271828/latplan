@@ -986,20 +986,19 @@ class TransitionWrapper:
 
 
     def _build(self,input_shape):
-        self.original_input_shape = input_shape
+        self.transition_input_shape = input_shape
         super()._build(input_shape[1:])
 
     def _build_aux(self,input_shape):
-        self.original_input_shape = input_shape
+        self.transition_input_shape = input_shape
         super()._build_aux(input_shape[1:])
 
-    def _build_primary(self,input_shape):
-        input_shape = self.original_input_shape
+    def _build_primary(self,state_input_shape):
         # [batch, 2, ...] -> [batch, ...]
-        self.encoder_net = self.build_encoder(input_shape[1:])
-        self.decoder_net = self.build_decoder(input_shape[1:])
+        self.encoder_net = self.build_encoder(state_input_shape)
+        self.decoder_net = self.build_decoder(state_input_shape)
 
-        x       = Input(shape=input_shape, name="double_input")
+        x       = Input(shape=self.transition_input_shape, name="double_input")
         z, _, _ = dapply(x, Sequential(self.encoder_net))
         y, _, _ = dapply(z, Sequential(self.decoder_net))
 
@@ -1027,8 +1026,7 @@ class TransitionWrapper:
         self.double_mode()
         return
 
-    def _build_aux_primary(self,input_shape):
-        input_shape = self.original_input_shape
+    def _build_aux_primary(self,state_input_shape):
 
         z2       = Input(shape=(2,*self.zdim()), name="double_input_decoder")
         y2, _, _ = dapply(z2, Sequential(self.decoder_net))
