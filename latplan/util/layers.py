@@ -542,6 +542,89 @@ class GumbelSoftmax(ScheduledVariable):
         return np.max([self.min,
                        self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
 
+class BinaryConcrete(ScheduledVariable):
+    count = 0
+
+    def __init__(self,min,max,full_epoch,
+                 annealer    = anneal_rate,
+                 beta        = 1.,
+                 offset      = 0,
+                 train_noise = True,
+                 train_hard  = False,
+                 test_noise  = False,
+                 test_hard   = True, ):
+        self.min         = min
+        self.max         = max
+        self.train_noise = train_noise
+        self.train_hard  = train_hard
+        self.test_noise  = test_noise
+        self.test_hard   = test_hard
+        self.anneal_rate = annealer(full_epoch-offset,min,max)
+        self.offset      = offset
+        self.beta        = beta
+        super(BinaryConcrete, self).__init__("temperature")
+
+    def call(self,logits):
+        u = K.random_uniform(K.shape(logits), 0, 1)
+        logistic = K.log(u + 1e-20) - K.log(1 - u + 1e-20)
+
+        if self.train_noise:
+            train_logit = logits + logistic
+        else:
+            train_logit = logits
+
+        if self.test_noise:
+            test_logit = logits + logistic
+        else:
+            test_logit = logits
+
+        def soft_train(x):
+            return K.sigmoid( x / self.variable )
+        def hard_train(x):
+            # use straight-through estimator
+            sigmoid = K.sigmoid(x / self.variable )
+            step    = K.round(sigmoid)
+            return K.stop_gradient(argmax-sigmoid) + sigmoid
+        def soft_test(x):
+            return K.sigmoid( x / self.min )
+        def hard_test(x):
+            sigmoid = K.sigmoid(x / self.min )
+            return K.round(sigmoid)
+
+        if self.train_hard:
+            train_activation = hard_train
+        else:
+            train_activation = soft_train
+
+        if self.test_hard:
+            test_activation = hard_test
+        else:
+            test_activation = soft_test
+
+        return K.in_train_phase(
+            train_activation( train_logit ),
+            test_activation ( test_logit  ))
+
+    def __call__(self,logits):
+        BinaryConcrete.count += 1
+        c = BinaryConcrete.count-1
+
+        layer = Lambda(self.call,name="concrete_{}".format(c))
+
+        q0 = K.sigmoid(logits)
+        q1 = 1-q0
+        log_q0 = K.log(q0 + 1e-20)
+        log_q1 = K.log(q1 + 1e-20)
+        loss = K.mean(q0 * log_q0 + q1 * log_q1) * self.beta
+
+        layer.add_loss(K.in_train_phase(loss, 0.0), logits)
+
+        return layer(logits)
+
+    def value(self,epoch):
+        return np.max([self.min,
+                       self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
+
 
 class BaseSchedule(ScheduledVariable):
     def __init__(self,schedule={0:0},*args,**kwargs):
