@@ -462,59 +462,62 @@ Each subclasses should implement a method for it."""
 class GumbelSoftmax(ScheduledVariable):
     count = 0
     
-    def __init__(self,N,M,min,max,full_epoch,annealer=anneal_rate, beta=1., offset=0,
-                 train_gumbel=True,
-                 train_softmax=True,
-                 test_gumbel=False,
-                 test_softmax=False, ):
-        self.N = N
-        self.M = M
-        self.min = min
-        self.max = max
-        self.train_gumbel  = train_gumbel
-        self.train_softmax = train_softmax
-        self.test_gumbel   = test_gumbel
-        self.test_softmax  = test_softmax
+    def __init__(self,N,M,min,max,full_epoch,
+                 annealer    = anneal_rate,
+                 beta        = 1.,
+                 offset      = 0,
+                 train_noise = True,
+                 train_hard  = False,
+                 test_noise  = False,
+                 test_hard   = True, ):
+        self.N           = N
+        self.M           = M
+        self.min         = min
+        self.max         = max
+        self.train_noise = train_noise
+        self.train_hard  = train_hard
+        self.test_noise  = test_noise
+        self.test_hard   = test_hard
         self.anneal_rate = annealer(full_epoch-offset,min,max)
-        self.offset = offset
-        self.beta = beta
+        self.offset      = offset
+        self.beta        = beta
         super(GumbelSoftmax, self).__init__("temperature")
         
     def call(self,logits):
         u = K.random_uniform(K.shape(logits), 0, 1)
         gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
 
-        if self.train_gumbel:
+        if self.train_noise:
             train_logit = logits + gumbel
         else:
             train_logit = logits
             
-        if self.test_gumbel:
+        if self.test_noise:
             test_logit = logits + gumbel
         else:
             test_logit = logits
 
-        def softmax_train(x):
+        def soft_train(x):
             return K.softmax( x / self.variable )
-        def argmax_train(x):
+        def hard_train(x):
             # use straight-through estimator
             argmax  = K.one_hot(K.argmax( x ), self.M)
             softmax = K.softmax( x / self.variable )
             return K.stop_gradient(argmax-softmax) + softmax
-        def softmax_test(x):
+        def soft_test(x):
             return K.softmax( x / self.min )
-        def argmax_test(x):
+        def hard_test(x):
             return K.one_hot(K.argmax( x ), self.M)
 
-        if self.train_softmax:
-            train_activation = softmax_train
+        if self.train_hard:
+            train_activation = hard_train
         else:
-            train_activation = argmax_train
+            train_activation = soft_train
 
-        if self.test_softmax:
-            test_activation = softmax_test
+        if self.test_hard:
+            test_activation = hard_test
         else:
-            test_activation = argmax_test
+            test_activation = soft_test
 
         return K.in_train_phase(
             train_activation( train_logit ),
@@ -538,6 +541,7 @@ class GumbelSoftmax(ScheduledVariable):
     def value(self,epoch):
         return np.max([self.min,
                        self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
+
 
 class BaseSchedule(ScheduledVariable):
     def __init__(self,schedule={0:0},*args,**kwargs):

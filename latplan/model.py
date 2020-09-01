@@ -554,18 +554,20 @@ The latter two are used for verifying the performance of the AE.
                max_temperature = self.parameters["max_temperature"],
                min_temperature = self.parameters["min_temperature"],
                full_epoch      = self.parameters["full_epoch"],
-               train_gumbel    = self.parameters["train_gumbel"],
-               test_gumbel     = self.parameters["test_gumbel"],
-               test_softmax    = self.parameters["test_softmax"],
+               train_noise     = self.parameters["train_noise"],
+               train_hard      = self.parameters["train_hard"],
+               test_noise      = self.parameters["test_noise"],
+               test_hard       = self.parameters["test_hard"],
                beta            = self.parameters["beta"],
                offset          = 0):
             gs = GumbelSoftmax(
                 N,M,min_temperature,max_temperature,full_epoch,
-                offset        = offset,
-                train_gumbel  = train_gumbel,
-                test_gumbel   = test_gumbel,
-                test_softmax  = test_softmax,
-                beta          = beta)
+                offset      = offset,
+                train_noise = train_noise,
+                train_hard  = train_hard,
+                test_noise  = test_noise,
+                test_hard   = test_hard,
+                beta        = beta)
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
             # self.custom_log_functions["tau"] = lambda: K.get_value(gs.variable)
             return gs
