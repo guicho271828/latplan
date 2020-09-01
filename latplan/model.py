@@ -614,12 +614,9 @@ class ConcreteLatentMixin:
     def zdim(self):
         return (self.parameters["N"],)
     def zindim(self):
-        return (self.parameters["N"],self.parameters["M"],)
+        return (self.parameters["N"],)
     def activation(self):
-        return Sequential([
-            self.build_gs(),
-            take_true(),
-        ])
+        return self.build_bc()
 
 class QuantizedLatentMixin:
     def __init__(self,*args,**kwargs):
