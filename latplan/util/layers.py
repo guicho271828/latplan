@@ -290,6 +290,38 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
                 self.model.stop_training = True
                 self.stopped_epoch = epoch
 
+class ExplosionEarlyStopping(HistoryBasedEarlyStopping):
+    "Stops when the value goes above the upper bound, which is set to a very large value (1e8 by default)"
+    def __init__(self,
+                 epoch_end,
+                 epoch_start=0,
+                 monitor='val_loss',
+                 ub=1e8,
+                 sample_epochs=20, verbose=0):
+        super().__init__()
+        self.monitor       = monitor
+        self.verbose       = verbose
+        self.history       = []
+        self.epoch_end     = epoch_end
+        self.epoch_start   = epoch_start
+        self.ub            = ub
+        self.sample_epochs = sample_epochs
+        self.stopped_epoch = 0
+
+    def on_epoch_end(self, epoch, logs=None):
+        import warnings
+        current = logs.get(self.monitor)
+        if current is None:
+            warnings.warn('Early stopping requires %s available!' %
+                          (self.monitor), RuntimeWarning)
+
+        self.history.append(current) # to the last
+        if len(self.history) > self.sample_epochs:
+            self.history.pop(0) # from the front
+            if (np.median(self.history) >= self.ub) and (self.epoch_start <= epoch) :
+                self.model.stop_training = True
+                self.stopped_epoch = epoch
+
 def anneal_rate(epoch,min=0.1,max=5.0):
     import math
     return math.log(max/min) / epoch
