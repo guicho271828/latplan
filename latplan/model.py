@@ -574,6 +574,34 @@ The latter two are used for verifying the performance of the AE.
 
         return fn(**kwargs)
 
+    def build_bc(self,
+                 **kwargs):
+        # python methods cannot use self in the
+        # default values, because python sucks
+
+        def fn(max_temperature = self.parameters["max_temperature"],
+               min_temperature = self.parameters["min_temperature"],
+               full_epoch      = self.parameters["full_epoch"],
+               train_noise     = self.parameters["train_noise"],
+               train_hard      = self.parameters["train_hard"],
+               test_noise      = self.parameters["test_noise"],
+               test_hard       = self.parameters["test_hard"],
+               beta            = self.parameters["beta"],
+               offset          = 0):
+            bc = BinaryConcrete(
+                min_temperature,max_temperature,full_epoch,
+                offset      = offset,
+                train_noise = train_noise,
+                train_hard  = train_hard,
+                test_noise  = test_noise,
+                test_hard   = test_hard,
+                beta        = beta)
+            self.callbacks.append(LambdaCallback(on_epoch_end=bc.update))
+            # self.custom_log_functions["tau"] = lambda: K.get_value(gs.variable)
+            return bc
+
+        return fn(**kwargs)
+
 # Latent Activations ################################################################
 
 class ConcreteLatentMixin:
