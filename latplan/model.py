@@ -264,6 +264,9 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
 
         if not hasattr(self,'bar'):
             self.initialize_bar()
+            from colors import color
+            from functools import partial
+            self.style = partial(color, fg='black', bg='white')
 
         tlogs = {}
         for k in self.custom_log_functions:
@@ -279,7 +282,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                 vlogs[k[4:]] = logs[k]
 
         if (epoch % 10) == 9:
-            self.bar.update(epoch+1, status = "[v] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(vlogs.items())]) + "\n")
+            self.bar.update(epoch+1, status = self.style("[v] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(vlogs.items())])) + "\n")
         else:
             self.bar.update(epoch+1, status = "[t] "+"  ".join(["{} {:8.3g}".format(k,v) for k,v in sorted(tlogs.items())]))
 
