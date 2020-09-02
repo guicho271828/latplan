@@ -999,22 +999,26 @@ class TransitionWrapper:
         self.decoder_net = self.build_decoder(state_input_shape)
 
         x       = Input(shape=self.transition_input_shape, name="double_input")
-        z, _, _ = dapply(x, Sequential(self.encoder_net))
-        y, _, _ = dapply(z, Sequential(self.decoder_net))
+        _, x_pre, x_suc = dapply(x, lambda x: x)
+        z, z_pre, z_suc = dapply(x, Sequential(self.encoder_net))
+        y, y_pre, y_suc = dapply(z, Sequential(self.decoder_net))
 
         self.encoder     = Model(x, z)
         self.autoencoder = Model(x, y)
 
         if "loss" in self.parameters:
             state_loss_fn = eval(self.parameters["loss"])
-            def loss(x,y):
-                # note: with actions, this y may be different from the y above
-                _, x_pre, x_suc = dapply(x, lambda x: x)
-                _, y_pre, y_suc = dapply(y, lambda x: x)
-                return state_loss_fn(x_pre, y_pre) + state_loss_fn(x_suc, y_suc)
-            self.loss = loss
         else:
-            self.loss = MSE
+            state_loss_fn = MSE
+
+        alpha = StepSchedule(schedule={
+            0:0,
+            (self.parameters["epoch"]*self.parameters["main_delay"]):1,
+        }, name="main")
+        self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
+        def loss(x,y):
+            return alpha.variable * (state_loss_fn(x_pre, y_pre) + state_loss_fn(x_suc, y_suc))
+        self.loss = loss
 
         self.net = self.autoencoder
 
@@ -1171,13 +1175,17 @@ class BaseActionMixin:
         z_suc_aae = self._apply(z_pre,z_suc,action)
         y_suc_aae = Sequential(self.decoder_net)(z_suc_aae)
 
-        self.net = Model(x, dmerge(y_pre, y_suc_aae))
-
         if "loss" in self.parameters:
             state_loss_fn = eval(self.parameters["loss"])
-            self.net.add_loss(K.mean(state_loss_fn(x_suc, y_suc)))
         else:
-            self.net.add_loss(K.mean(MSE(x_suc, y_suc)))
+            state_loss_fn = MSE
+
+        alpha = StepSchedule(schedule={
+            0:0,
+            (self.parameters["epoch"]*self.parameters["successor_delay"]):1,
+        }, name="successor")
+        self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
+        self.net.add_loss(alpha.variable * K.mean(state_loss_fn(x_suc, y_suc_aae)))
 
         self.add_metrics(x_pre, x_suc, z_pre, z_suc, z_suc_aae, y_pre, y_suc, y_suc_aae)
         return
