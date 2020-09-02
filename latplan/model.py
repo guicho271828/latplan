@@ -1400,7 +1400,7 @@ class DetActionMixin:
         ]
     def _action(self,z_pre,z_suc):
         self.action_encoder_net = self.build_action_encoder()
-        return ConditionalSequential(self.action_encoder_net, z_pre, axis=1)(z_suc)
+        return ConditionalSequential(self.action_encoder_net, z_pre, axis=-1)(z_suc)
 
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
@@ -1408,7 +1408,7 @@ class DetActionMixin:
         transition = Input(shape=(N*2,))
         pre2 = wrap(transition, transition[:,:N])
         suc2 = wrap(transition, transition[:,N:])
-        self.action = Model(transition, ConditionalSequential(self.action_encoder_net, pre2, axis=1)(suc2))
+        self.action = Model(transition, ConditionalSequential(self.action_encoder_net, pre2, axis=-1)(suc2))
         return
 
 
