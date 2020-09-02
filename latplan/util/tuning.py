@@ -278,9 +278,9 @@ def simple_genetic_search(task, default_config, parameters, path,
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
 
     # assert 2 <= initial_population
-    if not (2 <= initial_population):
-        print({"initial_population":initial_population},"is superceded by",{"initial_population":2},". initial_population must be larger than equal to 2",)
-        initial_population = 2
+    # if not (2 <= initial_population):
+    #     print({"initial_population":initial_population},"is superceded by",{"initial_population":2},". initial_population must be larger than equal to 2",)
+    #     initial_population = 2
     
     # assert initial_population <= limit
     if not (initial_population <= limit):
