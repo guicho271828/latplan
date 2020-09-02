@@ -446,6 +446,7 @@ class Gaussian:
 class ScheduledVariable:
     """General variable which is changed during the course of training according to some schedule"""
     def __init__(self,name="variable",):
+        self.name = name
         self.variable = K.variable(self.value(0), name=name)
         
     def value(self,epoch):
@@ -539,9 +540,9 @@ class GumbelSoftmax(ScheduledVariable):
                        self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
 
 class BaseSchedule(ScheduledVariable):
-    def __init__(self,schedule={0:0}):
+    def __init__(self,schedule={0:0},*args,**kwargs):
         self.schedule = schedule
-        super(BaseSchedule, self).__init__()
+        super().__init__(*args,**kwargs)
 
 class StepSchedule(BaseSchedule):
     """
@@ -551,19 +552,30 @@ class StepSchedule(BaseSchedule):
    ____|
 
 """
+    def __init__(self,*args,**kwargs):
+        self.current_value = None
+        super().__init__(*args,**kwargs)
+
     def value(self,epoch):
         assert epoch >= 0
+
+        def report(value):
+            if self.current_value != value:
+                print(f"StepSchedule(name={self.name}): {self.current_value} -> {value}")
+                self.current_value = value
+            return value
+
         pkey = None
         pvalue = None
         for key, value in sorted(self.schedule.items(),reverse=True):
             # from large to small
             key = int(key) # for when restoring from the json file
             if key <= epoch:
-                return value
+                return report(value)
             else:               # epoch < key 
                 pkey, pvalue = key, value
 
-        return pvalue
+        return report(pvalue)
 
 class LinearSchedule(BaseSchedule):
     """
