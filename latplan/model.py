@@ -202,7 +202,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         with open(self.local('aux.json'), 'w') as f:
             json.dump({"parameters":self.parameters,
                        "class"     :self.__class__.__name__,
-                       "input_shape":self.net.input_shape[1:]}, f , skipkeys=True, cls=NpEncoder)
+                       "input_shape":self.net.input_shape[1:]}, f , skipkeys=True, cls=NpEncoder, indent=2)
 
     def save_epoch(self, freq=10):
         def fn(epoch, logs):
@@ -511,10 +511,10 @@ The latter two are used for verifying the performance of the AE.
         self._report(test_both,**opts)
 
         with open(self.local('performance.json'), 'w') as f:
-            json.dump(performance, f, cls=NpEncoder)
+            json.dump(performance, f, cls=NpEncoder, indent=2)
 
         with open(self.local('parameter_count.json'), 'w') as f:
-            json.dump(count_params(self.autoencoder), f, cls=NpEncoder)
+            json.dump(count_params(self.autoencoder), f, cls=NpEncoder, indent=2)
 
         return self
 
