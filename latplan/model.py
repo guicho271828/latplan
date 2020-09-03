@@ -92,7 +92,7 @@ This dict can be used while building the network, making it easier to perform a 
         self.callbacks = [LambdaCallback(on_epoch_end=self.bar_update,
                                          # on_epoch_begin=self.bar_update
                                          ),
-                          keras.callbacks.TensorBoard(log_dir=self.local('logs/{}-{}'.format(path,datetime.datetime.now().isoformat())), write_graph=False)]
+                          keras.callbacks.TensorBoard(log_dir=self.local("logs/{}-{}".format(path,datetime.datetime.now().isoformat())), write_graph=False)]
 
     def build(self,*args,**kwargs):
         """An interface for building a network. Input-shape: list of dimensions.
@@ -185,7 +185,7 @@ into a full path."""
 Users should not overload this method; Define _save() for each subclass instead.
 This function calls _save bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
-        print("Saving the network to {}".format(self.local('')))
+        print("Saving the network to {}".format(self.local("")))
         self._save()
         print("Network saved")
         return self
@@ -199,7 +199,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         for i, net in enumerate(self.nets):
             net.save_weights(self.local("net{}.h5".format(i)))
 
-        with open(self.local('aux.json'), 'w') as f:
+        with open(self.local("aux.json"), "w") as f:
             json.dump({"parameters":self.parameters,
                        "class"     :self.__class__.__name__,
                        "input_shape":self.net.input_shape[1:]}, f , skipkeys=True, cls=NpEncoder, indent=2)
@@ -221,14 +221,14 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
 
         if allow_failure:
             try:
-                print("Loading the network from {} (with failure allowed)".format(self.local('')))
+                print("Loading the network from {} (with failure allowed)".format(self.local("")))
                 self._load()
                 self.loaded = True
                 print("Network loaded")
             except Exception as e:
                 print("Exception {} during load(), ignored.".format(e))
         else:
-            print("Loading the network from {} (with failure not allowed)".format(self.local('')))
+            print("Loading the network from {} (with failure not allowed)".format(self.local("")))
             self._load()
             self.loaded = True
             print("Network loaded")
@@ -240,7 +240,7 @@ Users may define a method for each subclass for adding a new load-time feature.
 Each method should call the _load() method of the superclass in turn.
 Users are not expected to call this method directly. Call load() instead.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
-        with open(self.local('aux.json'), 'r') as f:
+        with open(self.local("aux.json"), "r") as f:
             data = json.load(f)
             self.parameters = data["parameters"]
             self.build(tuple(data["input_shape"]))
@@ -251,10 +251,10 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def initialize_bar(self):
         import progressbar
         widgets = [
-            progressbar.Timer(format='%(elapsed)s'),
-            ' ', progressbar.Counter(), ' | ',
+            progressbar.Timer(format="%(elapsed)s"),
+            " ", progressbar.Counter(), " | ",
             # progressbar.Bar(),
-            progressbar.AbsoluteETA(format='%(eta)s'), ' ',
+            progressbar.AbsoluteETA(format="%(eta)s"), " ",
             DynamicMessage("status")
         ]
         self.bar = progressbar.ProgressBar(max_value=self.max_epoch, widgets=widgets)
@@ -262,11 +262,11 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def bar_update(self, epoch, logs):
         "Used for updating the progress bar."
 
-        if not hasattr(self,'bar'):
+        if not hasattr(self,"bar"):
             self.initialize_bar()
             from colors import color
             from functools import partial
-            self.style = partial(color, fg='black', bg='white')
+            self.style = partial(color, fg="black", bg="white")
 
         tlogs = {}
         for k in self.custom_log_functions:
@@ -305,7 +305,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         return loss
 
     def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer='adam',lr=0.0001,val_data=None,save=True,
+              epoch=200,batch_size=1000,optimizer="adam",lr=0.0001,val_data=None,save=True,
               train_data_to=None,
               val_data_to=None,
               **kwargs):
@@ -371,13 +371,13 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         clist = CallbackList(callbacks=self.callbacks)
         clist.set_model(self.nets[0])
         clist.set_params({
-            'batch_size': batch_size,
-            'epochs': epoch,
-            'steps': None,
-            'samples': len(train_data[0]),
-            'verbose': 0,
-            'do_validation': False,
-            'metrics': [],
+            "batch_size": batch_size,
+            "epochs": epoch,
+            "steps": None,
+            "samples": len(train_data[0]),
+            "verbose": 0,
+            "do_validation": False,
+            "metrics": [],
         })
         self.nets[0].stop_training = False
 
@@ -498,7 +498,7 @@ The latter two are used for verifying the performance of the AE.
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
-        opts = {'verbose':0,'batch_size':batch_size}
+        opts = {"verbose":0,"batch_size":batch_size}
 
         performance = {}
 
@@ -513,10 +513,10 @@ The latter two are used for verifying the performance of the AE.
 
         self._report(test_both,**opts)
 
-        with open(self.local('performance.json'), 'w') as f:
+        with open(self.local("performance.json"), "w") as f:
             json.dump(performance, f, cls=NpEncoder, indent=2)
 
-        with open(self.local('parameter_count.json'), 'w') as f:
+        with open(self.local("parameter_count.json"), "w") as f:
             json.dump(count_params(self.autoencoder), f, cls=NpEncoder, indent=2)
 
         return self
@@ -549,15 +549,15 @@ The latter two are used for verifying the performance of the AE.
         # python methods cannot use self in the
         # default values, because python sucks
 
-        def fn(N               = self.parameters['N'],
-               M               = self.parameters['M'],
-               max_temperature = self.parameters['max_temperature'],
-               min_temperature = self.parameters['min_temperature'],
-               full_epoch      = self.parameters['full_epoch'],
-               train_gumbel    = self.parameters['train_gumbel'],
-               test_gumbel     = self.parameters['test_gumbel'],
-               test_softmax    = self.parameters['test_softmax'],
-               beta            = self.parameters['beta'],
+        def fn(N               = self.parameters["N"],
+               M               = self.parameters["M"],
+               max_temperature = self.parameters["max_temperature"],
+               min_temperature = self.parameters["min_temperature"],
+               full_epoch      = self.parameters["full_epoch"],
+               train_gumbel    = self.parameters["train_gumbel"],
+               test_gumbel     = self.parameters["test_gumbel"],
+               test_softmax    = self.parameters["test_softmax"],
+               beta            = self.parameters["beta"],
                offset          = 0):
             gs = GumbelSoftmax(
                 N,M,min_temperature,max_temperature,full_epoch,
@@ -567,7 +567,7 @@ The latter two are used for verifying the performance of the AE.
                 test_softmax  = test_softmax,
                 beta          = beta)
             self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
-            # self.custom_log_functions['tau'] = lambda: K.get_value(gs.variable)
+            # self.custom_log_functions["tau"] = lambda: K.get_value(gs.variable)
             return gs
 
         return fn(**kwargs)
@@ -579,12 +579,12 @@ class ConcreteLatentMixin:
         super().__init__(*args,**kwargs)
         # this is not necessary for shape consistency but it helps pruning some hyperparameters
         if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
-            if self.parameters['M'] != 2:
+            if self.parameters["M"] != 2:
                 raise InvalidHyperparameterError()
     def zdim(self):
-        return (self.parameters['N'],)
+        return (self.parameters["N"],)
     def zindim(self):
-        return (self.parameters['N'],self.parameters['M'],)
+        return (self.parameters["N"],self.parameters["M"],)
     def activation(self):
         return Sequential([
             self.build_gs(),
@@ -596,12 +596,12 @@ class QuantizedLatentMixin:
         super().__init__(*args,**kwargs)
         # this is not necessary for shape consistency but it helps pruning some hyperparameters
         if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
-            if self.parameters['M'] != 2:
+            if self.parameters["M"] != 2:
                 raise InvalidHyperparameterError()
     def zdim(self):
-        return (self.parameters['N'],)
+        return (self.parameters["N"],)
     def zindim(self):
-        return (self.parameters['N'],)
+        return (self.parameters["N"],)
     def activation(self):
         return heavyside()
 
@@ -610,20 +610,20 @@ class SigmoidLatentMixin:
         super().__init__(*args,**kwargs)
         # this is not necessary for shape consistency but it helps pruning some hyperparameters
         if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
-            if self.parameters['M'] != 2:
+            if self.parameters["M"] != 2:
                 raise InvalidHyperparameterError()
     def zdim(self):
-        return (self.parameters['N'],)
+        return (self.parameters["N"],)
     def zindim(self):
-        return (self.parameters['N'],)
+        return (self.parameters["N"],)
     def activation(self):
         return rounded_sigmoid()
 
 class GumbelSoftmaxLatentMixin:
     def zdim(self):
-        return (self.parameters['N']*self.parameters['M'],)
+        return (self.parameters["N"]*self.parameters["M"],)
     def zindim(self):
-        return (self.parameters['N']*self.parameters['M'],)
+        return (self.parameters["N"]*self.parameters["M"],)
     def activation(self):
         return Sequential([
             self.build_gs(),
@@ -632,12 +632,12 @@ class GumbelSoftmaxLatentMixin:
 
 class SoftmaxLatentMixin:
     def zdim(self):
-        return (self.parameters['N']*self.parameters['M'],)
+        return (self.parameters["N"]*self.parameters["M"],)
     def zindim(self):
-        return (self.parameters['N']*self.parameters['M'],)
+        return (self.parameters["N"]*self.parameters["M"],)
     def activation(self):
         return Sequential([
-            Reshape((self.parameters['N'],self.parameters['M'],)),
+            Reshape((self.parameters["N"],self.parameters["M"],)),
             rounded_softmax(),
             flatten,
         ])
@@ -647,17 +647,17 @@ class SoftmaxLatentMixin:
 class FullConnectedEncoderMixin:
     def build_encoder(self,input_shape):
         return [flatten,
-                GaussianNoise(self.parameters['noise']),
+                GaussianNoise(self.parameters["noise"]),
                 BN(),
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                Dense(self.parameters["layer"], activation="relu", use_bias=False),
                 BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                Dropout(self.parameters["dropout"]),
+                Dense(self.parameters["layer"], activation="relu", use_bias=False),
                 BN(),
-                Dropout(self.parameters['dropout']),
-                Dense(self.parameters['layer'], activation='relu', use_bias=False),
+                Dropout(self.parameters["dropout"]),
+                Dense(self.parameters["layer"], activation="relu", use_bias=False),
                 BN(),
-                Dropout(self.parameters['dropout']),
+                Dropout(self.parameters["dropout"]),
                 Dense(np.prod(self.zindim())),
                 self.activation(),
         ]
@@ -667,37 +667,37 @@ class FullConnectedDecoderMixin:
         data_dim = np.prod(input_shape)
         return [
             flatten,
-            *([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            *([Dropout(self.parameters["dropout"])] if self.parameters["dropout_z"] else []),
+            Dense(self.parameters["layer"], activation="relu", use_bias=False),
             BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            Dropout(self.parameters["dropout"]),
+            Dense(self.parameters["layer"], activation="relu", use_bias=False),
             BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(data_dim, activation='sigmoid'),
+            Dropout(self.parameters["dropout"]),
+            Dense(data_dim, activation="sigmoid"),
             Reshape(input_shape),]
 
 class ConvolutionalEncoderMixin:
     """A mixin that uses convolutions in the encoder."""
     def build_encoder(self,input_shape):
         return [Reshape((*input_shape,1)),
-                GaussianNoise(self.parameters['noise']),
+                GaussianNoise(self.parameters["noise"]),
                 BN(),
-                *[Convolution2D(self.parameters['clayer'],(3,3),
-                                activation=self.parameters['activation'],padding='same', use_bias=False),
-                  Dropout(self.parameters['dropout']),
+                *[Convolution2D(self.parameters["clayer"],(3,3),
+                                activation=self.parameters["activation"],padding="same", use_bias=False),
+                  Dropout(self.parameters["dropout"]),
                   BN(),
                   MaxPooling2D((2,2)),],
-                *[Convolution2D(self.parameters['clayer'],(3,3),
-                                activation=self.parameters['activation'],padding='same', use_bias=False),
-                  Dropout(self.parameters['dropout']),
+                *[Convolution2D(self.parameters["clayer"],(3,3),
+                                activation=self.parameters["activation"],padding="same", use_bias=False),
+                  Dropout(self.parameters["dropout"]),
                   BN(),
                   MaxPooling2D((2,2)),],
                 flatten,
                 Sequential([
-                    Dense(self.parameters['layer'], activation=self.parameters['activation'], use_bias=False),
+                    Dense(self.parameters["layer"], activation=self.parameters["activation"], use_bias=False),
                     BN(),
-                    Dropout(self.parameters['dropout']),
+                    Dropout(self.parameters["dropout"]),
                     Dense(np.prod(self.zindim())),
                 ]),
                 self.activation(),
@@ -722,27 +722,27 @@ class ConvolutionalDecoderMixin:
         crop = ((crop[0][0],crop[0][1]),(crop[1][0],crop[1][1]))
         print(last_convolution,first_convolution,diff,crop)
 
-        return [*([Dropout(self.parameters['dropout'])] if self.parameters['dropout_z'] else []),
-                *[Dense(self.parameters['layer'],
-                        activation=self.parameters['activation'],
+        return [*([Dropout(self.parameters["dropout"])] if self.parameters["dropout_z"] else []),
+                *[Dense(self.parameters["layer"],
+                        activation=self.parameters["activation"],
                         use_bias=False),
                   BN(),
-                  Dropout(self.parameters['dropout']),],
-                *[Dense(np.prod(last_convolution) * self.parameters['clayer'],
-                        activation=self.parameters['activation'],
+                  Dropout(self.parameters["dropout"]),],
+                *[Dense(np.prod(last_convolution) * self.parameters["clayer"],
+                        activation=self.parameters["activation"],
                         use_bias=False),
                   BN(),
-                  Dropout(self.parameters['dropout']),],
-                Reshape((*last_convolution, self.parameters['clayer'])),
+                  Dropout(self.parameters["dropout"]),],
+                Reshape((*last_convolution, self.parameters["clayer"])),
                 *[UpSampling2D((2,2)),
-                  Deconvolution2D(self.parameters['clayer'],(3,3),
-                                  activation=self.parameters['activation'],
-                                  padding='same',
+                  Deconvolution2D(self.parameters["clayer"],(3,3),
+                                  activation=self.parameters["activation"],
+                                  padding="same",
                                   use_bias=False),
                   BN(),
-                  Dropout(self.parameters['dropout']),],
+                  Dropout(self.parameters["dropout"]),],
                 *[UpSampling2D((2,2)),
-                  Deconvolution2D(1,(3,3), activation='sigmoid',padding='same'),],
+                  Deconvolution2D(1,(3,3), activation="sigmoid",padding="same"),],
                 Cropping2D(crop),
                 Reshape(input_shape),]
 
@@ -892,7 +892,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         self.autoencoder = Model(x, y)
         self.net = self.autoencoder
         self.features = Model(x, Sequential([flatten, *_encoder[:-2]])(x))
-        self.custom_log_functions['lr'] = lambda: K.get_value(self.net.optimizer.lr)
+        self.custom_log_functions["lr"] = lambda: K.get_value(self.net.optimizer.lr)
 
     def _build_aux_primary(self,input_shape):
         # to be called after the training
@@ -944,7 +944,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         x3 = self.decode(z3)
         x3r = self.decode(z3r)
 
-        M, N = self.parameters['M'], self.parameters['N']
+        M, N = self.parameters["M"], self.parameters["N"]
 
         _z   = squarify(z)
         _z2  = squarify(z2)
@@ -1046,7 +1046,7 @@ class TransitionWrapper:
     def dump_actions(self,pre,suc,**kwargs):
         def save(name,data):
             print("Saving to",self.local(name))
-            with open(self.local(name), 'wb') as f:
+            with open(self.local(name), "wb") as f:
                 np.savetxt(f,data,"%d")
 
         data = np.concatenate([pre,suc],axis=1)
@@ -1143,7 +1143,7 @@ class BaseActionMixin:
         return Sequential([
             Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
             BN(),
-            Dropout(self.parameters['dropout']),
+            Dropout(self.parameters["dropout"]),
         ])
 
     def eff_reconstruction_loss(self,x):
@@ -1165,7 +1165,7 @@ class BaseActionMixin:
     def _build(self,input_shape):
         super()._build(input_shape)
 
-        x = self.net.input      # keras has a bug, we can't make a new Input here
+        x = self.net.input      # keras has a bug, we can"t make a new Input here
         _, x_pre, x_suc = dapply(x, lambda x: x)
         z, z_pre, z_suc = dapply(self.encoder.output,     lambda x: x)
         y, y_pre, y_suc = dapply(self.autoencoder.output, lambda x: x)
@@ -1293,7 +1293,7 @@ class BaseActionMixin:
 
         def save(name,data):
             print("Saving to",self.local(name))
-            with open(self.local(name), 'wb') as f:
+            with open(self.local(name), "wb") as f:
                 np.savetxt(f,data,"%d")
 
         N=pre.shape[1]
@@ -1401,9 +1401,9 @@ class DetActionMixin:
         return [
             *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
             Sequential([
-                        Dense(self.parameters['num_actions']),
+                        Dense(self.parameters["num_actions"]),
                         self.build_gs(N=1,
-                                      M=self.parameters['num_actions'],
+                                      M=self.parameters["num_actions"],
                                       offset=self.parameters["aae_delay"],),
             ]),
         ]
@@ -1413,7 +1413,7 @@ class DetActionMixin:
 
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
-        N = self.parameters['N']
+        N = self.parameters["N"]
         transition = Input(shape=(N*2,))
         pre2 = wrap(transition, transition[:,:N])
         suc2 = wrap(transition, transition[:,N:])
@@ -1454,7 +1454,7 @@ class ActionDumpMixin:
 
         def save(name,data):
             print("Saving to",self.local(name))
-            with open(self.local(name), 'wb') as f:
+            with open(self.local(name), "wb") as f:
                 np.savetxt(f,data,"%d")
 
         N=pre.shape[1]
@@ -1548,7 +1548,7 @@ class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin,HammingLoggerMixin)
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
-        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        act2 = Input(shape=(1,self.parameters["num_actions"],))
         self.apply  = Model([pre2,act2], ConditionalSequential(self.action_decoder_net, pre2, axis=1)(flatten(act2)))
         return
 
@@ -1577,7 +1577,7 @@ class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamm
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
-        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        act2 = Input(shape=(1,self.parameters["num_actions"],))
         eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
@@ -1609,7 +1609,7 @@ class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixi
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
-        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        act2 = Input(shape=(1,self.parameters["num_actions"],))
         eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
@@ -1640,7 +1640,7 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hamming
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
-        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        act2 = Input(shape=(1,self.parameters["num_actions"],))
         eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
@@ -1670,7 +1670,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
-        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        act2 = Input(shape=(1,self.parameters["num_actions"],))
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
@@ -1700,7 +1700,7 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammin
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
-        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        act2 = Input(shape=(1,self.parameters["num_actions"],))
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
@@ -1731,7 +1731,7 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin,Hammi
     def _build_aux(self, input_shape):
         super()._build_aux(input_shape)
         pre2 = Input(shape=self.zdim())
-        act2 = Input(shape=(1,self.parameters['num_actions'],))
+        act2 = Input(shape=(1,self.parameters["num_actions"],))
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
@@ -1794,9 +1794,9 @@ class Discriminator(Network):
         y = Sequential([
             flatten,
             *[Sequential([BN(),
-                          Dense(self.parameters['layer'],activation=self.parameters['activation']),
-                          Dropout(self.parameters['dropout']),])
-              for i in range(self.parameters['num_layers']) ],
+                          Dense(self.parameters["layer"],activation=self.parameters["activation"]),
+                          Dropout(self.parameters["dropout"]),])
+              for i in range(self.parameters["num_layers"]) ],
             Dense(1,activation="sigmoid")
         ])(x)
 
@@ -1818,7 +1818,7 @@ class PUDiscriminator(Discriminator):
     """Subclass for PU-learning."""
     def _load(self):
         super()._load()
-        K.set_value(self.c, self.parameters['c'])
+        K.set_value(self.c, self.parameters["c"])
 
     def _build(self,input_shape):
         super()._build(input_shape)
@@ -1854,7 +1854,7 @@ class PUDiscriminator(Discriminator):
             c = s.mean()
             print("PU constant c =", c)
             K.set_value(self.c, c)
-            self.parameters['c'] = float(c)
+            self.parameters["c"] = float(c)
             # prevent saving before setting c
             if save:
                 self.save()
@@ -1867,19 +1867,19 @@ class SimpleCAE(AE):
         return [Reshape((*input_shape,1)),
                 GaussianNoise(0.1),
                 BN(),
-                Convolution2D(self.parameters['clayer'],(3,3),
-                              activation=self.parameters['activation'],padding='same', use_bias=False),
-                Dropout(self.parameters['dropout']),
+                Convolution2D(self.parameters["clayer"],(3,3),
+                              activation=self.parameters["activation"],padding="same", use_bias=False),
+                Dropout(self.parameters["dropout"]),
                 BN(),
                 MaxPooling2D((2,2)),
-                Convolution2D(self.parameters['clayer'],(3,3),
-                              activation=self.parameters['activation'],padding='same', use_bias=False),
-                Dropout(self.parameters['dropout']),
+                Convolution2D(self.parameters["clayer"],(3,3),
+                              activation=self.parameters["activation"],padding="same", use_bias=False),
+                Dropout(self.parameters["dropout"]),
                 BN(),
                 MaxPooling2D((2,2)),
-                Convolution2D(self.parameters['clayer'],(3,3),
-                              activation=self.parameters['activation'],padding='same', use_bias=False),
-                Dropout(self.parameters['dropout']),
+                Convolution2D(self.parameters["clayer"],(3,3),
+                              activation=self.parameters["activation"],padding="same", use_bias=False),
+                Dropout(self.parameters["dropout"]),
                 BN(),
                 MaxPooling2D((2,2)),
                 flatten,]
@@ -1887,13 +1887,13 @@ class SimpleCAE(AE):
     def build_decoder(self,input_shape):
         data_dim = np.prod(input_shape)
         return [
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            Dense(self.parameters["layer"], activation="relu", use_bias=False),
             BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(self.parameters['layer'], activation='relu', use_bias=False),
+            Dropout(self.parameters["dropout"]),
+            Dense(self.parameters["layer"], activation="relu", use_bias=False),
             BN(),
-            Dropout(self.parameters['dropout']),
-            Dense(data_dim, activation='sigmoid'),
+            Dropout(self.parameters["dropout"]),
+            Dense(data_dim, activation="sigmoid"),
             Reshape(input_shape),]
 
     def _build(self,input_shape):
@@ -1965,13 +1965,13 @@ We again use gumbel-softmax for representing A."""
         return [
             *[
                 Sequential([
-                    Dense(self.parameters['aae_width'], activation=self.parameters['aae_activation'], use_bias=False),
+                    Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
                     BN(),
-                    Dropout(self.parameters['dropout']),])
-                for i in range(self.parameters['aae_depth'])
+                    Dropout(self.parameters["dropout"]),])
+                for i in range(self.parameters["aae_depth"])
             ],
             Sequential([
-                    Dense(self.parameters['N']*self.parameters['M']),
+                    Dense(self.parameters["N"]*self.parameters["M"]),
                     self.build_gs(),
             ]),
         ]
@@ -1981,10 +1981,10 @@ We again use gumbel-softmax for representing A."""
         return [
             *[
                 Sequential([
-                    Dense(self.parameters['aae_width'], activation=self.parameters['aae_activation'], use_bias=False),
+                    Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
                     BN(),
-                    Dropout(self.parameters['dropout']),])
-                for i in range(self.parameters['aae_depth'])
+                    Dropout(self.parameters["dropout"]),])
+                for i in range(self.parameters["aae_depth"])
             ],
             Sequential([
                 Dense(data_dim),
@@ -1995,7 +1995,7 @@ We again use gumbel-softmax for representing A."""
 
         dim = np.prod(input_shape) // 2
         print("{} latent bits".format(dim))
-        M, N = self.parameters['M'], self.parameters['N']
+        M, N = self.parameters["M"], self.parameters["N"]
 
         x = Input(shape=input_shape)
 
@@ -2025,7 +2025,7 @@ We again use gumbel-softmax for representing A."""
         self.autoencoder = self.net
 
     def encode_action(self,data,**kwargs):
-        M, N = self.parameters['M'], self.parameters['N']
+        M, N = self.parameters["M"], self.parameters["N"]
         return self.encode(data,**kwargs)[1]
 
     def report(self,train_data,
@@ -2036,7 +2036,7 @@ We again use gumbel-softmax for representing A."""
         test_data     = train_data if test_data is None else test_data
         train_data_to = train_data if train_data_to is None else train_data_to
         test_data_to  = test_data  if test_data_to is None else test_data_to
-        opts = {'verbose':0,'batch_size':batch_size}
+        opts = {"verbose":0,"batch_size":batch_size}
         def test_both(msg, fn):
             print(msg.format(fn(train_data)))
             if test_data is not None:
@@ -2083,10 +2083,10 @@ class CubeActionAE(ActionAE):
         return [
             *[
                 Sequential([
-                    Dense(self.parameters['aae_width'], activation=self.parameters['aae_activation'], use_bias=False),
+                    Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
                     BN(),
-                    Dropout(self.parameters['dropout']),])
-                for i in range(self.parameters['aae_depth'])
+                    Dropout(self.parameters["dropout"]),])
+                for i in range(self.parameters["aae_depth"])
             ],
             Sequential([
                 Dense(data_dim,use_bias=False),
@@ -2098,7 +2098,7 @@ class CubeActionAE(ActionAE):
 
         dim = np.prod(input_shape) // 2
         print("{} latent bits".format(dim))
-        M, N = self.parameters['M'], self.parameters['N']
+        M, N = self.parameters["M"], self.parameters["N"]
 
         x = Input(shape=input_shape)
 
@@ -2150,9 +2150,9 @@ class ActionDiscriminator(Discriminator):
             _y = Sequential([
                 flatten,
                 *[Sequential([BN(),
-                              Dense(self.parameters['layer'],activation=self.parameters['activation']),
-                              Dropout(self.parameters['dropout']),])
-              for i in range(self.parameters['num_layers']) ],
+                              Dense(self.parameters["layer"],activation=self.parameters["activation"]),
+                              Dropout(self.parameters["dropout"]),])
+              for i in range(self.parameters["num_layers"]) ],
                 Dense(1,activation="sigmoid")
             ])(_x)
             _m = Model(_x,_y,name="action_"+str(i))
