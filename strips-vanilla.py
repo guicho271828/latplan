@@ -43,8 +43,6 @@ default_parameters = {
     'train_softmax'   : True,    # if true, latent output is continuous
     'test_gumbel'     : False,   # if true, noise is added during testing
     'test_softmax'    : False,   # if true, latent output is continuous
-    'locality'        : 0.0,
-    'locality_delay'  : 0.0,
 }
 # hyperparameter tuning
 parameters = {
