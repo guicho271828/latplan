@@ -820,7 +820,10 @@ class HammingLoggerMixin:
 class LocalityMixin:
     def _build(self,input_shape):
         super()._build(input_shape)
-
+        if "locality_delay" not in self.parameters:
+            self.parameters["locality_delay"] = 0.0
+        if "locality" not in self.parameters:
+            self.parameters["locality"] = 0.0
         self.locality_alpha = StepSchedule(schedule={
             0:0,
             (self.parameters["epoch"]*self.parameters["locality_delay"]):self.parameters["locality"],
