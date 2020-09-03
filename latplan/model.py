@@ -756,7 +756,7 @@ class ZeroSuppressMixin:
         alpha = StepSchedule(schedule={
             0:0,
             (self.parameters["epoch"]*self.parameters["zerosuppress_delay"]):self.parameters["zerosuppress"],
-        })
+        }, name="zerosuppress")
         self.callbacks.append(LambdaCallback(on_epoch_end=alpha.update))
 
         zerosuppress_loss = K.mean(self.encoder.output)
@@ -827,7 +827,7 @@ class LocalityMixin:
         self.locality_alpha = StepSchedule(schedule={
             0:0,
             (self.parameters["epoch"]*self.parameters["locality_delay"]):self.parameters["locality"],
-        })
+        }, name="locality")
         self.callbacks.append(LambdaCallback(on_epoch_end=self.locality_alpha.update))
 
         def locality(x, y):
@@ -1437,7 +1437,7 @@ class DirectLossMixin:
         self.direct_alpha = StepSchedule(schedule={
             0:0,
             (self.parameters["epoch"]*self.parameters["direct_delay"]):self.parameters["direct"],
-        })
+        }, name="direct")
         self.callbacks.append(LambdaCallback(on_epoch_end=self.direct_alpha.update))
 
         return
