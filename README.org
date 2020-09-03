@@ -3,7 +3,7 @@
 
 * LatPlan : A domain-independent, image-based classical planner
 
-*Use tagged version for reliable reproduction of the results.*
+*Use tagged versions for reliable reproduction of the results.*
 
 + *NEWS* Initial release: Published after AAAI18.
 + *NEWS* Updates on version 2: Mainly the refactoring. AAAI18 experiments still works.
