@@ -961,7 +961,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
         plot_grid(z, w=6, path=path, verbose=verbose)
 
 
-class TransitionAE(ConvolutionalEncoderMixin, StateAE):
+class TransitionWrapper:
     def double_mode(self):
         pass
     def single_mode(self):
@@ -1763,32 +1763,32 @@ class ZeroSuppressConvolutional2StateAE(ZeroSuppressMixin, ConvolutionalDecoderM
     pass
 # Transition SAE ################################################################
 
-class VanillaTransitionAE(              ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
+class VanillaTransitionAE(              ZeroSuppressMixin, ConcreteLatentMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
 
 # earlier attempts to "sparcify" the transisions. No longer used
-class HammingTransitionAE(HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
+class HammingTransitionAE(HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
+class CosineTransitionAE (CosineMixin,  ZeroSuppressMixin, ConcreteLatentMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConcreteLatentMixin, TransitionAE):
+class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConcreteLatentMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
 
 
 # IJCAI2020 papers
-class ConcreteDetConditionalEffectTransitionAE              (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, ConditionalEffectMixin, TransitionAE):
+class ConcreteDetConditionalEffectTransitionAE              (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, ConditionalEffectMixin,        ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetBoolMinMaxEffectTransitionAE               (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolMinMaxEffectMixin, TransitionAE):
+class ConcreteDetBoolMinMaxEffectTransitionAE               (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolMinMaxEffectMixin,         ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetBoolSmoothMinMaxEffectTransitionAE         (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin, TransitionAE):
+class ConcreteDetBoolSmoothMinMaxEffectTransitionAE         (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin,   ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetBoolAddEffectTransitionAE                  (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolAddEffectMixin, TransitionAE):
+class ConcreteDetBoolAddEffectTransitionAE                  (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolAddEffectMixin,            ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetLogitAddEffectTransitionAE                 (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffectMixin, TransitionAE):
+class ConcreteDetLogitAddEffectTransitionAE                 (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffectMixin,           ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetLogitAddEffect2TransitionAE                (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffect2Mixin, TransitionAE):
+class ConcreteDetLogitAddEffect2TransitionAE                (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffect2Mixin,          ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
-class ConcreteDetNormalizedLogitAddEffectTransitionAE       (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NormalizedLogitAddEffectMixin, TransitionAE):
+class ConcreteDetNormalizedLogitAddEffectTransitionAE       (HammingMixin, ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NormalizedLogitAddEffectMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
     pass
 
 
