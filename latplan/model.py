@@ -1173,6 +1173,8 @@ class BaseActionMixin:
         z, z_pre, z_suc = dapply(self.encoder.output,     lambda x: x)
         y, y_pre, y_suc = dapply(self.autoencoder.output, lambda x: x)
 
+        if "stop_gradient" not in self.parameters:
+            self.parameters["stop_gradient"] = False
         if self.parameters["stop_gradient"]:
             z_pre = wrap(z_pre, K.stop_gradient(z_pre))
             z_suc = wrap(z_suc, K.stop_gradient(z_suc))
