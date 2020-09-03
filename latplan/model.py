@@ -1659,7 +1659,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
         self.eff_decoder_net = [
             *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
             Sequential([
-                Dense(np.prod(self.zdim())),
+                Dense(np.prod(self.zdim()),use_bias=False),
                 BN(),
             ])
         ]
