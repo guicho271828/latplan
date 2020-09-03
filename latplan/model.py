@@ -1568,7 +1568,7 @@ class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin):
             *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim())),
-                rounded_sigmoid(),
+                self.build_bc(),
                 Reshape(self.zdim()),
             ])
         ]
@@ -1665,7 +1665,7 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
         z_eff     = Sequential(self.eff_decoder_net)(flatten(action))
         z_add     = wrap(z_eff, z_eff[...,0])
         z_del     = wrap(z_eff, z_eff[...,1])
-        z_suc_aae = wrap(z_pre, rounded_sigmoid()(z_pre - 0.5 + z_add - z_del))
+        z_suc_aae = wrap(z_pre, self.build_bc()(z_pre - 0.5 + z_add - z_del))
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
         return z_suc_aae
 
@@ -1676,7 +1676,7 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
         eff2     = Sequential(self.eff_decoder_net)(flatten(act2))
         add2     = wrap(eff2, eff2[...,0])
         del2     = wrap(eff2, eff2[...,1])
-        self.apply  = Model([pre2,act2], wrap(pre2, rounded_sigmoid()(pre2 - 0.5 + add2 - del2)))
+        self.apply  = Model([pre2,act2], wrap(pre2, self.build_bc()(pre2 - 0.5 + add2 - del2)))
         return
 
 class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
@@ -1695,7 +1695,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
         l_eff     = Sequential(self.eff_decoder_net)(flatten(action))
         l_pre = self.scaling(z_pre)
         l_suc_aae = add([l_pre,l_eff])
-        z_suc_aae = rounded_sigmoid()(l_suc_aae)
+        z_suc_aae = self.build_bc()(l_suc_aae)
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
         return z_suc_aae
 
@@ -1706,7 +1706,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
-        suc2 = rounded_sigmoid()(lsuc2)
+        suc2 = self.build_bc()(lsuc2)
         self.apply  = Model([pre2,act2], suc2)
         return
 
@@ -1725,7 +1725,7 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
         l_eff     = Sequential(self.eff_decoder_net)(flatten(action))
         l_pre = self.scaling(z_pre)
         l_suc_aae = add([l_pre,l_eff])
-        z_suc_aae = rounded_sigmoid()(l_suc_aae)
+        z_suc_aae = self.build_bc()(l_suc_aae)
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
         return z_suc_aae
 
@@ -1736,7 +1736,7 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
-        suc2 = rounded_sigmoid()(lsuc2)
+        suc2 = self.build_bc()(lsuc2)
         self.apply  = Model([pre2,act2], suc2)
         return
 
@@ -1756,7 +1756,7 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
         l_eff     = Sequential(self.eff_decoder_net)(flatten(action))
         l_pre = self.scaling(z_pre)
         l_suc_aae = add([l_pre,l_eff])
-        z_suc_aae = rounded_sigmoid()(l_suc_aae)
+        z_suc_aae = self.build_bc()(l_suc_aae)
         z_suc_aae = self.apply_direct_loss(z_suc, z_suc_aae)
         return z_suc_aae
 
@@ -1767,7 +1767,7 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
         eff2 = Sequential(self.eff_decoder_net)(flatten(act2))
         lpre2 = self.scaling(pre2)
         lsuc2 = add([lpre2,eff2])
-        suc2 = rounded_sigmoid()(lsuc2)
+        suc2 = self.build_bc()(lsuc2)
         self.apply  = Model([pre2,act2], suc2)
         return
 
@@ -2020,7 +2020,7 @@ class ActionAE(AE):
             ],
             Sequential([
                 Dense(data_dim),
-                rounded_sigmoid(),
+                self.build_bc(),
                 Reshape(input_shape),]),]
 
     def _build(self,input_shape):
@@ -2147,7 +2147,7 @@ class CubeActionAE(ActionAE):
         l_pre = scaling(pre)
 
         l_suc = add([l_eff,l_pre])
-        suc_reconstruction = rounded_sigmoid()(l_suc)
+        suc_reconstruction = self.build_bc()(l_suc)
 
         y = Concatenate(axis=1)([pre,suc_reconstruction])
 
@@ -2156,7 +2156,7 @@ class CubeActionAE(ActionAE):
         l_pre2 = scaling(pre2)
         l_eff2 = Sequential(_decoder)(flatten(action2))
         l_suc2 = add([l_eff2,l_pre2])
-        suc_reconstruction2 = rounded_sigmoid()(l_suc2)
+        suc_reconstruction2 = self.build_bc()(l_suc2)
         y2 = Concatenate(axis=1)([pre2,suc_reconstruction2])
 
         self.metrics.append(MAE)
