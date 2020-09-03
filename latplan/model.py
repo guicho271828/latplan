@@ -875,9 +875,16 @@ Note: references to self.parameters[key] are all hyperparameters."""
         z = Sequential(self.encoder_net)(x)
         y = Sequential(self.decoder_net)(z)
 
-        self.loss = BCE
-        self.metrics.append(BCE)
-        self.metrics.append(MSE)
+        if "loss" in self.parameters:
+            self.loss = eval(self.parameters["loss"])
+        else:
+            self.loss = MSE
+
+        if "eval" in self.parameters:
+            e = eval(self.parameters["eval"])
+            if e not in self.metrics:
+                self.metrics.append(e)
+
         self.encoder     = Model(x, z)
         self.autoencoder = Model(x, y)
         self.net = self.autoencoder
@@ -992,19 +999,30 @@ class TransitionAE(ConvolutionalEncoderMixin, StateAE):
         self.encoder_net = self.build_encoder(input_shape[1:])
         self.decoder_net = self.build_decoder(input_shape[1:])
 
-        x               = Input(shape=input_shape, name="double_input")
-        z, z_pre, z_suc = dapply(x, Sequential(self.encoder_net))
-        y, _,     _     = dapply(z, Sequential(self.decoder_net))
+        x       = Input(shape=input_shape, name="double_input")
+        z, _, _ = dapply(x, Sequential(self.encoder_net))
+        y, _, _ = dapply(z, Sequential(self.decoder_net))
 
         self.encoder     = Model(x, z)
         self.autoencoder = Model(x, y)
 
         if "loss" in self.parameters:
-            self.loss = eval(self.parameters["loss"])
+            state_loss_fn = eval(self.parameters["loss"])
+            def loss(x,y):
+                # note: with actions, this y may be different from the y above
+                _, x_pre, x_suc = dapply(x, lambda x: x)
+                _, y_pre, y_suc = dapply(y, lambda x: x)
+                return state_loss_fn(x_pre, y_pre) + state_loss_fn(x_suc, y_suc)
+            self.loss = loss
         else:
             self.loss = MSE
 
         self.net = self.autoencoder
+
+        if "eval" in self.parameters:
+            e = eval(self.parameters["eval"])
+            if e not in self.metrics:
+                self.metrics.append(e)
 
         self.double_mode()
         return
