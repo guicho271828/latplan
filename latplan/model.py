@@ -1404,7 +1404,7 @@ class DetActionMixin:
     "Deterministic mapping from a state pair to an action"
     def build_action_encoder(self):
         return [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                         Dense(self.parameters["num_actions"]),
                         self.build_gs(N=1,
@@ -1538,7 +1538,7 @@ class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin):
     def _apply(self,z_pre,z_suc,action):
 
         self.action_decoder_net = [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim())),
                 rounded_sigmoid(),
@@ -1563,7 +1563,7 @@ class BoolMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim())*3),
                 Reshape((*self.zdim(),3)),
@@ -1595,7 +1595,7 @@ class BoolSmoothMinMaxEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixi
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim())*3),
                 Reshape((*self.zdim(),3)),
@@ -1626,7 +1626,7 @@ class BoolAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim())*3),
                 Reshape((*self.zdim(),3)),
@@ -1657,7 +1657,7 @@ class NormalizedLogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMi
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim()),use_bias=False),
                 BN(),
@@ -1688,7 +1688,7 @@ class LogitAddEffectMixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim())),
             ])
@@ -1718,7 +1718,7 @@ class LogitAddEffect2Mixin(ActionDumpMixin,BaseActionMixin,DirectLossMixin):
     def _apply(self,z_pre,z_suc,action):
 
         self.eff_decoder_net = [
-            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"])],
+            *[self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)],
             Sequential([
                 Dense(np.prod(self.zdim())),
                 BN(),
@@ -1973,7 +1973,7 @@ class ActionAE(AE):
                     Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
                     BN(),
                     Dropout(self.parameters["dropout"]),])
-                for i in range(self.parameters["aae_depth"])
+                for i in range(self.parameters["aae_depth"]-1)
             ],
             Sequential([
                     Dense(self.parameters["N"]*self.parameters["M"]),
@@ -1989,7 +1989,7 @@ class ActionAE(AE):
                     Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
                     BN(),
                     Dropout(self.parameters["dropout"]),])
-                for i in range(self.parameters["aae_depth"])
+                for i in range(self.parameters["aae_depth"]-1)
             ],
             Sequential([
                 Dense(data_dim),
@@ -2091,7 +2091,7 @@ class CubeActionAE(ActionAE):
                     Dense(self.parameters["aae_width"], activation=self.parameters["aae_activation"], use_bias=False),
                     BN(),
                     Dropout(self.parameters["dropout"]),])
-                for i in range(self.parameters["aae_depth"])
+                for i in range(self.parameters["aae_depth"]-1)
             ],
             Sequential([
                 Dense(data_dim,use_bias=False),
