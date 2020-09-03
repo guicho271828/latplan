@@ -27,7 +27,7 @@
     During this migration I used [[https://github.com/newren/git-filter-repo][git-filter-repo]] utility, which rewrites the history.
     This may have broken the older tags --- I will inspect the breakage and fix them soon.
 + *NEWS* Updates on version 4.1.1, 4.1.2: The project is loadable with Anaconda, is pip-installable (somewhat).
-+ *NEWS* Updates on version 4.1.3: Minor refactoring. We also released the trained weights.
++ *NEWS* Updates on version 4.1.3: Minor refactoring. We also released the trained weights. See [[Releases][https://github.com/guicho271828/latplan/releases]].
   + *Future plan*: I am currently thinking about porting Latplan to Pytorch, as well as allowing the integration with Gym environment, especally PDDLGym.
 
 # [[https://travis-ci.org/guicho271828/latplan][https://travis-ci.org/guicho271828/latplan.svg?branch=master]]
