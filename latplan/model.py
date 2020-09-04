@@ -707,7 +707,14 @@ class FullConnectedDecoderMixin:
 class ConvolutionalEncoderMixin:
     """A mixin that uses convolutions in the encoder."""
     def build_encoder(self,input_shape):
-        return [Reshape((*input_shape,1)),
+        if len(input_shape) == 2:
+            reshape = Reshape((*input_shape,1)) # monochrome image
+        elif len(input_shape) == 3:
+            reshape = lambda x: x
+        else:
+            raise Exception(f"ConvolutionalEncoderMixin: unsupported shape {input_shape}")
+
+        return [reshape,
                 GaussianNoise(self.parameters["noise"]),
                 BN(),
                 *[Convolution2D(self.parameters["clayer"],(3,3),
