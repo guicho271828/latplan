@@ -709,7 +709,7 @@ class FullConnectedDecoderMixin:
             Reshape(input_shape),]
 
 class ConvolutionalEncoderMixin:
-    """A mixin that uses convolutions in the encoder."""
+    """A mixin that uses convolutions + fc in the encoder."""
     def build_encoder(self,input_shape):
         if len(input_shape) == 2:
             reshape = Reshape((*input_shape,1)) # monochrome image
@@ -1813,18 +1813,25 @@ class PoissonTransitionAE(PoissonMixin, ZeroSuppressMixin, ConcreteLatentMixin, 
 
 # IJCAI2020 papers
 class ConcreteDetConditionalEffectTransitionAE              (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, ConditionalEffectMixin,        ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+    """Vanilla Space AE"""
     pass
 class ConcreteDetBoolMinMaxEffectTransitionAE               (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolMinMaxEffectMixin,         ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+    """Cube-Space AE with naive discrete effects (not BTL)"""
     pass
 class ConcreteDetBoolSmoothMinMaxEffectTransitionAE         (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolSmoothMinMaxEffectMixin,   ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+    """Cube-Space AE with naive discrete effects with smooth min/max"""
     pass
 class ConcreteDetBoolAddEffectTransitionAE                  (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, BoolAddEffectMixin,            ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+    """Cube-Space AE with naive discrete effects (not BTL). Effect is one-hot from add/del/nop"""
     pass
 class ConcreteDetLogitAddEffectTransitionAE                 (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffectMixin,           ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+    """Cube-Space AE without BatchNorm"""
     pass
 class ConcreteDetLogitAddEffect2TransitionAE                (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, LogitAddEffect2Mixin,          ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+    """Cube-Space AE without BatchNorm for the current state but with BatchNorm for effects"""
     pass
 class ConcreteDetNormalizedLogitAddEffectTransitionAE       (ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NormalizedLogitAddEffectMixin, ConvolutionalEncoderMixin, TransitionWrapper, StateAE):
+    """Final Cube-Space AE implementation"""
     pass
 
 
