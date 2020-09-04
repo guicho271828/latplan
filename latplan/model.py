@@ -781,6 +781,85 @@ class ConvolutionalDecoderMixin:
                 Reshape(input_shape),]
 
 
+class FullyConvolutionalAEMixin:
+    """A mixin that uses only convolutional layers in the encoder/decoder."""
+
+    def output_shape(self,layers,input_shape):
+        from functools import reduce
+        def c(input_shape,layer):
+            print(input_shape)
+            return layer.compute_output_shape(input_shape)
+        return reduce(c,layers,input_shape)
+
+    def encoder_block(self,i):
+        """Extend this method for Residual Nets"""
+        k = self.parameters["kernel_size"]
+        p = self.parameters["pooling_size"]
+        w  = self.parameters["encoder_width"]
+        dw = self.parameters["width_increment"]
+        return [
+            Convolution2D(w * (dw ** i), (k,k), activation="relu", padding="same", use_bias=False),
+            BN(),
+            Dropout(self.parameters["encoder_dropout"]),
+            MaxPooling2D((p,p)),
+        ]
+
+    def decoder_block(self,i):
+        """Extend this method for Residual Nets"""
+        k = self.parameters["kernel_size"]
+        p = self.parameters["pooling_size"]
+        w  = self.parameters["encoder_width"]
+        dw = self.parameters["width_increment"]
+        return [
+            UpSampling2D((p,p)),
+            Deconvolution2D(w * (dw ** i),(k,k), activation="relu",padding="same", use_bias=False),
+            BN(),
+            Dropout(self.parameters["decoder_dropout"]),
+        ]
+
+    def build_encoder(self,input_shape):
+        if len(input_shape) == 2:
+            reshape = [Reshape((*input_shape,1))] # monochrome image
+        elif len(input_shape) == 3:
+            reshape = []
+        else:
+            raise Exception(f"ConvolutionalEncoderMixin: unsupported shape {input_shape}")
+
+        layers = [*reshape,
+                  GaussianNoise(self.parameters["noise"]),
+                  BN(),
+        ]
+        for i in range(self.parameters["encoder_depth"]-1):
+            layers.extend(self.encoder_block(i))
+        k = self.parameters["kernel_size"]
+        layers.append(Convolution2D(self.parameters["P"], (k,k), padding="same"))
+
+        self.conv_latent_space = self.output_shape(layers,[0,*input_shape])[1:] # H,W,C
+        self.parameters["N"] = np.prod(self.conv_latent_space)
+        print(f"latent space shape is {self.conv_latent_space} : {self.parameters['N']} propositions in total")
+        return [*layers,
+                # flatten,
+                Reshape((self.parameters["N"],)),
+                # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                # Conv2D does not set the tensor shape properly, and Flatten fails to work
+                # during the build_aux phase.
+                self.activation(),
+        ]
+
+    def build_decoder(self,input_shape):
+        layers = [Reshape(self.conv_latent_space),
+                  BN(),
+        ]
+        for i in range(self.parameters["encoder_depth"]-2, -1, -1):
+            layers.extend(self.decoder_block(i))
+        k = self.parameters["kernel_size"]
+        layers.append(Deconvolution2D(3, (k,k), padding="same"))
+
+        computed_input_shape = self.output_shape(layers,[0,*self.conv_latent_space])[1:]
+        assert input_shape == computed_input_shape
+        return layers
+
+
 # Mixins ################################################################
 
 class ZeroSuppressMixin:
