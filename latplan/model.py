@@ -1902,6 +1902,12 @@ class ConcreteDetNormalizedLogitAddEffectTransitionAE       (ZeroSuppressMixin, 
     pass
 
 
+
+class FullyConvolutionalCubeSpaceAE(ZeroSuppressMixin, ConcreteLatentMixin, DetActionMixin, NormalizedLogitAddEffectMixin, FullyConvolutionalAEMixin, TransitionWrapper, StateAE):
+    """Fully convolutional Cube-Space AE, cannot specify the latent space size (depends on the input size)"""
+    pass
+
+
 # state/action discriminator ####################################################
 class Discriminator(Network):
     """Base class for generic binary classifiers."""
