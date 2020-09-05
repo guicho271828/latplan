@@ -1519,6 +1519,7 @@ class ActionDumpMixin:
         N=pre.shape[1]
         data = np.concatenate([pre,suc],axis=1)
         actions = self.encode_action(data, **kwargs).round()
+        # [B, 1, A]
 
         histogram = np.squeeze(actions.sum(axis=0,dtype=int))
         print(histogram)
