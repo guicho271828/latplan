@@ -1526,7 +1526,8 @@ class ActionDumpMixin:
         true_num_actions = np.count_nonzero(histogram)
         print(true_num_actions)
         all_labels = np.zeros((true_num_actions, actions.shape[1], actions.shape[2]), dtype=int)
-        for i, a in enumerate(np.where(histogram > 0)[0]):
+        action_ids = np.where(histogram > 0)[0]
+        for i, a in enumerate(action_ids):
             all_labels[i][0][a] = 1
 
         save("available_actions.csv", np.where(histogram > 0)[0])
@@ -1547,8 +1548,6 @@ class ActionDumpMixin:
         save("actions_both.csv", np.concatenate([data,data_aae], axis=0))
         save("actions_both+ids.csv", np.concatenate([data_byid,data_aae_byid], axis=0))
 
-        all_actions_byid = to_id(all_labels)
-
         # extract the effects.
         # there were less efficient version 2 and 3, which uses the transition dataset.
         # this version does not require iterating over hte dataset --- merely twice over all actions.
@@ -1556,9 +1555,25 @@ class ActionDumpMixin:
         del_effect = 1-self.decode_action([np.ones((true_num_actions, N)),all_labels], **kwargs)
         save("action_add4.csv",add_effect)
         save("action_del4.csv",del_effect)
-        save("action_add4+ids.csv",np.concatenate((add_effect,all_actions_byid), axis=1))
-        save("action_del4+ids.csv",np.concatenate((del_effect,all_actions_byid), axis=1))
+        save("action_add4+ids.csv",np.concatenate((add_effect,action_ids.reshape([-1,1])), axis=1))
+        save("action_del4+ids.csv",np.concatenate((del_effect,action_ids.reshape([-1,1])), axis=1))
 
+        # extract the preconditions.
+        # it is done by checking if a certain bit is always 0 or always 1.
+        pos = []
+        neg = []
+        for a in action_ids:
+            pre_a = pre[np.where(actions_byid == a)[0]]
+            pos_a =   pre_a.min(axis=0,keepdims=True) # [1,C]
+            neg_a = 1-pre_a.max(axis=0,keepdims=True) # [1,C]
+            pos.append(pos_a)
+            neg.append(neg_a)
+        pos = np.concatenate(pos,axis=0) # [A,C]
+        neg = np.concatenate(neg,axis=0) # [A,C]
+        save("action_pos4.csv",pos)
+        save("action_neg4.csv",neg)
+        save("action_pos4+ids.csv",np.concatenate((pos,action_ids.reshape([-1,1])), axis=1))
+        save("action_neg4+ids.csv",np.concatenate((neg,action_ids.reshape([-1,1])), axis=1))
         return
 
 class ConditionalEffectMixin(BaseActionMixin,DirectLossMixin):
