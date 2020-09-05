@@ -422,7 +422,12 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         self.loaded = True
         if save:
             self.save()
-        self.build_aux(input_shape)
+        try:
+            self.build_aux(input_shape)
+        except Exception as e:
+            print("building the auxilialy network failed.")
+            from .util.stacktrace import format
+            format(False)
         return self
 
     def evaluate(self,*args,**kwargs):
