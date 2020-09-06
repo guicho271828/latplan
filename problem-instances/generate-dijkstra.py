@@ -8,6 +8,7 @@ import sys
 sys.path.append('../../')
 from latplan.util import curry
 from latplan.util.noise import gaussian, salt, pepper, saltpepper
+from latplan.util.search import dijkstra
 
 import matplotlib
 matplotlib.use('Agg')
@@ -37,48 +38,10 @@ instances = 100
 noise_fns     = [identity]
 output_dirs = ["vanilla"]
 
-def dijkstra(init_c,length,successor_fn):
-    import queue
-    open_list = queue.PriorityQueue()
-    close_list = {}
-
-    t = tuple(init_c)
-    open_list.put((0, t))
-    close_list[t] = {"g":0, "open":True,}
-
-    expanded = 0
-    g_max = -1
-    
-    while not open_list.empty():
-        expanded += 1
-        g, current = open_list.get()
-        if g > length:
-            print("explored all nodes with g < {}".format(length))
-            return
-        if g == length:
-            yield current
-        if g > g_max:
-            print("new g",g,"expanded",expanded)
-            g_max = g
-                
-        close_list[current]["open"]=False
-        g_new = g+1
-        
-        for succ in successor_fn(current):
-            succ = tuple(succ)
-            if succ in close_list:
-                node = close_list[succ]
-                if node["open"] == False:
-                    continue
-                if g_new < node["g"]:
-                    node["g"]    = g_new
-                    node["open"] = True
-                    open_list.put((g_new,succ))
-            else:
-                close_list[succ] = {"g":g_new, "open":True,}
-                open_list.put((g_new,succ))
-    print("open list exhausted")
-    return
+# dijkstra will yield a pair (current, close_list). This passes the current only
+def untuple(generator):
+    for tup in generator:
+        yield tup[0]
 
 # XXX do not use, still results in suboptimal paths???
 def lightsout_special(init_c,length,successor_fn):
@@ -144,13 +107,17 @@ def generate(p, ics, gcs, *args):
 
 ################################################################
 
+
+
 def puzzle(type='mnist', width=3, height=3):
     import importlib
     p = importlib.import_module('latplan.puzzles.puzzle_{}'.format(type))
     p.setup()
-    ics = reservoir_sampling(dijkstra(np.arange(width*height), steps,
-                                      lambda config: p.successors(config,width,height)),
-                             instances)
+    ics = reservoir_sampling(
+        untuple(
+            dijkstra(tuple(np.arange(width*height)), steps,
+                     lambda config: p.successors(config,width,height))),
+        instances)
     gcs = np.arange(width*height).reshape((1,width*height))
     generate(p, ics, gcs, width, height)
 
@@ -183,9 +150,11 @@ def hanoi(disks=5, towers=3):
     p.setup()
     ics = [
         np.zeros(disks,dtype=int),
-        *reservoir_sampling(dijkstra(np.full(disks,towers-1,dtype=int), steps,
-                                     lambda config: p.successors(config,disks,towers)),
-                            instances-1)
+        *reservoir_sampling(
+            untuple(
+                dijkstra(tuple(np.full(disks,towers-1,dtype=int)), steps,
+                         lambda config: p.successors(config,disks,towers))),
+            instances-1)
     ]
     gcs = np.full((1,disks),towers-1,dtype=int)
     generate(p, ics, gcs, disks, towers)
@@ -194,9 +163,11 @@ def lightsout(type='digital', size=4):
     import importlib
     p = importlib.import_module('latplan.puzzles.lightsout_{}'.format(type))
     p.setup()
-    ics = reservoir_sampling(dijkstra(np.full(size*size,-1), steps,
-                                      lambda config: p.successors(config)),
-                             instances)
+    ics = reservoir_sampling(
+        untuple(
+            dijkstra(tuple(np.full(size*size,-1)), steps,
+                     lambda config: p.successors(config))),
+        instances)
     gcs = np.full((1,size*size),-1)
     generate(p, ics, gcs)
 
