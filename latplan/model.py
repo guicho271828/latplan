@@ -322,7 +322,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         self.max_epoch = epoch
         input_shape = train_data.shape[1:]
         self.build(input_shape)
-        print("parameters",self.parameters)
 
         def replicate(thing):
             if isinstance(thing, tuple):
