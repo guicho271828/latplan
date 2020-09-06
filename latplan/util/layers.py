@@ -315,6 +315,10 @@ class ExplosionEarlyStopping(HistoryBasedEarlyStopping):
             warnings.warn('Early stopping requires %s available!' %
                           (self.monitor), RuntimeWarning)
 
+        if np.isnan(current) :
+            self.model.stop_training = True
+            self.stopped_epoch = epoch
+            return
         self.history.append(current) # to the last
         if len(self.history) > self.sample_epochs:
             self.history.pop(0) # from the front
