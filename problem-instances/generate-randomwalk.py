@@ -7,6 +7,7 @@ import sys
 sys.path.append('../../')
 from latplan.util import curry
 from latplan.util.noise import gaussian, salt, pepper, saltpepper
+from latplan.util.search import random_walk
 
 import matplotlib
 matplotlib.use('Agg')
@@ -36,39 +37,6 @@ instances = 100
 noise_fns     = [identity]
 output_dirs = ["vanilla"]
 
-def random_walk(init_c,length,successor_fn):
-    print(".",end="")
-    while True:
-        result = random_walk_rec(init_c, [init_c], length, successor_fn)
-        print()
-        if result is None:
-            continue
-        else:
-            return result
-
-def random_walk_rec(current, trace, length, successor_fn): 
-    import numpy.random as random
-    if length == 0:
-        return current
-    else:
-        sucs = successor_fn(current)
-        first = random.randint(len(sucs))
-        now = first
-
-        while True:
-            suc = sucs[now]
-            try:
-                assert not np.any([np.all(np.equal(suc, t)) for t in trace])
-                result = random_walk_rec(suc, [*trace, suc], length-1, successor_fn)
-                assert result is not None
-                return result
-            except AssertionError:
-                now = (now+1)%len(sucs)
-                if now == first:
-                    print("B",end="")
-                    return None
-                else:
-                    continue
 
 def safe_chdir(path):
     try:
