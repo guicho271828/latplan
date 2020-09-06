@@ -18,3 +18,4 @@ dependencies:
       - imageio
       - pillow
       - git+https://github.com/tomsilver/pddlgym
+      - tqdm
