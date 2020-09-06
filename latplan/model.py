@@ -1008,6 +1008,7 @@ Note: references to self.parameters[key] are all hyperparameters."""
             e = eval(self.parameters["eval"])
             if e not in self.metrics:
                 self.metrics.append(e)
+            self.eval = e
 
         self.encoder     = Model(x, z)
         self.autoencoder = Model(x, y)
@@ -1150,6 +1151,7 @@ class TransitionWrapper:
             e = eval(self.parameters["eval"])
             if e not in self.metrics:
                 self.metrics.append(e)
+            self.eval = e
 
         self.double_mode()
         return
