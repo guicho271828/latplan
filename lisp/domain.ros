@@ -7,25 +7,28 @@ exec ros dynamic-space-size=32000 -Q -- $0 "$@"
 #|
 
 This is a converter from a CSV file containing the propositional state vectors
-to a PDDL *domain* file.
-PDDL files are compatible to any classical planning solvers.
-See the past competition solvers for example.
+to a PDDL *domain* file, initially wrote for AMA1, in conjunction with problem.ros.
 
-http://www.plg.inf.uc3m.es/ipc2011-deterministic/
-https://helios.hud.ac.uk/scommv/IPC-14/planners.html
+*** THIS PROGRAM IS NOT USED IN THE ACTUAL AMA1. ***
+
+Problem files are small, just containing the initial and the goal states,
+but the PDDL domain file is huge, due to the large number of actions.
+Thus, while in princeple any PDDL-based solver should be able to parse it and solve it,
+some solvers may fail to even read/parse it (e.g. memory exhaust),
+or take incredibly larger amount of runtime.
+Thus we developped sas.ros, which skips part of the computation and
+replace the original python script (very slow) in Fast Downward to a compiled lisp program (sas.ros).
+Since a SAS file contains the information of both the domain file and the problem file,
+neither problem.ros nor domain.ros is necessary now.
 
 In a CSV file, each line is a description of a transition.
 The first half of the line is for the before-state and
 the second half of the line is for the after-state (successor state).
 
-Problem files are small, just containing the initial and the goal states,
-but the PDDL domain file is huge, due to the large number of actions.
-Thus, while in princeple any PDDL-based solver should be able to parse it and solve it,
-some solvers may fail to even read/parse it (e.g. buffer overflow),
-or take incredibly larger amount of runtime.
-
-Thus we developped sas.ros, which skips part of the computation and
-replace the original python script (very slow) in Fast Downward to a compiled program (sas.ros).
+PDDL files are compatible to any classical planning solvers.
+See the past competition solvers for example.
+http://www.plg.inf.uc3m.es/ipc2011-deterministic/
+https://helios.hud.ac.uk/scommv/IPC-14/planners.html
 
 The script is capable of handle the value of 2 (don't care) in the action description,
 but in AMA1 this is not used. Just 0 = false, 1 = true.
