@@ -20,7 +20,7 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
 
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre serializable-object lparallel numcl) :silent t)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre serializable-object lparallel numcl dataloader) :silent t)
   )
 
 (defpackage :actionlearner
