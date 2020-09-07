@@ -43,7 +43,7 @@ def print_object(o,include_private=False):
             if include(key):
                 print("{} = {}".format(key.rjust(maxlen+4),repr(printer(get(key)))),file=sys.stderr)
         except Exception as e:
-            print("{} = Error printing object : {}".format(key.rjust(maxlen),e),file=sys.stderr)
+            print("{} = Error printing object : {}".format(str(key).rjust(maxlen),e),file=sys.stderr)
 
 def format(exit=True):
     np.set_printoptions(threshold=25,formatter=None)
