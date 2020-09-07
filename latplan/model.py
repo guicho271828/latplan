@@ -822,17 +822,21 @@ class FullyConvolutionalAEMixin:
         ]
 
     def build_encoder(self,input_shape):
+        layers = []
         if len(input_shape) == 2:
-            reshape = [Reshape((*input_shape,1))] # monochrome image
+            layers.append(Reshape((*input_shape,1))) # monochrome image
         elif len(input_shape) == 3:
-            reshape = []
+            pass
         else:
             raise Exception(f"ConvolutionalEncoderMixin: unsupported shape {input_shape}")
 
-        layers = [*reshape,
-                  GaussianNoise(self.parameters["noise"]),
-                  BN(),
-        ]
+        maxdim = max(input_shape[0],input_shape[1])
+        if maxdim > 48:
+            r = 1+(maxdim // 48)
+            layers.append(MaxPooling2D((r,r)))
+
+        layers.append(GaussianNoise(self.parameters["noise"]))
+
         for i in range(self.parameters["encoder_depth"]-1):
             layers.extend(self.encoder_block(i))
         k = self.parameters["kernel_size"]
@@ -841,14 +845,15 @@ class FullyConvolutionalAEMixin:
         self.conv_latent_space = self.output_shape(layers,[0,*input_shape])[1:] # H,W,C
         self.parameters["N"] = np.prod(self.conv_latent_space)
         print(f"latent space shape is {self.conv_latent_space} : {self.parameters['N']} propositions in total")
-        return [*layers,
-                # flatten,
-                Reshape((self.parameters["N"],)),
-                # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                # Conv2D does not set the tensor shape properly, and Flatten fails to work
-                # during the build_aux phase.
-                self.activation(),
-        ]
+
+        layers.append(
+            # flatten,
+            Reshape((self.parameters["N"],)))
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        # Conv2D does not set the tensor shape properly, and Flatten fails to work
+        # during the build_aux phase.
+        layers.append(self.activation())
+        return layers
 
     def build_decoder(self,input_shape):
         layers = [Reshape(self.conv_latent_space),
@@ -857,11 +862,24 @@ class FullyConvolutionalAEMixin:
         for i in range(self.parameters["encoder_depth"]-2, -1, -1):
             layers.extend(self.decoder_block(i))
         k = self.parameters["kernel_size"]
+
         if len(input_shape) == 2:
             layers.append(Deconvolution2D(1, (k,k), padding="same"))
             layers.append(Reshape(input_shape))
         elif len(input_shape) == 3:
             layers.append(Deconvolution2D(3, (k,k), padding="same"))
+        else:
+            raise Exception(f"ConvolutionalEncoderMixin: unsupported shape {input_shape}")
+
+        maxdim = max(input_shape[0],input_shape[1])
+        if maxdim > 48:
+            r = 1+(maxdim // 48)
+            layers.append(UpSampling2D((r,r)))
+
+        if len(input_shape) == 2:
+            layers.append(Reshape(input_shape))
+        elif len(input_shape) == 3:
+            pass
         else:
             raise Exception(f"ConvolutionalEncoderMixin: unsupported shape {input_shape}")
 
