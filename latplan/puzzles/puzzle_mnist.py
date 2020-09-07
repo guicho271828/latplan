@@ -5,9 +5,10 @@ from .model.puzzle import *
 from .split_image import split_image
 from .util import preprocess
 import os
+from skimage.transform import resize
 
 def setup():
-    setting['base'] = 14
+    setting['base'] = 16
 
     def loader(width,height):
         from ..util.mnist import mnist
@@ -18,19 +19,7 @@ def setup():
         panels  = [ imgs[0].reshape((28,28)) for imgs in imgs ]
         panels[8] = imgs[8][3].reshape((28,28))
         panels[1] = imgs[1][3].reshape((28,28))
-        # additional panels
-        # panels.append(np.random.uniform(0,1,(28,28)))
-        # panels.append(np.zeros((28,28)))
-        # panels.append(np.ones((28,28))*255)
-        panels = np.array(panels)
-        stepy = panels.shape[1]//base
-        stepx = panels.shape[2]//base
-        # unfortunately the method below generates "bolder" fonts
-        # panels = panels[:,:stepy*base,:stepx*base,]
-        # panels = panels.reshape((panels.shape[0],base,stepy,base,stepx))
-        # panels = panels.mean(axis=(2,4))
-        # panels = panels.round()
-        panels = panels[:,::stepy,::stepx][:,:base,:base].round()
+        panels = np.array([ resize(panel, (setting['base'],setting['base'])) for panel in panels])
         panels = preprocess(panels)
         return panels
     
