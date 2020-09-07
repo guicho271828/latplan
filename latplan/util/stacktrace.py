@@ -24,7 +24,7 @@ def print_object(o,include_private=False):
 
     def printer(thing):
         if isinstance(thing,list):
-            return [printer(remove_array(o)) for o, _ in zip(thing, range(25))]
+            return [printer(remove_array(o)) for o, _ in zip(thing, range(3))]
         elif isinstance(thing,tuple):
             return tuple([printer(remove_array(o)) for o in thing])
         elif isinstance(thing,dict):
