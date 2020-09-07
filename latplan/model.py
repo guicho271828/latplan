@@ -802,7 +802,7 @@ class FullyConvolutionalAEMixin:
         w  = self.parameters["encoder_width"]
         dw = self.parameters["width_increment"]
         return [
-            Convolution2D(w * (dw ** i), (k,k), activation="relu", padding="same", use_bias=False),
+            Convolution2D(round(w * (dw ** i)), (k,k), activation="relu", padding="same", use_bias=False),
             BN(),
             Dropout(self.parameters["encoder_dropout"]),
             MaxPooling2D((p,p)),
@@ -816,7 +816,7 @@ class FullyConvolutionalAEMixin:
         dw = self.parameters["width_increment"]
         return [
             UpSampling2D((p,p)),
-            Deconvolution2D(w * (dw ** i),(k,k), activation="relu",padding="same", use_bias=False),
+            Deconvolution2D(round(w * (dw ** i)),(k,k), activation="relu",padding="same", use_bias=False),
             BN(),
             Dropout(self.parameters["decoder_dropout"]),
         ]
