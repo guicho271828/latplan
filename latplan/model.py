@@ -857,7 +857,13 @@ class FullyConvolutionalAEMixin:
         for i in range(self.parameters["encoder_depth"]-2, -1, -1):
             layers.extend(self.decoder_block(i))
         k = self.parameters["kernel_size"]
-        layers.append(Deconvolution2D(3, (k,k), padding="same"))
+        if len(input_shape) == 2:
+            layers.append(Deconvolution2D(1, (k,k), padding="same"))
+            layers.append(Reshape(input_shape))
+        elif len(input_shape) == 3:
+            layers.append(Deconvolution2D(3, (k,k), padding="same"))
+        else:
+            raise Exception(f"ConvolutionalEncoderMixin: unsupported shape {input_shape}")
 
         computed_input_shape = self.output_shape(layers,[0,*self.conv_latent_space])[1:]
         assert input_shape == computed_input_shape
