@@ -1,6 +1,7 @@
 import os.path
 from timeout_decorator import timeout, TimeoutError
 import random
+from .stacktrace import print_object
 
 from tensorflow.python.framework.errors_impl import ResourceExhaustedError
 
@@ -67,7 +68,7 @@ def load_history(path):
         open_list  = []
         close_list = {}
         for hist in stream_read_json(log):
-            print("loaded:",hist)
+            print_object({"loaded":hist})
             open_list.insert(0,tuple(hist))
             close_list[_key(hist[1])] = hist[0]
         open_list.sort(key=lambda x: x[0])
