@@ -891,6 +891,12 @@ class FullyConvolutionalAEMixin:
 # Mixins ################################################################
 
 class ZeroSuppressMixin:
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
+            if self.parameters["zerosuppress"] == 0.0 and self.parameters["zerosuppress_delay"] != 0.0:
+                raise InvalidHyperparameterError()
+        return
     def _build(self,input_shape):
         super()._build(input_shape)
 
@@ -1505,6 +1511,13 @@ class DetActionMixin:
 
 class DirectLossMixin:
     "Additional loss for the latent space successor prediction."
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        if "parameters" in kwargs: # otherwise the object is instantiated without paramteters for loading the value later
+            if self.parameters["direct"] == 0.0 and self.parameters["direct_delay"] != 0.0:
+                raise InvalidHyperparameterError()
+        return
+
     def _build(self,input_shape):
         super()._build(input_shape)
 
