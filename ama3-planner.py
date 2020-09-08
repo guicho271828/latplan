@@ -109,7 +109,9 @@ def main(domainfile, problem_dir, heuristics):
         log("running a validator")
         echodo(["arrival", domainfile, problemfile, planfile, tracefile])
         log("simulated the plan")
-        echodo(["lisp/read-latent-state-traces.bin", tracefile, str(len(init)), csvfile])
+        with open(csvfile,"w") as f:
+            echodo(["lisp/read-latent-state-traces.bin", tracefile, str(len(init))],
+                   stdout=f)
         plan = np.loadtxt(csvfile, dtype=int)
         log("parsed the plan")
         img_states = sae.decode(plan)
