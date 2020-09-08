@@ -588,7 +588,7 @@ class BinaryConcrete(ScheduledVariable):
             # use straight-through estimator
             sigmoid = K.sigmoid(x / self.variable )
             step    = K.round(sigmoid)
-            return K.stop_gradient(argmax-sigmoid) + sigmoid
+            return K.stop_gradient(step-sigmoid) + sigmoid
         def soft_test(x):
             return K.sigmoid( x / self.min )
         def hard_test(x):
