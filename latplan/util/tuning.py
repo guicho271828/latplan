@@ -34,6 +34,7 @@ class HyperparameterGenerationError(Exception):
 #     print("finished")
 
 import time
+import math
 import subprocess
 def call_with_lock(path,fn):
     subprocess.call(["mkdir","-p",path])
@@ -103,6 +104,8 @@ def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
               save=False,
               **parameters,)
     error = net.evaluate(val_in,val_out,batch_size=100,verbose=0)
+    if math.isnan(error):
+        error = float("inf")
     return net, error
 
 def merge_hash(a, b):
