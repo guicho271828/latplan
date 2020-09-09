@@ -331,9 +331,9 @@ def simple_genetic_search(task, default_config, parameters, path,
         gen_config = _random_configs(parameters)
         try:
             while len(open_list) < initial_population:
-                while True:
+                for config in gen_config:
                     try:
-                        open_list, close_list = _iter(next(gen_config))
+                        open_list, close_list = _iter(config)
                         break
                     except ResourceExhaustedError as e:
                         print("OOM!")
