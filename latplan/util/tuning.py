@@ -122,14 +122,13 @@ def _select(list):
     return list[random.randint(0,len(list)-1)]
 
 def _update_best(artifact, eval, config, best, report, report_best):
-    if report:
+    if report and (artifact is not None):
         report(artifact)
     print("Evaluation result for:\n{}\neval = {}".format(config,eval))
     if best['eval'] is None or eval < best['eval']:
         print("Found a better parameter:\n{}\neval:{} old-best:{}".format(config,eval,best['eval']))
-        if report_best:
+        if report_best and (artifact is not None):
             report_best(artifact)
-        del best['artifact']
         best['params'] = config
         best['eval'] = eval
         best['artifact'] = artifact
