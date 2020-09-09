@@ -336,10 +336,13 @@ def simple_genetic_search(task, default_config, parameters, path,
                         open_list, close_list = _iter(next(gen_config))
                         break
                     except ResourceExhaustedError as e:
+                        print("OOM!")
                         print(e)
                     except InvalidHyperparameterError as e:
+                        print("invalid config!")
                         pass
                     except HyperparameterGenerationError as e:
+                        print("duplicate config!")
                         pass
         except StopIteration:   # from gen_config
             pass
