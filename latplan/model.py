@@ -1532,9 +1532,10 @@ class DirectLossMixin:
         dummy = Lambda(lambda x: x)
         if "direct_loss" not in self.parameters:
             self.parameters["direct_loss"] = "MAE"
-        loss = K.mean(eval(self.parameters["direct_loss"])(true, pred))
+        loss  = K.mean(eval(self.parameters["direct_loss"])(true, pred))
+        loss1 = K.mean(MAE(true, pred))
         # direct loss should be treated as the real loss
-        dummy.add_loss(K.in_train_phase(loss * self.direct_alpha.variable, loss))
+        dummy.add_loss(K.in_train_phase(loss * self.direct_alpha.variable, loss1))
         return dummy(pred)
 
 class ActionDumpMixin:
