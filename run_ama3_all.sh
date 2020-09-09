@@ -1,5 +1,18 @@
 #!/bin/bash -x
 
+# The complicated machinary in this file is made
+# because submitting a large number of short jobs
+# not only harm the performance of the job scheduler, but also
+# make the job handling cumbersome.
+# 
+# (e.g. after noticing a bug, it takes some time to cancel thousands of
+# jobs. Also, some HPC environment has a limit for the number of jobs a single
+# user can submit.)
+
+# This script writes the task commands for processing problem files into a file,
+# then batch-assign it in a single scheduler job which are assigned one hour and 8 cores.
+# Setting the runtime limit of 15 min to each task, each batch-scheduler job can run 4 * 8 tasks.
+
 ulimit -v 16000000000
 
 trap exit SIGINT
