@@ -283,6 +283,7 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
         self.ub_ratio_start   = ub_ratio_start
         self.sample_epochs = sample_epochs
         self.stopped_epoch = 0
+        self.value_start = float("inf")
 
     def on_epoch_end(self, epoch, logs=None):
         import warnings
@@ -291,7 +292,7 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
             warnings.warn('Early stopping requires %s available!' %
                           (self.monitor), RuntimeWarning)
 
-        if epoch == 0:
+        if epoch == self.epoch_start:
             self.value_start = current
 
         progress_ratio = (epoch - self.epoch_start) / (self.epoch_end - self.epoch_start)
