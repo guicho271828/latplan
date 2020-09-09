@@ -71,7 +71,11 @@ def load_history(path):
         for hist in stream_read_json(log):
             print_object({"loaded":hist})
             open_list.insert(0,tuple(hist))
-            close_list[_key(hist[1])] = hist[0]
+            key = _key(hist[1])
+            if key in close_list: # there could be duplicates
+                close_list[key] = min(close_list[key], hist[0])
+            else:
+                close_list[key] = hist[0]
         open_list.sort(key=lambda x: x[0])
         return open_list, close_list
     else:
