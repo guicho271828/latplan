@@ -40,6 +40,7 @@ import subprocess
 def call_with_lock(path,fn):
     subprocess.call(["mkdir","-p",path])
     lock = path+"/lock"
+    first = True
     while True:
         try:
             with open(lock,"x") as f:
@@ -49,7 +50,9 @@ def call_with_lock(path,fn):
                     subprocess.run(["rm",lock])
             break
         except FileExistsError:
-            print("waiting for lock...")
+            if first:
+                print("waiting for lock...")
+                first = False
             time.sleep(1)
     return result
 
@@ -69,7 +72,7 @@ def load_history(path):
         open_list  = []
         close_list = {}
         for hist in stream_read_json(log):
-            print_object({"loaded":hist})
+            # print_object({"loaded":hist})
             open_list.insert(0,tuple(hist))
             key = _key(hist[1])
             if key in close_list: # there could be duplicates
