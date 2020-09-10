@@ -308,7 +308,7 @@ def simple_genetic_search(task, default_config, parameters, path,
     open_list, close_list = call_with_lock(path, fn)
 
     def _iter(config):
-        def fn():
+        def fn1():
             open_list, close_list = load_history(path)
             if _key(config) in close_list:
                 raise HyperparameterGenerationError()
@@ -316,14 +316,14 @@ def simple_genetic_search(task, default_config, parameters, path,
                 # insert infinity and block the duplicated effort.
                 # Third field indicating the placeholder
                 save_history(path, (float("inf"), config, default_config, "placeholder"))
-        call_with_lock(path, fn)
+        call_with_lock(path, fn1)
         artifact, eval = task(merge_hash(default_config,config))
-        def fn():
+        def fn2():
             open_list, close_list = save_history(path, (eval, config, default_config, None))
             if (open_list[0][1] == config) and (len(open_list) < limit):
                 _update_best(artifact, eval, config, best, report, report_best)
             return open_list, close_list
-        return call_with_lock(path, fn)
+        return call_with_lock(path, fn2)
 
     try:
         print("Simple GA: Generating the initial population")
