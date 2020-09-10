@@ -205,7 +205,7 @@ def _key(config):
         if isinstance(x,list):
             return tuple(x)
         else:
-            x
+            return x
     return tuple( tuplize(v) for _, v in sorted(config.items()))
 
 def _crossover(parent1,parent2):
