@@ -1,3 +1,4 @@
+import json
 import os.path
 from timeout_decorator import timeout, TimeoutError
 import random
@@ -56,7 +57,6 @@ def call_with_lock(path,fn):
 def save_history(path,obj):
     print("logging the results")
     with open(os.path.join(path,"grid_search.log"), 'a') as f:
-        import json
         json.dump(obj, f)
         f.write("\n")
     return load_history(path)
@@ -83,7 +83,6 @@ def load_history(path):
 
 # from https://stackoverflow.com/questions/6886283/how-i-can-i-lazily-read-multiple-json-values-from-a-file-stream-in-python
 def stream_read_json(fn):
-    import json
     start_pos = 0
     with open(fn, 'r') as f:
         while True:
@@ -97,6 +96,20 @@ def stream_read_json(fn):
                 obj = json.loads(json_str)
                 start_pos += e.pos
                 yield obj
+
+def save_default_parameters(path,default_parameters):
+    fname = os.path.join(path,"default_parameters.json")
+    def fn():
+        if not os.path.exists(fname):
+            with open(fname,"w") as f:
+                json.dump(default_parameters, f)
+    call_with_lock(path,fn)
+    return
+
+def load_default_parameters(path):
+    fname = os.path.join(path,"default_parameters.json")
+    with open(fname) as f:
+        return json.load(f)
 
 # single iteration of NN training
 def nn_task(network, path, train_in, train_out, val_in, val_out, parameters):
@@ -156,6 +169,7 @@ def grid_search(task, default_config, parameters, path,
                 shuffle=True,
                 limit=10000):
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
+    save_default_parameters(path, default_config)
     open_list, close_list = call_with_lock(path,lambda : load_history(path))
     if len(open_list) > 0:
         _update_best(None, open_list[0][0], open_list[0][1], best, None, None)
@@ -238,10 +252,10 @@ def _inverse_weighted_select(lst):
 def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters):
     top_k = open_list[:k]
     for tried in range(max_trial):
-        peval1, parent1, _ = _inverse_weighted_select(top_k)
-        peval2, parent2, _ = _inverse_weighted_select(top_k)
+        peval1, parent1, *_ = _inverse_weighted_select(top_k)
+        peval2, parent2, *_ = _inverse_weighted_select(top_k)
         while parent1 == parent2:
-            peval2, parent2, _ = _inverse_weighted_select(top_k)
+            peval2, parent2, *_ = _inverse_weighted_select(top_k)
 
         child = _crossover(parent1, parent2)
         if _key(child) not in close_list:
@@ -259,7 +273,7 @@ def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters
 def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters):
     top_k = open_list[:k]
     for tried in range(max_trial):
-        peval, parent, _ = _inverse_weighted_select(top_k)
+        peval, parent, *_ = _inverse_weighted_select(top_k)
         children = _neighbors(parent, parameters)
         open_children = []
         for c in children:
@@ -284,6 +298,7 @@ def simple_genetic_search(task, default_config, parameters, path,
     "Initialize the queue by evaluating the N nodes. Select 2 parents randomly from top N nodes and perform the uniform crossover. Fall back to LGBFS on a fixed ratio (as a mutation)."
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
 
+    save_default_parameters(path, default_config)
     # assert 2 <= initial_population
     # if not (2 <= initial_population):
     #     print({"initial_population":initial_population},"is superceded by",{"initial_population":2},". initial_population must be larger than equal to 2",)
@@ -315,11 +330,11 @@ def simple_genetic_search(task, default_config, parameters, path,
             else:
                 # insert infinity and block the duplicated effort.
                 # Third field indicating the placeholder
-                save_history(path, (float("inf"), config, default_config, "placeholder"))
+                save_history(path, (float("inf"), config, "placeholder"))
         call_with_lock(path, fn1)
         artifact, eval = task(merge_hash(default_config,config))
         def fn2():
-            open_list, close_list = save_history(path, (eval, config, default_config, None))
+            open_list, close_list = save_history(path, (eval, config, None))
             if (open_list[0][1] == config) and (len(open_list) < limit):
                 _update_best(artifact, eval, config, best, report, report_best)
             return open_list, close_list
@@ -330,7 +345,7 @@ def simple_genetic_search(task, default_config, parameters, path,
 
         gen_config = _random_configs(parameters)
         try:
-            while len(open_list) < initial_population:
+            while len([ tag for _, _, tag in open_list if tag is None]) < initial_population:
                 for config in gen_config:
                     try:
                         open_list, close_list = _iter(config)
@@ -386,19 +401,20 @@ def simple_genetic_search(task, default_config, parameters, path,
 
 
 # do not run it in parallel.
-def reproduce(task, default_config, parameters, path, report=None, report_best=None, limit=3):
+def reproduce(task, path, report=None, report_best=None, limit=3):
     best = {'eval'    :None, 'params'  :None, 'artifact':None}
 
     open_list, close_list = load_history(path)
+    default_config = load_default_parameters(path)
 
-    def _iter(config,default_config):
+    def _iter(config):
         artifact, eval = task(merge_hash(default_config,config))
         _update_best(artifact, eval, config, best, report, report_best)
 
     print("Reproducing the best results from the log")
     try:
         for _ in range(limit):
-            _iter(open_list[0][1],open_list[0][2])
+            _iter(open_list[0][1])
     except SignalInterrupt as e:
         print("received",e.signal,", optimization stopped")
     finally:
