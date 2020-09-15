@@ -1293,22 +1293,6 @@ class BaseActionMixin:
             Dropout(self.parameters["dropout"]),
         ])
 
-    def eff_reconstruction_loss(self,x):
-        # optional loss, unused
-        # _, x_pre, x_suc = dapply(x, lambda x: x)
-        # eff_reconstruction_loss = K.mean(bce(x_suc, y_suc_aae))
-        # self.net.add_loss(eff_reconstruction_loss)
-        return
-
-    def effect_minimization_loss(self):
-        # optional loss, unused
-        # self.net.add_loss(1*K.mean(K.sum(action_add,axis=-1)))
-        # self.net.add_loss(1*K.mean(K.sum(action_del,axis=-1)))
-
-        # depending on how effects are encoded, this is also used
-        # self.net.add_loss(1*K.mean(K.sum(action_eff,axis=-1)))
-        return
-
     def _build(self,input_shape):
         super()._build(input_shape)
 
