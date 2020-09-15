@@ -96,7 +96,7 @@ def save_default_parameters(path,default_parameters):
     def fn():
         if not os.path.exists(fname):
             with open(fname,"w") as f:
-                json.dump(default_parameters, f)
+                json.dump(default_parameters, f, indent=2)
     call_with_lock(path,fn)
     return
 
