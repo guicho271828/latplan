@@ -5,6 +5,13 @@ import keras.backend as K
 # K.set_floatx('float16')
 print("Default float: {}".format(K.floatx()))
 
+# https://stackoverflow.com/questions/48979426/keras-model-accuracy-differs-after-loading-the-same-saved-model
+from numpy.random import seed
+seed(42) # keras seed fixing
+import tensorflow as tf
+# tf.random.set_seed(42) # tensorflow seed fixing
+tf.set_random_seed(42)
+
 def load_session():
     K.set_session(
         tf.Session(
