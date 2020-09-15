@@ -167,7 +167,7 @@ class HistoryBasedEarlyStopping(Callback):
 
     def on_train_end(self, logs=None):
         if self.stopped_epoch > 0 and self.verbose > 0:
-            print('\nEpoch %05d: early stopping' % (self.stopped_epoch))
+            print(f'\nEpoch {self.stopped_epoch}: early stopping {type(self)}')
             print('history:',self.history)
 
 class GradientEarlyStopping(HistoryBasedEarlyStopping):
