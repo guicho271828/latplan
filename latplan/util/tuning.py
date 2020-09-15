@@ -25,15 +25,6 @@ class HyperparameterGenerationError(Exception):
     """Raised when the hyperparameter generation failed """
     pass
 
-# flock does not work on GPFS
-# import struct, fcntl, os,
-# 
-# with open("lockfile","a") as f:
-#     fcntl.lockf(f, fcntl.LOCK_EX)
-#     print("sleep")
-#     time.sleep(30)
-#     print("finished")
-
 import time
 import math
 import subprocess
