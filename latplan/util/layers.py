@@ -777,7 +777,7 @@ class StepSchedule(BaseSchedule):
 
         def report(value):
             if self.current_value != value:
-                print(f"StepSchedule(name={self.name}): {self.current_value} -> {value}")
+                print(f"Epoch {epoch} StepSchedule(name={self.name}): {self.current_value} -> {value}")
                 self.current_value = value
             return value
 
