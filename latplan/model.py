@@ -257,7 +257,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             progressbar.AbsoluteETA(format="%(eta)s"), " ",
             DynamicMessage("status")
         ]
-        self.bar = progressbar.ProgressBar(max_value=self.max_epoch, widgets=widgets)
+        self.bar = progressbar.ProgressBar(max_value=self.parameters["epoch"], widgets=widgets)
 
     def bar_update(self, epoch, logs):
         "Used for updating the progress bar."
@@ -305,9 +305,10 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         return loss
 
     def train(self,train_data,
-              epoch=200,batch_size=1000,optimizer="adam",lr=0.0001,val_data=None,save=True,
-              train_data_to=None,
-              val_data_to=None,
+              val_data      = None,
+              train_data_to = None,
+              val_data_to   = None,
+              save          = True,
               **kwargs):
         """Main method for training.
  This method may be overloaded by the subclass into a specific training method, e.g. GAN training."""
@@ -319,7 +320,21 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         if val_data_to  is None:
             val_data_to  = val_data
 
-        self.max_epoch = epoch
+        epoch      = self.parameters["epoch"]
+        batch_size = self.parameters["batch_size"]
+        optimizer  = self.parameters["optimizer"]
+        lr         = self.parameters["lr"]
+        clipnorm   = self.parameters["clipnorm"]
+        # clipvalue  = self.parameters["clipvalue"]
+
+        def make_optimizer(net):
+            return getattr(keras.optimizers,optimizer)(
+                lr,
+                clipnorm=clipnorm
+                # clipvalue=clipvalue,
+            )
+
+
         input_shape = train_data.shape[1:]
         self.build(input_shape)
 
@@ -334,15 +349,10 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
 
         train_data    = replicate(train_data)
         train_data_to = replicate(train_data_to)
-        val_data     = replicate(val_data)
-        val_data_to  = replicate(val_data_to)
-        optimizer     = replicate(optimizer)
-        lr            = replicate(lr)
+        val_data      = replicate(val_data)
+        val_data_to   = replicate(val_data_to)
 
-        def get_optimizer(optimizer,lr):
-            return getattr(keras.optimizers,optimizer)(lr)
-
-        self.compile(list(map(get_optimizer, optimizer, lr)))
+        self.compile(list(map(make_optimizer, self.nets)))
 
         def assert_length(data):
             l = None
