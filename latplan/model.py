@@ -1523,6 +1523,8 @@ class DirectLossMixin:
 
         return
     def apply_direct_loss(self,true,pred):
+        if true is None:
+            return pred
         dummy = Lambda(lambda x: x)
         if "direct_loss" not in self.parameters:
             self.parameters["direct_loss"] = "MAE"
