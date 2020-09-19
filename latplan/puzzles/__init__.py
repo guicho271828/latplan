@@ -18,7 +18,18 @@ def shuffle_objects(objects):
     import numpy as np
     import numpy.random
     tmp = np.copy(objects)
-    tmp = np.transpose(tmp,(1,0,2))
-    np.random.shuffle(tmp)
-    tmp = np.transpose(tmp,(1,0,2))
+    if len(tmp.shape) == 4:
+        # shuffling transitions
+        assert tmp.shape[1] == 2
+        # B, 2, O, F
+        tmp = np.swapaxes(tmp, 0, 2)
+        np.random.shuffle(tmp)
+        tmp = np.swapaxes(tmp, 0, 2)
+    else:
+        # shuffling states
+        assert len(tmp.shape) == 3
+        # B, O, F
+        tmp = np.swapaxes(tmp, 0, 1)
+        np.random.shuffle(tmp)
+        tmp = np.swapaxes(tmp, 0, 1)
     return tmp
