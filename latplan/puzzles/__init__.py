@@ -14,22 +14,23 @@ from . import puzzle_wrong
 from . import puzzle_spider
 from . import split_image
 
-def shuffle_objects(objects):
+def shuffle_objects(x, copy=True):
     import numpy as np
     import numpy.random
-    tmp = np.copy(objects)
-    if len(tmp.shape) == 4:
+    if copy:
+        x = np.copy(x)
+    if len(x.shape) == 4:
         # shuffling transitions
-        assert tmp.shape[1] == 2
+        assert x.shape[1] == 2
         # B, 2, O, F
-        tmp = np.swapaxes(tmp, 0, 2)
-        np.random.shuffle(tmp)
-        tmp = np.swapaxes(tmp, 0, 2)
+        x = np.swapaxes(x, 0, 2)
+        np.random.shuffle(x)
+        x = np.swapaxes(x, 0, 2)
     else:
         # shuffling states
-        assert len(tmp.shape) == 3
+        assert len(x.shape) == 3
         # B, O, F
-        tmp = np.swapaxes(tmp, 0, 1)
-        np.random.shuffle(tmp)
-        tmp = np.swapaxes(tmp, 0, 1)
-    return tmp
+        x = np.swapaxes(x, 0, 1)
+        np.random.shuffle(x)
+        x = np.swapaxes(x, 0, 1)
+    return x
