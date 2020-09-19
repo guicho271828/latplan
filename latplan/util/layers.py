@@ -396,6 +396,18 @@ def smooth_max(*args):
 def smooth_min(*args):
     return K.in_train_phase(-K.logsumexp(-K.stack(args,axis=0), axis=0)+K.log(2.0), K.minimum(*args))
 
+stclip_counter = 0
+def stclip(min_value,high_value,name="stclip"):
+    "clip with straight-through gradient"
+    global stclip_counter
+    stclip_counter += 1
+    import tensorflow as tf
+    def fn(x):
+        x_clip = K.clip(x, min_value, high_value)
+        return K.stop_gradient(x_clip - x) + x
+    return Lambda(fn,name="{}_{}".format(name,stclip_counter))
+
+
 def delay(self, x, amount):
     switch = K.variable(0)
     def fn(epoch,log):
