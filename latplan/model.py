@@ -248,6 +248,15 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         for i, net in enumerate(self.nets):
             net.load_weights(self.local("net{}.h5".format(i)))
 
+    def reload_with_shape(self,input_shape):
+        """Rebuild the network for a shape that is different from the training time, then load the weights."""
+        with open(self.local("aux.json"), "r") as f:
+            # self.build / self.loaded flag are ignored
+            self._build(input_shape)
+            self._build_aux(input_shape)
+        for i, net in enumerate(self.nets):
+            net.load_weights(self.local("net{}.h5".format(i)))
+
     def initialize_bar(self):
         import progressbar
         widgets = [
