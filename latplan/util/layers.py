@@ -464,6 +464,47 @@ class Gaussian:
         
         return layer(mean_log_var)
 
+class Uniform:
+    count = 0
+
+    def __init__(self, beta=0.):
+        self.beta = beta
+
+    def call(self, mean_width):
+        sym_shape = K.shape(mean_width)
+        shape = K.int_shape(mean_width)
+        dims = [sym_shape[i] for i in range(len(shape)-1)]
+        dim = shape[-1]//2
+        mean = mean_width[...,:dim]
+        width = mean_width[...,dim:]
+        noise = width * K.random_uniform(shape=(*dims, dim),minval=-0.5, maxval=0.5)
+        return K.in_train_phase(mean + noise, mean)
+
+    def __call__(self, mean_width):
+        Uniform.count += 1
+        c = Uniform.count-1
+
+        layer = Lambda(self.call,name="uniform_{}".format(c))
+
+        sym_shape = K.shape(mean_width)
+        shape = K.int_shape(mean_width)
+        dims = [sym_shape[i] for i in range(len(shape)-1)]
+        dim = shape[-1]//2
+        mean = mean_width[...,:dim]
+        width = mean_width[...,dim:]
+
+        # KL
+        high = mean + width/2
+        low  = mean - width/2
+        high = K.clip(high, 0.0, 1.0)
+        low  = K.clip(low,  0.0, 1.0)
+        intersection = high-low
+        loss = K.mean(intersection) * self.beta
+        # but this does not seem informative --- if it has no overlap with [0,1], it is always 0
+        # Total Variation / Earth Mover would seem much better choice
+        layer.add_loss(K.in_train_phase(loss, 0.0))
+        return layer(mean_width)
+
 class ScheduledVariable:
     """General variable which is changed during the course of training according to some schedule"""
     def __init__(self,name="variable",):
