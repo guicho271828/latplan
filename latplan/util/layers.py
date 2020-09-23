@@ -436,12 +436,13 @@ class Gaussian:
         self.beta = beta
         
     def call(self, mean_log_var):
-        batch = K.shape(mean_log_var)[0]
-        dim = K.int_shape(mean_log_var)[1]//2
-        print(batch,dim)
-        mean    = mean_log_var[:,:dim]
-        log_var = mean_log_var[:,dim:]
-        return mean + K.exp(0.5 * log_var) * K.random_normal(shape=(batch, dim))
+        sym_shape = K.shape(mean_log_var)
+        shape = K.int_shape(mean_log_var)
+        dims = [sym_shape[i] for i in range(len(shape)-1)]
+        dim = shape[-1]//2
+        mean    = mean_log_var[...,:dim]
+        log_var = mean_log_var[...,dim:]
+        return mean + K.exp(0.5 * log_var) * K.random_normal(shape=(*dims, dim))
     
     def __call__(self, mean_log_var):
         Gaussian.count += 1
@@ -449,10 +450,13 @@ class Gaussian:
 
         layer = Lambda(self.call,name="gaussian_{}".format(c))
 
-        batch = K.shape(mean_log_var)[0]
-        dim = K.int_shape(mean_log_var)[1]//2
-        mean    = mean_log_var[:,:dim]
-        log_var = mean_log_var[:,dim:]
+        sym_shape = K.shape(mean_log_var)
+        shape = K.int_shape(mean_log_var)
+        dims = [sym_shape[i] for i in range(len(shape)-1)]
+        dim = shape[-1]//2
+        mean    = mean_log_var[...,:dim]
+        log_var = mean_log_var[...,dim:]
+
         loss = -0.5 * K.mean(K.sum(1 + log_var - K.square(mean) - K.exp(log_var), axis=-1)) * self.beta
 
         layer.add_loss(K.in_train_phase(loss, 0.0), mean_log_var)
