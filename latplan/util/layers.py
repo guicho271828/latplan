@@ -442,7 +442,8 @@ class Gaussian:
         dim = shape[-1]//2
         mean    = mean_log_var[...,:dim]
         log_var = mean_log_var[...,dim:]
-        return mean + K.exp(0.5 * log_var) * K.random_normal(shape=(*dims, dim))
+        noise = K.exp(0.5 * log_var) * K.random_normal(shape=(*dims, dim))
+        return K.in_train_phase(mean + noise, mean)
     
     def __call__(self, mean_log_var):
         Gaussian.count += 1
