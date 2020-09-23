@@ -431,8 +431,8 @@ def dapply(x,fn):
 
 class Gaussian:
     count = 0
-    
-    def __init__(self, beta=1.):
+
+    def __init__(self, beta=0.):
         self.beta = beta
         
     def call(self, mean_log_var):
