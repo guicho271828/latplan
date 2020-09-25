@@ -384,7 +384,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                 yield subdata[i*batch_size:min((i+1)*batch_size,len(subdata))]
 
         index_array = np.arange(len(train_data[0]))
-        np.random.shuffle(index_array)
 
         clist = CallbackList(callbacks=self.callbacks)
         clist.set_model(self.nets[0])
@@ -418,10 +417,11 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         try:
             clist.on_train_begin()
             logs = {}
-            indices_cache       = [ indices for indices in make_batch(index_array) ]
-            train_data_cache    = [[ train_subdata   [indices] for train_subdata    in train_data    ] for indices in indices_cache ]
-            train_data_to_cache = [[ train_subdata_to[indices] for train_subdata_to in train_data_to ] for indices in indices_cache ]
             for epoch in range(epoch):
+                np.random.shuffle(index_array)
+                indices_cache       = [ indices for indices in make_batch(index_array) ]
+                train_data_cache    = [[ train_subdata   [indices] for train_subdata    in train_data    ] for indices in indices_cache ]
+                train_data_to_cache = [[ train_subdata_to[indices] for train_subdata_to in train_data_to ] for indices in indices_cache ]
                 clist.on_epoch_begin(epoch,logs)
                 for train_subdata_cache,train_subdata_to_cache in zip(train_data_cache,train_data_to_cache):
                     for net,train_subdata_batch_cache,train_subdata_to_batch_cache in zip(self.nets, train_subdata_cache,train_subdata_to_cache):
