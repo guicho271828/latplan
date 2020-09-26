@@ -1,7 +1,8 @@
+import keras.initializers
 import keras.backend as K
 from keras.layers import *
 import numpy as np
-
+import tensorflow as tf
 debug = False
 # debug = True
 
@@ -686,6 +687,57 @@ class BinaryConcrete(ScheduledVariable):
     def value(self,epoch):
         return np.max([self.min,
                        self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
+
+
+# modified from https://github.com/HenningBuhl/VQ-VAE_Keras_Implementation
+# note: this is useful only for convolutional embedding whre the same embedding
+# can be reused across cells
+class VQVAELayer(Layer):
+    def __init__(self, embedding_dim, num_classes=2, beta=1.0,
+                 initializer='uniform', epsilon=1e-10, **kwargs):
+        self.embedding_dim = embedding_dim
+        self.num_classes = num_classes
+        self.beta = beta
+        self.initializer = keras.initializers.VarianceScaling(distribution=initializer)
+        super(VQVAELayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        # Add embedding weights.
+        self.w = self.add_weight(name='embedding',
+                                  shape=(self.embedding_dim, self.num_classes),
+                                  initializer=self.initializer,
+                                  trainable=True)
+        # Finalize building.
+        super(VQVAELayer, self).build(input_shape)
+
+    def call(self, x):
+        # Flatten input except for last dimension.
+        flat_inputs = K.reshape(x, (-1, self.embedding_dim))
+
+        # Calculate distances of input to embedding vectors.
+        distances = (K.sum(flat_inputs**2, axis=1, keepdims=True)
+                     - 2 * K.dot(flat_inputs, self.w)
+                     + K.sum(self.w ** 2, axis=0, keepdims=True))
+
+        # Retrieve encoding indices.
+        encoding_indices = K.argmax(-distances, axis=1)
+        encodings = K.one_hot(encoding_indices, self.num_classes)
+        encoding_indices = K.reshape(encoding_indices, K.shape(x)[:-1])
+        quantized = self.quantize(encoding_indices)
+
+        e_latent_loss = K.mean((K.stop_gradient(quantized) - x) ** 2)
+        q_latent_loss = K.mean((quantized - K.stop_gradient(x)) ** 2)
+        self.add_loss(e_latent_loss + q_latent_loss * self.beta)
+
+        return K.stop_gradient(quantized - x) + x
+
+    @property
+    def embeddings(self):
+        return self.w
+
+    def quantize(self, encoding_indices):
+        w = K.transpose(self.embeddings.read_value())
+        return tf.nn.embedding_lookup(w, encoding_indices, validate_indices=False)
 
 
 class BaseSchedule(ScheduledVariable):
