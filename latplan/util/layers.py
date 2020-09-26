@@ -290,7 +290,6 @@ class ExplosionEarlyStopping(HistoryBasedEarlyStopping):
                  epoch_end,
                  epoch_start=0,
                  monitor='val_loss',
-                 ub=1e8,
                  sample_epochs=20, verbose=0):
         super().__init__()
         self.monitor       = monitor
@@ -298,7 +297,6 @@ class ExplosionEarlyStopping(HistoryBasedEarlyStopping):
         self.history       = []
         self.epoch_end     = epoch_end
         self.epoch_start   = epoch_start
-        self.ub            = ub
         self.sample_epochs = sample_epochs
         self.stopped_epoch = 0
 
@@ -308,7 +306,8 @@ class ExplosionEarlyStopping(HistoryBasedEarlyStopping):
         if current is None:
             warnings.warn('Early stopping requires %s available!' %
                           (self.monitor), RuntimeWarning)
-
+        if epoch == 0:
+            self.ub = current * 10
         if np.isnan(current) :
             self.model.stop_training = True
             self.stopped_epoch = epoch
