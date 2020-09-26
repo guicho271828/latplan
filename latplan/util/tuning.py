@@ -327,7 +327,8 @@ def simple_genetic_search(task, default_config, parameters, path,
         artifact, eval = task(parameters)
         def fn2():
             open_list, close_list = save_history(path, (eval, config, None))
-            if (open_list[0][1] == config) and (len(open_list) < limit):
+            import math
+            if (open_list[0][1] == config) and (len([ tag for _,_,tag in open_list if tag != "placeholder"]) <= limit):
                 _update_best(artifact, eval, config, best, report, report_best)
             return open_list, close_list
         return call_with_lock(path, fn2)
