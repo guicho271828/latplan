@@ -272,6 +272,7 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
                  epoch_start=0,
                  monitor='val_loss',
                  ub_ratio_start=1.0, ub_ratio_end=0.0, # note: relative to the loss at epoch 0
+                 target_value=None,
                  sample_epochs=20, verbose=0):
         super().__init__()
         self.monitor = monitor
@@ -284,6 +285,10 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
         self.sample_epochs = sample_epochs
         self.stopped_epoch = 0
         self.value_start = float("inf")
+        if target_value is not None:
+            self.value_end = target_value
+        else:
+            self.value_end = 0.0
 
     def on_epoch_end(self, epoch, logs=None):
         import warnings
@@ -297,7 +302,7 @@ class LinearEarlyStopping(HistoryBasedEarlyStopping):
 
         progress_ratio = (epoch - self.epoch_start) / (self.epoch_end - self.epoch_start)
         ub_ratio = self.ub_ratio_start + (self.ub_ratio_end - self.ub_ratio_start) * progress_ratio
-        ub = self.value_start * ub_ratio
+        ub = (self.value_start - self.value_end) * ub_ratio + self.value_end
 
         self.history.append(current) # to the last
         if len(self.history) > self.sample_epochs:
