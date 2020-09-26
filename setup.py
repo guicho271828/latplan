@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 setup(name='latplan',
       version='0.0.1',
       install_requires=[
-          'tensorflow==1.15.2',
+          'tensorflow==1.15.4',
           'keras==2.2.5',
           'h5py',
           'matplotlib',
