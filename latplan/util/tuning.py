@@ -179,7 +179,9 @@ def grid_search(task, default_config, parameters, path,
 
     def _iter(config):
         nonlocal open_list, close_list
-        artifact, eval = task(merge_hash(default_config,config))
+        parameters = merge_hash(default_config,config)
+        parameters["current_best"] = best["eval"]
+        artifact, eval = task(parameters)
         open_list, close_list = call_with_lock(path,lambda :  save_history(path, (eval, config, default_config)))
         _update_best(artifact, eval, config, best, report, report_best)
 
@@ -335,7 +337,9 @@ def simple_genetic_search(task, default_config, parameters, path,
                 # Third field indicating the placeholder
                 save_history(path, (float("inf"), config, "placeholder"))
         call_with_lock(path, fn1)
-        artifact, eval = task(merge_hash(default_config,config))
+        parameters = merge_hash(default_config,config)
+        parameters["current_best"] = best["eval"]
+        artifact, eval = task(parameters)
         def fn2():
             open_list, close_list = save_history(path, (eval, config, None))
             if (open_list[0][1] == config) and (len(open_list) < limit):
@@ -411,7 +415,9 @@ def reproduce(task, path, report=None, report_best=None, limit=3):
     default_config = load_default_parameters(path)
 
     def _iter(config):
-        artifact, eval = task(merge_hash(default_config,config))
+        parameters = merge_hash(default_config,config)
+        parameters["current_best"] = best["eval"]
+        artifact, eval = task(parameters)
         _update_best(artifact, eval, config, best, report, report_best)
 
     print("Reproducing the best results from the log")
