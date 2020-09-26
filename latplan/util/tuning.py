@@ -262,8 +262,14 @@ def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters
         while parent1 == parent2:
             peval2, parent2, *_ = _inverse_weighted_select(top_k)
 
-        child = _crossover(parent1, parent2)
-        if _key(child) not in close_list:
+        non_mutated_child = _crossover(parent1, parent2)
+        children = _neighbors(non_mutated_child, parameters)
+        open_children = []
+        for c in children:
+            if _key(c) not in close_list:
+                open_children.append(c)
+        if len(open_children) > 0:
+            child = _select(open_children)
             print("parent1: ", parent1)
             print("peval1 : ", peval1)
             print("parent2: ", parent2)
@@ -272,27 +278,6 @@ def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters
             print("attempted trials : ", tried)
             return child
     print("Simple GA: crossover failed after {} trials".format(max_trial))
-    print("Simple GA: falling back to mutation")
-    return _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters)
-
-def _generate_child_by_mutation(open_list, close_list, k, max_trial, parameters):
-    top_k = open_list[:k]
-    for tried in range(max_trial):
-        peval, parent, *_ = _inverse_weighted_select(top_k)
-        children = _neighbors(parent, parameters)
-        open_children = []
-        for c in children:
-            if _key(c) not in close_list:
-                open_children.append(c)
-        if len(open_children) > 0:
-            child = _select(open_children)
-            print("parent: ", parent)
-            print("peval : ", peval)
-            print("child : ", child)
-            print("attempted trials : ", tried)
-            return child
-    print("Simple GA: mutation failed after {} trials".format(max_trial))
-    print("Simple GA: Reached a local minima")
     raise HyperparameterGenerationError()
 
 def simple_genetic_search(task, default_config, parameters, path,
@@ -371,20 +356,10 @@ def simple_genetic_search(task, default_config, parameters, path,
 
         print("Simple GA: Generated the initial population")
         while len(open_list) < limit:
-            mutation_ratio = open_list[0][0] / open_list[population-1][0]
-            assert mutation_ratio <= 1
-            print("Simple GA: best",open_list[0][0],
-                  "worst",open_list[population-1][0],
-                  "current mutation ratio",mutation_ratio)
             done = False
             while not done:
                 try:
-                    if random.random() < mutation_ratio:
-                        print("Simple GA: mutation was selected")
-                        child = _generate_child_by_mutation(open_list, close_list, population, 10000, parameters)
-                    else:
-                        print("Simple GA: crossover was selected")
-                        child = _generate_child_by_crossover(open_list, close_list, population, 10000, parameters)
+                    child = _generate_child_by_crossover(open_list, close_list, population, 10000, parameters)
                     done = True
                 except HyperparameterGenerationError as e:
                     print(e)
