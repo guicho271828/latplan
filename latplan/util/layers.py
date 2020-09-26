@@ -238,33 +238,6 @@ class ChangeEarlyStopping(HistoryBasedEarlyStopping):
                 self.model.stop_training = True
                 self.stopped_epoch = epoch
 
-class MinimalEarlyStopping(HistoryBasedEarlyStopping):
-    "Stops when the value is simply too high"
-    def __init__(self, monitor='val_loss',
-                 threshold=0.2, epoch_start=0, sample_epochs=20, verbose=0):
-        super().__init__()
-        self.monitor = monitor
-        self.verbose = verbose
-        self.threshold = threshold
-        self.history = []
-        self.epoch_start = epoch_start
-        self.sample_epochs = sample_epochs
-        self.stopped_epoch = 0
-
-    def on_epoch_end(self, epoch, logs=None):
-        import warnings
-        current = logs.get(self.monitor)
-        if current is None:
-            warnings.warn('Early stopping requires %s available!' %
-                          (self.monitor), RuntimeWarning)
-
-        self.history.append(current) # to the last
-        if len(self.history) > self.sample_epochs:
-            self.history.pop(0) # from the front
-            if (np.median(self.history) >= self.threshold) and (self.epoch_start <= epoch) :
-                self.model.stop_training = True
-                self.stopped_epoch = epoch
-
 class LinearEarlyStopping(HistoryBasedEarlyStopping):
     "Stops when the value goes above the linearly decreasing upper bound"
     def __init__(self,
