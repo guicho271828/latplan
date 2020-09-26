@@ -68,6 +68,20 @@ def wrap(x,y,**kwargs):
     return Lambda(lambda x:y,**kwargs)(x)
 
 
+def Densify(layers):
+    "Apply layers in a densenet-like manner."
+    def densify_fn(x):
+        def rec(x,layers):
+            layer, *rest = layers
+
+            result = layer(x)
+            if len(rest) == 0:
+                return result
+            else:
+                return rec(concatenate([x,result]), rest)
+        return rec(x,layers)
+    return densify_fn
+
 def flatten(x):
     if K.ndim(x) >= 3:
         try:
