@@ -211,13 +211,33 @@ def _neighbors(parent,parameters):
     "Returns all dist-1 neighbors"
     results = []
     for k, _ in parent.items():
-        if k in parameters:     # HACK! HACK! remove in the next run. 2019/12/29
+        if k in parameters:     # If a hyperparameter is made non-configurable, it could be missing here
             for v in parameters[k]:
                 if parent[k] is not v:
                     other = parent.copy()
                     other[k] = v
                     results.append(other)
     return results
+
+def _check_missing_hyperparameter(parent,parameters):
+    """Parameter list could be updated and new jobs may be run under the new parameter list which has a new entry.
+    However, the parent may hold those values in the default_parameters, missing the values of its own.
+    _neighbor only consider the oppsite case: when the parameters are removed.
+    _crossover do not consider those values.
+    As a result, the value is missing in both the new default_parameters, and the parent parameters.
+    This code checks for any hyperparameters in the parents that must be configured.
+"""
+    for k, v in parameters.items():
+        if k not in parent:
+            # is missing in the parents
+            parent[k] = random.choice(v)
+    # for k in parent.items():
+    #     if k not in parameters:
+    #         # is already in the new default_parameters
+    #         del parent[k]
+    return parent
+
+
 
 def _key(config):
     def tuplize(x):
@@ -263,6 +283,7 @@ def _generate_child_by_crossover(open_list, close_list, k, max_trial, parameters
             peval2, parent2, *_ = _inverse_weighted_select(top_k)
 
         non_mutated_child = _crossover(parent1, parent2)
+        non_mutated_child = _check_missing_hyperparameter(non_mutated_child, parameters)
         children = _neighbors(non_mutated_child, parameters)
         open_children = []
         for c in children:
