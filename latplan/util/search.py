@@ -2,7 +2,7 @@
 
 ################################################################
 
-def dijkstra(init_c,length,successor_fn,include_nonleaf=False):
+def dijkstra(init_c,length,successor_fn,include_nonleaf=False,limit=None):
     import queue
     open_list = queue.PriorityQueue()
     close_list = {}
@@ -15,11 +15,13 @@ def dijkstra(init_c,length,successor_fn,include_nonleaf=False):
     g_max = -1
 
     while not open_list.empty():
-        expanded += 1
+        if limit is not None and expanded >= limit:
+            return
         g, current = open_list.get()
         if close_list[current]["open"] == False:
             continue
         close_list[current]["open"]=False
+        expanded += 1
 
         if g > length:
             print("explored all nodes with g < {}".format(length))
