@@ -1,6 +1,7 @@
 import keras.initializers
 import keras.backend as K
 from keras.layers import *
+from keras.initializers import Initializer
 import numpy as np
 import tensorflow as tf
 debug = False
@@ -680,6 +681,39 @@ class BinaryConcrete(ScheduledVariable):
         return np.max([self.min,
                        self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
 
+
+class RandomLogistic(Initializer):
+    """Initializer that generates tensors with a normal distribution.
+
+    # Arguments
+        mean: a python scalar or a scalar tensor. Mean of the random values
+          to generate.
+        scale: a python scalar or a scalar tensor. Scale of the
+          random values to generate.
+        seed: A Python integer. Used to seed the random generator.
+    """
+
+    def __init__(self, mean=0., scale=1.0, seed=None):
+        self.mean = mean
+        self.scale = scale
+        self.seed = seed
+
+    def __call__(self, shape, dtype=None):
+        # self.mean, self.scale,
+        u = K.random_uniform(shape, dtype=dtype, seed=self.seed)
+        # it does log(u / 1-u)
+        M, eps = tf.float32.max, tf.float32.min
+        Mu = M * u
+        Mu = K.clip(Mu, eps, M-eps)
+        W = K.log(Mu)-K.log(M-Mu)
+        return W * self.scale + self.mean
+
+    def get_config(self):
+        return {
+            'mean': self.mean,
+            'scale': self.scale,
+            'seed': self.seed
+        }
 
 # modified from https://github.com/HenningBuhl/VQ-VAE_Keras_Implementation
 # note: this is useful only for convolutional embedding whre the same embedding
