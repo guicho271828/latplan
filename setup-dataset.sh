@@ -49,3 +49,23 @@ $common download-and-extract blocks-3-4
 $common download-and-extract blocks-3-3
 $common download-and-extract blocks-3-3-multi
 $common download-and-extract blocks-3-3-multi-global
+
+
+# layout-based dataset generation is fast enough
+# train dataset
+parallel $common ./setup-dataset.py sokoban_layout ::: 1000 10000 ::: True False ::: True ::: 0 1 2 3 4 ::: False
+# test dataset
+parallel $common ./setup-dataset.py sokoban_layout ::: 1000 10000 ::: True False ::: True ::: 0 1 2 3 ::: True
+
+
+# for image-based datasets, we speed up the processing with more cpus
+common="jbsub -mem 64g -cores 16 -queue x86_1h -proj $proj PYTHONUNBUFFERED=1"
+# train dataset
+parallel $common ./setup-dataset.py sokoban_image ::: 1000 10000 ::: True False ::: True False ::: 0 1 2 3 4 ::: False
+# test dataset -- no need for depth=28
+parallel $common ./setup-dataset.py sokoban_image ::: 1000 10000 ::: True False ::: True False ::: 0 1 2 3 ::: True
+
+# Merging sokoban datasets from different stages.
+# This performs object number normalization and position rescaling
+echo "After sokoban image is generated, run:"
+echo parallel ./merge-sokobans.py ::: 1000 10000 ::: True False
