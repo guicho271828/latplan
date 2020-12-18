@@ -87,3 +87,25 @@ def random_walk_rec(current, trace, length, successor_fn):
                     return None
                 else:
                     continue
+
+
+def reservoir_sampling(generator, limit):
+    "perform a reservoir sampling because for a large state space it is impossible to enumerate states in memory"
+    import numpy as np
+    import random
+    if limit is None:
+        results = np.array(list(generator))
+    else:
+        results = np.array([ c for c,_ in zip(generator, range(limit)) ])
+        i = limit
+        step = 1
+        for result in generator:
+            i += 1
+            if (i % step) == 0:
+                if i == step * 10:
+                    step = i
+            j = random.randrange(i)
+            if j < limit:
+                results[j] = result
+        print("done reservoir sampling")
+    return results
