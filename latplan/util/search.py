@@ -109,3 +109,10 @@ def reservoir_sampling(generator, limit):
                 results[j] = result
         print("done reservoir sampling")
     return results
+
+
+# dijkstra will yield a pair (current, close_list). This passes the current only
+def untuple(generator):
+    for tup in generator:
+        yield tup[0]
+
