@@ -14,6 +14,8 @@ from . import puzzle_wrong
 from . import puzzle_spider
 from . import split_image
 
+from . import objutil
+
 def shuffle_objects(x, copy=True):
     import numpy as np
     import numpy.random
