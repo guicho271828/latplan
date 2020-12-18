@@ -25,3 +25,5 @@ downward/
 /build/
 /dist/
 /latplan.egg-info/
+/puzzle/
+/sokoban/
