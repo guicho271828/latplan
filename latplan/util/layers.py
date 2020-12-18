@@ -211,7 +211,7 @@ class GradientEarlyStopping(HistoryBasedEarlyStopping):
 class ChangeEarlyStopping(HistoryBasedEarlyStopping):
     "Stops when the training gets stabilized: when the change of the past epochs are below a certain threshold"
     def __init__(self, monitor='val_loss',
-                 threshold=0.001, epoch_start=0, sample_epochs=20, verbose=0):
+                 threshold=0.00001, epoch_start=0, sample_epochs=20, verbose=0):
         super().__init__()
         self.monitor = monitor
         self.verbose = verbose
