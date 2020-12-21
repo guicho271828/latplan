@@ -65,9 +65,9 @@ def main(network_dir, problem_dir, heuristics='blind', action_type="all_actions"
     ###### preprocessing ################################################################
     os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
     echodo(["touch",problem("domain.pddl")]) # dummy file, just making planner-scripts work
-    echodo(["helper/sas.sh", transitions, ig, sas])
+    echodo(["helper/ama1-sas.sh", transitions, ig, sas])
     log("sas.sh done")
-    echodo(["helper/sasp.sh", sas, sasp, sasp2])
+    echodo(["helper/ama1-sasp.sh", sas, sasp, sasp2])
     log("sasp.sh done")
     
     ###### do planning #############################################
@@ -77,7 +77,7 @@ def main(network_dir, problem_dir, heuristics='blind', action_type="all_actions"
     assert os.path.exists(planfile)
     
     ###### parse the plan #############################################
-    out = echo_out(["lisp/parse-plan.bin",planfile, *list(init.astype('str'))])
+    out = echo_out(["lisp/ama1-parse-plan.bin",planfile, *list(init.astype('str'))])
     lines = out.splitlines()
     plan = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     log("parsed the plan")

@@ -8,7 +8,7 @@ echo $0 $@
 start=`date +%s`
 if ! [ -s $3 ]
 then
-    $(dirname $0)/../lisp/sas.bin -t $1 $(cat $2) | gzip > $3
+    $(dirname $0)/../lisp/ama1-sas.bin -t $1 $(cat $2) | gzip > $3
     end=`date +%s`
     echo $((end-start)) > $3.time
 fi
