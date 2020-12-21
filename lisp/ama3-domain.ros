@@ -1,0 +1,122 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros dynamic-space-size=128000 -Q -- $0 "$@"
+|#
+
+#|
+
+This is a converter from a CSV file containing the propositional state vectors
+to a PDDL *domain* file.
+
+It takes five csv files -- each describing the 
+add-effect,delete-effect, positive precondition and the negative precondition.
+Each row of the CSV file corresponds to one action,
+and should be a 0/1 sequence except the action ids.
+
+PDDL files are compatible to any classical planning solvers.
+See the past competition solvers for example.
+
+http://www.plg.inf.uc3m.es/ipc2011-deterministic/
+https://helios.hud.ac.uk/scommv/IPC-14/planners.html
+
+|#
+
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(cl-csv iterate alexandria trivia.ppcre serializable-object lparallel numcl dataloader) :silent t)
+  )
+
+(defpackage :actionlearner
+  (:use :numcl :iterate :trivia :trivia.ppcre :lparallel)
+  (:shadowing-import-from :numcl
+                          :sum))
+(in-package :actionlearner)
+
+(defmethod print-object ((o (eql nil)) s)
+  (write-char #\( s)
+  (write-char #\) s))
+
+(defun sym (&rest args)
+  (intern (format nil "~{~a~}" args)))
+
+(defun z (dim)
+  "(z 0) returns a form (Z0) and alike"
+  (list (sym 'z dim)))
+(defun negate (thing) `(not ,thing))
+
+
+(defun make-domain (actions add del pos neg)
+  (format *error-output* "Generating a domain~%")
+  (finish-output *error-output*)
+  (ematch (shape add)
+    ((list action-num dim)
+     `(define (domain latent)
+          (:requirements :strips :negative-preconditions)
+        (:predicates
+         ,@(map 'list #'z (alexandria:iota dim)))
+
+        ,@(iter (for i below action-num)
+                (for a = (aref actions i 0))
+                (for add/a = (aref add i))
+                (for del/a = (aref del i))
+                (for pos/a = (aref pos i))
+                (for neg/a = (aref neg i))
+                (collecting
+                 `(:action ,(sym 'a a)
+                   :parameters ()
+                   :precondition
+                   (and ,@(iter (for p in-vector pos/a with-index j)
+                                (when (plusp p)
+                                  (collect (z j))))
+                        ,@(iter (for p in-vector neg/a with-index j)
+                                (when (plusp p)
+                                  (collect `(not ,(z j))))))
+                   :effect
+                   (and ,@(iter (for p in-vector add/a with-index j)
+                                (when (plusp p)
+                                  (collect (z j))))
+                        ,@(iter (for p in-vector del/a with-index j)
+                                (when (plusp p)
+                                  (collect `(not ,(z j)))))))))))))
+
+(defun main (actions add del pos neg)
+  (flet ((load-csv (filename)
+           (dataloader:load filename
+                            :mime "text/plain"
+                            :separator #\Space
+                            :data-map-fn #'read-from-string)))
+    (let* ((*print-right-margin* 70)
+           (*trace-output* *error-output*))
+      
+      (time
+       (progn
+         (format t "~(~:S~)~%"
+                 (make-domain (load-csv actions)
+                              (load-csv add)
+                              (load-csv del)
+                              (load-csv pos)
+                              (load-csv neg)))
+         (finish-output))))))
+
+#+(or)
+(progn
+
+  (defun merge-as-directory (directory path)
+    (merge-pathnames path (uiop:ensure-directory-pathname directory)))
+
+  (defparameter *dir* "blocks-3-3/blocksworld_coord_tr_LiftedMultiArityFirstOrderTransitionAE_blocks-3-3_0.0001_1_10000_4174835/")
+
+
+  (merge-as-directory "available_actions.csv")
+
+
+  (main (merge-as-directory *dir* "available_actions.csv")
+        (merge-as-directory *dir* "action_add4.csv")
+        (merge-as-directory *dir* "action_del4.csv")
+        (merge-as-directory *dir* "action_pos4.csv")
+        (merge-as-directory *dir* "action_neg4.csv")))
+;;; vim: set ft=lisp lisp:
+
+
+
