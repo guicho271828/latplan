@@ -1,6 +1,7 @@
 *~
 #*
 *.log
+*.err
 *.valid
 *.pyc
 *.csv
@@ -8,6 +9,7 @@
 *.pddl
 *.plan
 *.negative
+*.trace
 learn/events*
 /mnist_model/
 *.bin
