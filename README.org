@@ -66,6 +66,8 @@ Python 3.5 or later is required.
 
 + =parallel= --- for running some scripts.
 
++ =libmagic-dev= --- for filetype detection used by file processor.
+
 ** Python Dependency Installation with Anaconda / Miniconda (recommended)
 
 =anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html) is a

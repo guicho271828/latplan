@@ -24,6 +24,7 @@ git clone -b release https://github.com/roswell/roswell.git
     ros setup
 )
 
+sudo apt -y install libmagic-dev
 ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot
 ros dynamic-space-size=8000 install guicho271828/magicffi guicho271828/dataloader
 
