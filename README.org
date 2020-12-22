@@ -60,13 +60,18 @@ Python 3.5 or later is required.
 
 + =mercurial g++ cmake make python flex bison g++-multilib= --- these are required for compiling Fast Downward.
 
-+ =git build-essential automake libcurl4-openssl-dev= --- these are required for compiling [Roswell](http://roswell.github.io/). OSX users should use =brew install roswell=.
++ =git build-essential automake libcurl4-openssl-dev= --- these are required for compiling [Roswell](http://roswell.github.io/).
+ OSX users should use =brew install roswell=.
 
 + =gnuplot= --- for plotting.
 
 + =parallel= --- for running some scripts.
 
 + =libmagic-dev= --- for filetype detection used by file processor.
+
++ Common Lisp library dependencies (lines started by =ros= in  [[./install.sh]] )
+  + =ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot=
+  + =ros dynamic-space-size=8000 install guicho271828/magicffi guicho271828/dataloader=
 
 ** Python Dependency Installation with Anaconda / Miniconda (recommended)
 
