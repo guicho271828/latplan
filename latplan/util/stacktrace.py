@@ -31,7 +31,12 @@ def print_object(o,include_private=False):
             return {k:printer(remove_array(v)) for k,v in thing.items()}
         else:
             return remove_array(thing)
-    
+
+    try:
+        zip(o)
+    except TypeError:
+        print(o)
+        return
     for key in o:
         try:
             if include(key):
