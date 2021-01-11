@@ -29,6 +29,10 @@ def print_object(o,include_private=False):
             return tuple([printer(remove_array(o)) for o in [*list(zip(thing, range(3))),("...",None)]])
         elif isinstance(thing,dict):
             return {k:printer(remove_array(v)) for k,v in thing.items()}
+        elif isinstance(thing,str):
+            return thing[:500]
+        elif isinstance(thing,bytes):
+            return thing[:500]
         else:
             return remove_array(thing)
 
