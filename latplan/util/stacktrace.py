@@ -23,10 +23,17 @@ def print_object(o,include_private=False):
             return thing
 
     def printer(thing):
+        threshold = 3
         if isinstance(thing,list):
-            return [printer(remove_array(o)) for o, _ in [*list(zip(thing, range(3))),("...",None)]]
+            if len(thing) > threshold:
+                return [printer(remove_array(o)) for o, _ in [*list(zip(thing, range(threshold))),("...",None)]]
+            else:
+                return [printer(remove_array(o)) for o in thing]
         elif isinstance(thing,tuple):
-            return tuple([printer(remove_array(o)) for o in [*list(zip(thing, range(3))),("...",None)]])
+            if len(thing) > threshold:
+                return tuple([printer(remove_array(o)) for o in [*list(zip(thing, range(threshold))),("...",None)]])
+            else:
+                return tuple([printer(remove_array(o)) for o in thing])
         elif isinstance(thing,dict):
             return {k:printer(remove_array(v)) for k,v in thing.items()}
         elif isinstance(thing,str):
