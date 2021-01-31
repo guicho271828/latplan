@@ -6,7 +6,7 @@ sudo apt install -y gnuplot parallel
 sudo apt install -y mercurial g++ cmake make python flex bison g++-multilib
 git submodule update --init --recursive
 (
-    hg clone http://hg.fast-downward.org downward
+    git clone -b release-20.06.0 https://github.com/aibasel/downward.git
     cd downward
     ./build.py -j $(cat /proc/cpuinfo | grep -c processor) release
 )
