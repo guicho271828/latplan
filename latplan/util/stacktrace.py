@@ -26,12 +26,12 @@ def print_object(o,include_private=False):
         threshold = 3
         if isinstance(thing,list):
             if len(thing) > threshold:
-                return [printer(remove_array(o)) for o, _ in [*list(zip(thing, range(threshold))),("...",None)]]
+                return [printer(remove_array(o)) for o, _ in [*list(zip(thing, range(threshold))),(f"...<{len(thing)-threshold} more>",None)]]
             else:
                 return [printer(remove_array(o)) for o in thing]
         elif isinstance(thing,tuple):
             if len(thing) > threshold:
-                return tuple([printer(remove_array(o)) for o in [*list(zip(thing, range(threshold))),("...",None)]])
+                return tuple([printer(remove_array(o)) for o in [*list(zip(thing, range(threshold))),(f"...<{len(thing)-threshold} more>",None)]])
             else:
                 return tuple([printer(remove_array(o)) for o in thing])
         elif isinstance(thing,dict):
