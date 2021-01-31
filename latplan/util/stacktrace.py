@@ -5,6 +5,7 @@ import sys, traceback, types, linecache
 import numpy as np
 
 def print_object(o,include_private=False):
+    maxlinelen=1000
     maxlen=20
     def get(key):
         if isinstance(o, dict):
@@ -57,7 +58,7 @@ def print_object(o,include_private=False):
     for key in o:
         try:
             if include(key):
-                print("{} = {}".format(key.rjust(maxlen+4),repr(printer(get(key)))),file=sys.stderr)
+                print("{} = {}".format(key.rjust(maxlen+4),repr(printer(get(key))))[:maxlinelen],file=sys.stderr)
         except Exception as e:
             print("{} = Error printing object : {}".format(str(key).rjust(maxlen),e),file=sys.stderr)
 
