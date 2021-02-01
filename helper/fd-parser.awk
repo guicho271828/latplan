@@ -95,33 +95,44 @@ BEGIN {
     print "\"translate\":"$4","
 }
 
+# [t=1.22939s, 23808 KB] Plan length: 0 step(s).
+
 /Plan length:/{
-    print "\"length\":"$3","
+    print "\"length\":"$6","
 }
+
+# [t=1.22939s, 23808 KB] Plan cost: 0
+
 /Plan cost:/{
-    print "\"cost\":"$3","
+    print "\"cost\":"$6","
 }
 
-
+# [t=1.22939s, 23808 KB] Expanded 1 state(s).
 
 /Expanded [0-9]+ state\(s\)./{
-    print "\"expanded\":"$2","
+    print "\"expanded\":"$5","
 }
+
+# [t=1.22939s, 23808 KB] Evaluated 1 state(s).
+
 /Evaluated [0-9]+ state\(s\)./{
-    print "\"evaluated\":"$2","
+    print "\"evaluated\":"$5","
 }
+
+# [t=1.22939s, 23808 KB] Generated 0 state(s).
+
 /Generated [0-9]+ state\(s\)./{
-    print "\"generated\":"$2","
+    print "\"generated\":"$5","
 }
 
 /Search time: [.0-9]+s/{
-    sub(/s/,"",$3)
-    search = $3
-    print "\"search\":"$3","
+    sub(/s/,"",$6)
+    search = $6
+    print "\"search\":"$6","
 }
 /Total time: [.0-9]+s/{
-    sub(/s/,"",$3)
-    initialization = $3 - search
+    sub(/s/,"",$6)
+    initialization = $6 - search
     print "\"initialization\":"initialization","
 }
 
