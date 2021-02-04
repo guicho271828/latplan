@@ -46,9 +46,90 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
 (defun negate (thing) `(not ,thing))
 
 
+(defun make-action (A neg pos add/a del/a pos/a neg/a)
+  "This function must handle XOR semantics which may blow up the compilation.
+XOR semantics is defined by positive and negative precondition both specified,
+or by add and delete effect both specified.
+This implies that the bit is _always flipped_, which is not expressible under STRIPS.
+When those conditions are found, we branch out and compile the XOR away.
+"
+  (flet ((check-xor-semantics (j e+ e- p+ p-)
+           (when (or (and (plusp e+) (plusp e-))
+                     (and (plusp p+) (plusp p-)))
+             (cond
+               ((and (plusp e+) (plusp e-) (plusp p+) (plusp p-))
+                (warn "xor semantics! at action ~a pre+eff ~a" a j))
+               ((and (plusp e+) (plusp e-))
+                (warn "xor semantics! at action ~a eff ~a" a j))
+               ((and (plusp p+) (plusp p-))
+                (warn "xor semantics! at action ~a pre ~a" a j)))
+             ;; it is possible that only one of the preconditions and the effects exhibit xor semantics.
+             ;; what should we do when it happens? the answer is that the xor semantics dominate.
+             ;; imagine the effect says add-effect, while the precondition has xor semantics.
+             ;; the add-effect, produced by feeding 0 to action, says if the input is 0, the output is 1.
+             ;; but does not say what happens if the input is 1.
+             ;; so in a sense, the formulation wa incomplete.
+             (unwind-protect
+                  (let (result+ result-)
+                    (setf (aref add/a j) 1 ; bit j: 0 -> 1
+                          (aref del/a j) 0
+                          (aref pos/a j) 0
+                          (aref neg/a j) 1)
+                    (setf result+ (make-action (sym A '+ j) neg pos add/a del/a pos/a neg/a))
+                    (setf (aref add/a j) 0 ; bit j: 1 -> 0
+                          (aref del/a j) 1
+                          (aref pos/a j) 1
+                          (aref neg/a j) 0)
+                    (setf result- (make-action (sym A '- j) neg pos add/a del/a pos/a neg/a))
+                    (return-from make-action
+                      (append result+ result-)))
+               (setf (aref add/a j) e+
+                     (aref del/a j) e-
+                     (aref pos/a j) p+
+                     (aref neg/a j) p-)))))
+    `((:action ,(sym 'a a)
+       :parameters ()
+       :precondition
+       (and ,@(iter (for p+ in-vector pos/a with-index j)
+                    (for p- in-vector neg/a)
+                    (for e+ in-vector add/a)
+                    (for e- in-vector del/a)
+                    (check-xor-semantics j e+ e- p+ p-)
+                    ;; positive precondition
+                    (when (plusp p+)
+                      (collecting
+                       (z j)))
+                    ;; negative precondition
+                    (when (plusp p-)
+                      (collecting
+                       (negate (z j))))
+                    ;; prevail condition
+                    (when (and (zerop p+) (zerop p-))
+                      (when (plusp e+)
+                        (collecting
+                         (z j)))
+                      (when (plusp e-)
+                        (collecting
+                         (negate (z j)))))))
+       :effect
+       (and ,@(iter (for p+ in-vector pos/a with-index j)
+                    (for p- in-vector neg/a)
+                    (for e+ in-vector add/a)
+                    (for e- in-vector del/a)
+                    (check-xor-semantics j e+ e- p+ p-)
+                    (when (plusp e+)
+                      (collecting
+                       (z j)))
+                    (when (plusp e-)
+                      (collecting
+                       (negate
+                        (z j))))))))))
+
 (defun make-domain (actions add del pos neg)
   (format *error-output* "Generating a domain~%")
   (finish-output *error-output*)
+  (setf pos (or pos (full-like add -1 :type '(signed-byte 1))))
+  (setf neg (or neg (full-like add -1 :type '(signed-byte 1))))
   (ematch (shape add)
     ((list action-num dim)
      `(define (domain latent)
@@ -62,39 +143,10 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
                 (for del/a = (aref del i))
                 (for pos/a = (aref pos i))
                 (for neg/a = (aref neg i))
-                (collecting
-                 `(:action ,(sym 'a a)
-                   :parameters ()
-                   :precondition
-                   (and ,@(when (and pos neg)
-                            (iter (for p+ in-vector pos/a with-index j)
-                                  (for p- in-vector neg/a)
-                                  (for e+ in-vector add/a)
-                                  (for e- in-vector del/a)
-                                  (assert (not (and (plusp p+) (plusp p-))))
-                                  (assert (not (and (plusp e+) (plusp e-))))
-                                  ;; positive precondition
-                                  (when (plusp p+)
-                                    (collect (z j)))
-                                  ;; negative precondition
-                                  (when (plusp p-)
-                                    (collect `(not ,(z j))))
-                                  ;; prevail condition
-                                  (when (and (zerop p+) (zerop p-))
-                                    (when (plusp e+)
-                                      (collect (z j)))
-                                    (when (plusp e-)
-                                      (collect `(not ,(z j))))))))
-                   :effect
-                   (and ,@(iter (for e+ in-vector add/a with-index j)
-                                (for e- in-vector del/a)
-                                (assert (not (and (plusp e+) (plusp e-))))
-                                (when (plusp e+)
-                                  (collect (z j)))
-                                (when (plusp e-)
-                                  (collect `(not ,(z j)))))))))))))
+                (appending
+                 (make-action a neg pos add/a del/a pos/a neg/a)))))))
 
-(defun main (actions add del pos neg)
+(defun main (actions add del &optional pos neg)
   (flet ((load-csv (filename)
            (dataloader:load filename
                             :mime "text/plain"
@@ -109,8 +161,8 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
                  (make-domain (load-csv actions)
                               (load-csv add)
                               (load-csv del)
-                              (load-csv pos)
-                              (load-csv neg)))
+                              (and pos (load-csv pos))
+                              (and neg (load-csv neg))))
          (finish-output))))))
 
 #+(or)
