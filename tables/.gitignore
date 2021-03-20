@@ -1,0 +1,3 @@
+*.pdf
+plots-generated/*
+tables-generated/*

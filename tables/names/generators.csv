@@ -1,0 +1,8 @@
+key,name,id
+latplan.puzzles.blocks,Blocks,1
+latplan.puzzles.lightsout_digital,LOut,2
+latplan.puzzles.lightsout_twisted,Twisted,3
+latplan.puzzles.puzzle_mandrill,Mandrill,4
+latplan.puzzles.puzzle_mnist,MNIST,5
+latplan.puzzles.sokoban,Sokoban,6
+latplan.puzzles.hanoi,Hanoi,7

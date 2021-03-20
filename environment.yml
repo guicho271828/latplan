@@ -2,6 +2,7 @@
 name : latplan
 dependencies:
   - python=3.8
+  - sqlite=3.35                 # need 3.35 which has sqrt function
   - pip
   - pip:
       - keras==2.2.5
@@ -14,6 +15,8 @@ dependencies:
       - ansicolors
       - scipy==1.4.1
       - scikit-image
+      - sklearn
+      - pandas
       - imageio
       - pillow
       - git+https://github.com/tomsilver/pddlgym@be55cbf458293edd419216ee71bead02d41c586d

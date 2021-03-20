@@ -1,0 +1,78 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros -Q -- $0 "$@"
+|#
+(declaim (sb-ext:muffle-conditions style-warning))
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:eazy-gnuplot :iterate :trivia) :silent t)
+  )
+
+(defpackage :ros.script.plot-init
+  (:use :cl :eazy-gnuplot :iterate :trivia))
+(in-package :ros.script.plot-init)
+
+(defun main (in out)
+  (with-plots (s )
+    (gp-setup :output out
+              :terminal `(:pdf :noenhanced
+                               :size
+                               (4 3) ; inch ; half column, US letterpaper
+                               ;; (800 800)
+                               ;; :dashed
+                               ;; :background :rgb ,(if improved "white" "gray90")
+                               ;; :monochrome
+                               :font "Times New Roman, 15")
+              :size :square
+              :key :rmargin
+              ;; :key '(:top :right )
+              :pointsize 0.5
+              :logscale :x
+              ;; :format '(xy "10^{%T}")
+              :xrange '(* *)
+              :yrange '(* *)
+              ;; :yrange '(500 5000)
+              :datafile '(:separator :comma)
+              :title out
+              :xlabel "Sum of reconstruction losses"
+              :ylabel "Sum of KL divergence losses")
+    (iter ;; (with var = "F")
+          ;; (with index = 3)
+          ;; (for val in '(50 100 300))
+          
+          ;; (with var = "beta_z")
+          ;; (with index = 4)
+          ;; (for val in '(1 10))
+          
+          (with var = "beta_d")
+          (with index = 5)
+          (for val in '(1 10 100 1000 10000))
+
+
+          (for i from 1)
+          (plot (pathname in)
+                :using `(1 ,(intern (format nil "((($~a==~a))?$2:1/0)" index val)))
+                :title (format nil "~a=~a" var val)
+                :with :points
+                :pt i))
+    ;; (iter 
+    ;; (plot (pathname in)
+    ;;       :using `(1 2 |($3/50)|)
+    ;;       :notitle nil
+    ;;       :with :points :lc :variable)
+    ;; (plot (pathname in)
+    ;;       :using `(1 2 3)
+    ;;       :notitle nil
+    ;;       :with :labels)
+    ;; (plot (pathname in)
+    ;;       :using `(1 2 3)
+    ;;       :notitle nil
+    ;;       :with :labels)
+    ;; (plot (pathname in)
+    ;;       :using `(1 2)
+    ;;       :notitle nil
+    ;;       :with :points)
+    ))
+
+;;; vim: set ft=lisp lisp:

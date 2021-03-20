@@ -30,3 +30,5 @@ downward/
 /puzzle/
 /sokoban/
 tmp*
+*.sqlite
+*.ods

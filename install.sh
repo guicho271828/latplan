@@ -28,6 +28,9 @@ sudo apt -y install libmagic-dev
 ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot
 ros dynamic-space-size=8000 install guicho271828/magicffi guicho271828/dataloader
 
+# for result parsing
+sudo apt -y install sqlite3 jq
+
 make -j 1 -C lisp
 
 mkdir -p ~/.keras

@@ -1,0 +1,81 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#| <Put a one-line description here>
+exec ros -Q -- $0 "$@"
+|#
+(declaim (sb-ext:muffle-conditions style-warning))
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:eazy-gnuplot :iterate :trivia) :silent t)
+  )
+
+(defpackage :ros.script.plot-init
+  (:use :cl :eazy-gnuplot :iterate :trivia))
+(in-package :ros.script.plot-init)
+
+(defun main (in out title xlabel ylabel min max smaller-is-better bottom-right-key logarithmic showbest &rest names)
+  (declare (ignorable argv))
+  (match* (min max smaller-is-better logarithmic bottom-right-key showbest)
+    (((read min) (read max) (read smaller-is-better) (read logarithmic) (read bottom-right-key) (read showbest))
+     (with-plots (s )
+       (gp-setup :output out
+                 :terminal `(:pdf :enhanced
+                                  :size
+                                  (3 3) ; inch ; half column, US letterpaper
+                                  ;; (800 800)
+                                  ;; :dashed
+                                  ;; :background :rgb ,(if improved "white" "gray90")
+                                  ;; :monochrome
+                                  :font "Times New Roman, 11")
+                 :size :square
+                 :view '(:equal :xy)
+                 :pointsize 0.3
+                 :xrange `(,min ,max)
+                 :yrange `(,min ,max)
+                 :datafile '(:separator :comma)
+                 :title title
+                 :xlabel xlabel
+                 :ylabel ylabel)
+       (when logarithmic
+         (gp :set :logscale :xy)
+         (gp :set :format '(xy "10^%T")))
+       ;; when smaller-is-better is t, change the location of keys,
+       ;; the direction of arrows, and the location of labels
+       (if smaller-is-better
+           (gp :set '|arrow from graph 0.7, graph 0.6 to graph 0.6, graph 0.7 linewidth 2|)
+           (gp :set '|arrow from graph 0.6, graph 0.7 to graph 0.7, graph 0.6 linewidth 2|))
+       (if bottom-right-key
+           (progn
+             (gp :set :key '(:bottom :right))
+             (gp :set '|label "better" at graph 0.71, graph 0.6 font "Times New Roman, 12"|))
+           (progn
+             (gp :set :key '(:top :left |Left| :reverse :invert))
+             (gp :set '|label "better" at graph 0.5, graph 0.73 font "Times New Roman, 12"|)))
+       (iter (for i from 1)
+             (for name in names)
+             (plot (pathname in)
+                   :using `(2 ,(intern (format nil "($1==~a?$4:1/0)" i)))
+                   :title name
+                   :with :points
+                   :pt i))
+       (when showbest
+         (plot (pathname in)
+               :using `(2 ,(intern (format nil "(($3==1)?$4:1/0)")))
+               :title (format nil "Best ELBO by ~a" xlabel)
+               :with :points
+               :pointsize 1.1
+               :pt 6
+               :lc '(:rgb "red"))
+         (plot (pathname in)
+               :using `(2 ,(intern (format nil "(($5==1)?$4:1/0)")))
+               :title (format nil "Best ELBO by ~a" ylabel)
+               :with :points
+               :pointsize 1
+               :pt 6
+               :lc '(:rgb "blue")))
+       (plot "x"
+             :notitle ()
+             :with :lines
+             :lc '(:rgb "gray"))))))
+
+;;; vim: set ft=lisp lisp:

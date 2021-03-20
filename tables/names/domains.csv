@@ -1,0 +1,14 @@
+key,name,id
+prob-cylinders-4,Blocks,1
+lightsout-digital-5,LOut,2
+lightsout-twisted-5,Twisted,3
+puzzle-mandrill-4-4,Mandrill,4
+puzzle-mnist-3-3,MNIST,5
+puzzle_longest-mnist-3-3,Long MNIST,6
+puzzle_random_goal-mnist-3-3,"Random MNIST",7
+sokoban-2-False,Sokoban,8
+sokoban_pddl-2-False,"PDDL Sokoban",9
+hanoi-3-9,"Hanoi 3 disks 9 towers",10
+hanoi-4-9,"Hanoi 4 disks 9 towers",11
+hanoi-5-9,"Hanoi 5 disks 9 towers",12
+hanoi-4-4,"Hanoi 4 disks 4 towers",13
