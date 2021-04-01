@@ -98,12 +98,8 @@ def reservoir_sampling(generator, limit):
     else:
         results = np.array([ c for c,_ in zip(generator, range(limit)) ])
         i = limit
-        step = 1
         for result in generator:
             i += 1
-            if (i % step) == 0:
-                if i == step * 10:
-                    step = i
             j = random.randrange(i)
             if j < limit:
                 results[j] = result
