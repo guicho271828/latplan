@@ -94,9 +94,9 @@ def reservoir_sampling(generator, limit):
     import numpy as np
     import random
     if limit is None:
-        results = np.array(list(generator))
+        results = list(generator)
     else:
-        results = np.array([ c for c,_ in zip(generator, range(limit)) ])
+        results = [ c for c,_ in zip(generator, range(limit)) ]
         i = limit
         for result in generator:
             i += 1
