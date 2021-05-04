@@ -41,31 +41,25 @@ def load_blocks(track,num_examples,objects=True,**kwargs):
 ################################################################
 # flat images
 
-@register
-def blocks(track="blocks-3-flat",num_examples=6500,N=None,num_actions=None,aeclass="ConvolutionalGumbelAE",comment=""):
-    for name, value in locals().items():
-        if value is not None:
-            parameters[name]      = [value]
-    parameters["aeclass"]  = aeclass
+def blocks(args):
     parameters["generator"] = "latplan.puzzles.blocks"
-
-    transitions, states = load_blocks(track,num_examples,objects=False)
+    transitions, states = load_blocks(**vars(args),objects=False)
 
     ae = run(os.path.join("samples",common.sae_path), transitions)
 
 
+_parser = subparsers.add_parser('blocks',
+                                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                help='Blocksworld environment. Requires an archive made by github.com/IBM/photorealistic-blocksworld')
+_parser.add_argument('track', help='Name of the archive stored in latplan/puzzles/. Example: blocks-3-flat')
+add_common_arguments(_parser,blocks)
+
 ################################################################
 # object-based representation
 
-@register
-def blocks_objs(track="blocks-3-objs",num_examples=6500,mode="coord",move=False,aeclass="GaussianLiftedMultiArityFirstOrderTransitionAE",comment=""):
-    for name, value in locals().items():
-        if value is not None:
-            parameters[name]      = [value]
-    parameters["aeclass"]  = aeclass
+def blocks_objs(args):
     parameters["generator"] = "latplan.puzzles.blocks"
-
-    transitions, states = load_blocks(track,num_examples,mode=mode,randomize_locations=move)
+    transitions, states = load_blocks(**vars(args))
 
     ae = run(os.path.join("samples",common.sae_path), transitions)
 
@@ -92,3 +86,8 @@ def blocks_objs(track="blocks-3-objs",num_examples=6500,mode="coord",move=False,
     pass
 
 
+_parser = subparsers.add_parser('blocks_objs',
+                                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                help='Object-based blocksworld environment. Requires an archive made by github.com/IBM/photorealistic-blocksworld')
+_parser.add_argument('track', help='Name of the archive stored in latplan/puzzles/. blocks-3-objs')
+add_common_arguments(_parser,blocks_objs,True)

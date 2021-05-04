@@ -38,7 +38,7 @@ Normalization is performed across batches."""
     return transitions, states
 
 
-def normalize_transitions_objects(pres,sucs,object_ordering=None,randomize_locations=False,mode="coord"):
+def normalize_transitions_objects(pres,sucs,object_ordering=None,randomize_locations=False,location_representation="coord",**kwargs):
     """
 Normalize a dataset for object-based transition input format [B, 2, O, F] where B : batch , O : object, F: feature.
 Normalization is performed across B,O dimensions, e.g., mean/variance has shape [F].
@@ -55,7 +55,7 @@ None : maintain the original order in the archive.
 "match_bbox_argmin": compute pairwise L2 distances between bboxes of O objects in the predecessor and successor states.
             we then compute argmin
 
-mode specifies the representation for network input/output, which one of the following:
+location_representation specifies the representation for network input/output, which one of the following:
 
 "coord" : Represent the location as a center location (cx,cy) and a dimension (w,h).
 
@@ -94,7 +94,7 @@ mode specifies the representation for network input/output, which one of the fol
         "binary": binary_embedding,
         "bbox"  : bbox_embedding,
         "sinusoidal": sinusoidal_embedding,
-    }[mode](transitions)
+    }[location_representation](transitions)
 
 
 def shuffle_objects(transitions):

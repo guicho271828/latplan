@@ -6,13 +6,11 @@ from .normalization import normalize_transitions
 from . import common
 
 
-@register
-def hanoi(disks=7,towers=4,num_examples=6500,N=None,num_actions=None,aeclass="ConvolutionalGumbelAE",comment=""):
-    for name, value in locals().items():
-        if value is not None:
-            parameters[name] = [value]
-    parameters["aeclass"] = aeclass
+def hanoi(args):
     parameters["generator"] = "latplan.puzzles.hanoi"
+    disks  = args.disks
+    towers = args.towers
+    num_examples = args.num_examples
 
     import latplan.puzzles.hanoi as p
     p.setup()
@@ -30,3 +28,7 @@ def hanoi(disks=7,towers=4,num_examples=6500,N=None,num_actions=None,aeclass="Co
 
 
 
+_parser = subparsers.add_parser('hanoi', formatter_class=argparse.ArgumentDefaultsHelpFormatter, help='Tower of Hanoi.')
+_parser.add_argument('disks', type=int, default=7, help='The number of disks in the environment.')
+_parser.add_argument('towers', type=int, default=4, help='The number of towers, or the width of the environment.')
+add_common_arguments(_parser,hanoi)

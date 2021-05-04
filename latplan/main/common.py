@@ -11,16 +11,116 @@ from latplan.util        import curry
 ################################################################
 # globals
 
-mode     = 'learn_dump'
+args     = None
 sae_path = None
-tasks    = {}
 
-def register(fn):
-    tasks[fn.__name__] = fn
+################################################################
+# command line parsing
 
+import argparse
+
+parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+
+
+# 
+# RawDescriptionHelpFormatter
+# ArgumentDefaultsHelpFormatter
+
+
+parser.add_argument(
+    "mode",
+    help=(
+        "A string which contains mode substrings."
+        "\nRecognized modes are:"
+        "\n" 
+        "\n   learn     : perform the training with a hyperparameter tuner. Results are stored in logs/."
+        "\n   plot      : load the weights of the current best hyperparameter and produce visualizations"
+        "\n   dump      : dump csv files necessary for producing PDDL models"
+        "\n   summary   : perform extensive evaluations and collect the statistics, store the result in performance.json"
+        "\n   debug     : debug training limited to epoch=2, batch_size=100. dataset is truncated to 200 samples"
+        "\n   reproduce : train the best hyperparameter so far three times with different random seeds. store the best results."
+        "\n   iterate   : iterate plot/dump/summary commands above over all hyperparmeters that are already trained and stored in logs/ directory."
+        "\n"
+        "\nFor example, learn_plot_dump contains 'learn', 'plot', 'dump' mode."
+        "\nThe separater does not matter because its presense is tested by python's `in` directive, i.e., `if 'learn' in mode:` ."
+        "\nTherefore, learnplotdump also works."))
+
+
+subparsers = parser.add_subparsers(
+    title="subcommand",
+    metavar="subcommand",
+    required=True,
+    description=(
+        "\nA string which matches the name of one of the dataset functions in latplan.main module."
+        "\n"
+        "\nEach task has a different set of parameters, e.g.,"
+        "\n'puzzle' has 'type', 'width', 'height' where 'type' should be one of 'mnist', 'spider', 'mandrill', 'lenna',"
+        "\nwhile 'lightsout' has 'type' being either 'digital' and 'twisted', and 'size' being an integer."
+        "\nSee subcommand help."))
+
+def add_common_arguments(subparser,task,objs=False):
+    subparser.set_defaults(task=task)
+    subparser.add_argument(
+        "num_examples",
+        default=5000,
+        type=int,
+        help=(
+            "\nNumber of data points to use. 90%% of this number is used for training, and 5%% each for validation and testing."
+            "\nIt is assumed that the user has already generated a dataset archive in latplan/puzzles/,"
+            "\nwhich contains a larger number of data points using the setup-dataset script provided in the root of the repository."))
+    subparser.add_argument(
+        "aeclass",
+        help=
+        "A string which matches the name of the model class available in latplan.model module.\n"+
+        "It must be one of:\n"+
+        "\n".join([ " "*4+name for name, cls in vars(latplan.model).items()
+                    if type(cls) is type and \
+                    issubclass(cls, latplan.network.Network) and \
+                    cls is not latplan.network.Network
+                ])
+    )
+    if objs:
+        subparser.add_argument("location_representation",
+                               nargs='?',
+                               choices=["bbox","coord","binary","sinusoidal","anchor"],
+                               default="coord",
+                               help="A string which specifies how to convert/encode the location in the dataset. See documentations for normalize_transitions_objects")
+        subparser.add_argument("randomize_location",
+                               nargs='?',
+                               type=bool,
+                               default=False,
+                               help="A boolean which specifies whether we randomly translate the environment globally. See documentations for normalize_transitions_objects")
+    subparser.add_argument("comment",
+                           nargs='?',
+                           default="",
+                           help="A string which is appended to the directory name to label each experiment.")
+    return
+
+
+
+def main(parameters):
+    import latplan.util.tuning
+    latplan.util.tuning.parameters.update(parameters)
+
+    import sys
+    global args, sae_path
+    args = parser.parse_args()
+    task = args.task
+    delattr(args,"task")
+    print(vars(args))
+    latplan.util.tuning.parameters.update(vars(args))
+    sae_path = "_".join(sys.argv[2:])
+    try:
+        task(args)
+    except:
+        latplan.util.stacktrace.format()
+
+
+################################################################
+# procedures for each mode
 
 def plot_autoencoding_image(ae,transitions,label):
-    if 'plot' not in mode:
+    if 'plot' not in args.mode:
         return
 
     if hasattr(ae, "plot_transitions"):
@@ -35,7 +135,7 @@ def plot_autoencoding_image(ae,transitions,label):
 
 
 def dump_all_actions(ae,configs,trans_fn,name = "all_actions.csv",repeat=1):
-    if 'dump' not in mode:
+    if 'dump' not in args.mode:
         return
     l     = len(configs)
     batch = 5000
@@ -55,14 +155,14 @@ def dump_all_actions(ae,configs,trans_fn,name = "all_actions.csv",repeat=1):
 
 
 def dump_actions(ae,transitions,name = "actions.csv",repeat=1):
-    if 'dump' not in mode:
+    if 'dump' not in args.mode:
         return
     print(ae.local(name))
     ae.dump_actions(transitions,batch_size = 1000)
 
 
 def dump_all_states(ae,configs,states_fn,name = "all_states.csv",repeat=1):
-    if 'dump' not in mode:
+    if 'dump' not in args.mode:
         return
     l     = len(configs)
     batch = 5000
@@ -79,7 +179,7 @@ def dump_all_states(ae,configs,states_fn,name = "all_states.csv",repeat=1):
 
 
 def dump_states(ae,states,name = "states.csv",repeat=1):
-    if 'dump' not in mode:
+    if 'dump' not in args.mode:
         return
     print(ae.local(name))
     with open(ae.local(name), 'wb') as f:
@@ -123,7 +223,7 @@ def run(path,transitions,extra=None):
         return
 
 
-    if 'learn' in mode:
+    if 'learn' in args.mode:
         simple_genetic_search(
             curry(nn_task, latplan.model.get(parameters["aeclass"]),
                   path,
@@ -136,7 +236,7 @@ def run(path,transitions,extra=None):
             report             = report,
         )
 
-    if 'resume' in mode:
+    if 'resume' in args.mode:
         simple_genetic_search(
             lambda parameters: nn_task(latplan.model.get(parameters["aeclass"]), path, train, train, val, val, parameters, resume=True),
             parameters,
@@ -147,7 +247,7 @@ def run(path,transitions,extra=None):
             report             = report,
         )
 
-    elif 'debug' in mode:
+    elif 'debug' in args.mode:
         print("debug run. removing past logs...")
         for _path in glob.glob(os.path.join(path,"*")):
             if os.path.isfile(_path):
@@ -167,7 +267,7 @@ def run(path,transitions,extra=None):
             report             = report,
         )
 
-    elif 'reproduce' in mode:   # reproduce the best result from the grid search log
+    elif 'reproduce' in args.mode:   # reproduce the best result from the grid search log
         reproduce(
             curry(nn_task, latplan.model.get(parameters["aeclass"]),
                   path,
@@ -176,16 +276,16 @@ def run(path,transitions,extra=None):
             report      = report,
         )
 
-    if 'iterate' in mode:
+    if 'iterate' in args.mode:
         wild = os.path.join(path,"logs","*")
-        print(f"iterating mode {mode} for all weights stored under {wild}")
+        print(f"iterating mode {args.mode} for all weights stored under {wild}")
         for path in glob.glob(wild):
             postprocess(latplan.model.load(path))
 
 
 
 def show_summary(ae,train,test):
-    if 'summary' in mode:
+    if 'summary' in args.mode:
         ae.summary()
         ae.report(train, test_data = test, train_data_to=train, test_data_to=test)
 

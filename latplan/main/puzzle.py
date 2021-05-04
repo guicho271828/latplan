@@ -39,29 +39,23 @@ def load_puzzle(type,width,height,num_examples,objects=True,**kwargs):
 ################################################################
 # flat images
 
-@register
-def puzzle(type='mnist',width=3,height=3,num_examples=6500,N=None,num_actions=None,aeclass="ConvolutionalGumbelAE",comment=""):
-    for name, value in locals().items():
-        if value is not None:
-            parameters[name] = [value]
-    parameters["aeclass"] = aeclass
-
-    transitions, states = load_puzzle(type,width,height,num_examples,objects=False)
+def puzzle(args):
+    transitions, states = load_puzzle(**vars(args),objects=False)
 
     ae = run(os.path.join("samples",common.sae_path), transitions)
 
 
+_parser = subparsers.add_parser('puzzle', formatter_class=argparse.ArgumentDefaultsHelpFormatter, help='Sliding tile puzzle.')
+_parser.add_argument('type', choices=["mnist","mandrill","spider"], help='')
+_parser.add_argument('width', type=int, default=3, help='Integer width of the puzzle. In MNIST, the value must be 3.')
+_parser.add_argument('height', type=int, default=3, help='Integer height of the puzzle. In MNIST, the value must be 3.')
+add_common_arguments(_parser,puzzle)
+
 ################################################################
 # object-based representation
 
-@register
-def puzzle_objs(type='mnist',width=3,height=3,num_examples=6500,mode="coord",move=False,aeclass="LiftedMultiArityFirstOrderTransitionAE",comment=""):
-    for name, value in locals().items():
-        if value is not None:
-            parameters[name]      = [value]
-    parameters["aeclass"] = aeclass
-
-    transitions, states = load_puzzle(type,width,height,num_examples,mode=mode,randomize_locations=move)
+def puzzle_objs(args):
+    transitions, states = load_puzzle(**vars(args))
 
     ae = run(os.path.join("samples",common.sae_path), transitions)
 
@@ -79,4 +73,10 @@ def puzzle_objs(type='mnist',width=3,height=3,num_examples=6500,mode="coord",mov
 
     pass
 
+
+_parser = subparsers.add_parser('puzzle_objs', formatter_class=argparse.ArgumentDefaultsHelpFormatter, help='Object-based sliding tile puzzle.')
+_parser.add_argument('type', choices=["mnist","mandrill","spider"], help='')
+_parser.add_argument('width', type=int, default=3, help='Integer width of the puzzle. In MNIST, the value must be 3.')
+_parser.add_argument('height', type=int, default=3, help='Integer height of the puzzle. In MNIST, the value must be 3.')
+add_common_arguments(_parser,puzzle_objs,True)
 

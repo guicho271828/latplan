@@ -19,19 +19,19 @@ task (){
     mode=$1
     # main training experiments. results are used for planning experiments
 
-    $common $script $mode hanoi     4 4           {} $comment ::: 5000 ::: None ::: None ::: CubeSpaceAE_AMA{3,4}Conv
-    $common $script $mode hanoi     3 9           {} $comment ::: 5000 ::: None ::: None ::: CubeSpaceAE_AMA{3,4}Conv
-    $common $script $mode hanoi     4 9           {} $comment ::: 5000 ::: None ::: None ::: CubeSpaceAE_AMA{3,4}Conv
-    $common $script $mode hanoi     5 9           {} $comment ::: 5000 ::: None ::: None ::: CubeSpaceAE_AMA{3,4}Conv
-    $common $script $mode puzzle    mnist    3 3  {} $comment ::: 5000 ::: None ::: None ::: CubeSpaceAE_AMA{3,4}Conv
-    $common $script $mode lightsout digital    5  {} $comment ::: 5000 ::: None ::: None ::: CubeSpaceAE_AMA{3,4}Conv
-    $common $script $mode lightsout twisted    5  {} $comment ::: 5000 ::: None ::: None ::: CubeSpaceAE_AMA{3,4}Conv
-    $common -queue x86_12h $script $mode puzzle    mandrill 4 4  {} $comment ::: 20000 ::: None ::: None ::: CubeSpaceAE_AMA3Conv
-    $common -queue x86_24h $script $mode puzzle    mandrill 4 4  {} $comment ::: 20000 ::: None ::: None ::: CubeSpaceAE_AMA4Conv
-    $common -queue x86_6h  $script $mode sokoban   $skb_train    {} $comment ::: 20000 ::: None ::: None ::: CubeSpaceAE_AMA3Conv
-    $common -queue x86_12h $script $mode sokoban   $skb_train    {} $comment ::: 20000 ::: None ::: None ::: CubeSpaceAE_AMA4Conv
-    $common -queue x86_12h $script $mode blocks    cylinders-4-flat {} $comment ::: 20000 ::: None ::: None ::: CubeSpaceAE_AMA3Conv
-    $common -queue x86_24h $script $mode blocks    cylinders-4-flat {} $comment ::: 20000 ::: None ::: None ::: CubeSpaceAE_AMA4Conv
+    $common $script $mode hanoi     4 4           {} $comment ::: 5000 ::: CubeSpaceAE_AMA{3,4}Conv
+    $common $script $mode hanoi     3 9           {} $comment ::: 5000 ::: CubeSpaceAE_AMA{3,4}Conv
+    $common $script $mode hanoi     4 9           {} $comment ::: 5000 ::: CubeSpaceAE_AMA{3,4}Conv
+    $common $script $mode hanoi     5 9           {} $comment ::: 5000 ::: CubeSpaceAE_AMA{3,4}Conv
+    $common $script $mode puzzle    mnist    3 3  {} $comment ::: 5000 ::: CubeSpaceAE_AMA{3,4}Conv
+    $common $script $mode lightsout digital    5  {} $comment ::: 5000 ::: CubeSpaceAE_AMA{3,4}Conv
+    $common $script $mode lightsout twisted    5  {} $comment ::: 5000 ::: CubeSpaceAE_AMA{3,4}Conv
+    $common -queue x86_12h $script $mode puzzle    mandrill 4 4  {} $comment ::: 20000 ::: CubeSpaceAE_AMA3Conv
+    $common -queue x86_24h $script $mode puzzle    mandrill 4 4  {} $comment ::: 20000 ::: CubeSpaceAE_AMA4Conv
+    $common -queue x86_6h  $script $mode sokoban   $skb_train    {} $comment ::: 20000 ::: CubeSpaceAE_AMA3Conv
+    $common -queue x86_12h $script $mode sokoban   $skb_train    {} $comment ::: 20000 ::: CubeSpaceAE_AMA4Conv
+    $common -queue x86_12h $script $mode blocks    cylinders-4-flat {} $comment ::: 20000 ::: CubeSpaceAE_AMA3Conv
+    $common -queue x86_24h $script $mode blocks    cylinders-4-flat {} $comment ::: 20000 ::: CubeSpaceAE_AMA4Conv
 }
 
 export -f task

@@ -32,31 +32,23 @@ def load_sokoban(track,num_examples,objects=True,**kwargs):
 ################################################################
 # flat images
 
-@register
-def sokoban(track="sokoban_image-10000-global-global-0-train",num_examples=6500,N=None,num_actions=None,aeclass="ConvolutionalGumbelAE",comment=""):
-    for name, value in locals().items():
-        if value is not None:
-            parameters[name]      = [value]
-    parameters["aeclass"]  = aeclass
+def sokoban(args):
     parameters["generator"] = "latplan.puzzles.sokoban"
-
-    transitions, states = load_sokoban(track,num_examples,objects=False)
+    transitions, states = load_sokoban(**vars(args),objects=False)
 
     ae = run(os.path.join("samples",common.sae_path), transitions)
 
 
+_parser = subparsers.add_parser('sokoban', formatter_class=argparse.ArgumentDefaultsHelpFormatter, help='Sokoban environment rendered by PDDLGym.')
+_parser.add_argument('track', help='Name of the archive stored in latplan/puzzles/. Example: sokoban_image-10000-global-global-0-train')
+add_common_arguments(_parser,sokoban)
+
 ################################################################
 # object-based representation
 
-@register
-def sokoban_objs(track="sokoban_image-10000-global-object-merged-train",num_examples=6500,mode="coord",move=False,aeclass="LiftedMultiArityFirstOrderTransitionAE",comment=""):
-    for name, value in locals().items():
-        if value is not None:
-            parameters[name]      = [value]
-    parameters["aeclass"]  = aeclass
+def sokoban_objs(args):
     parameters["generator"] = "latplan.puzzles.sokoban"
-
-    transitions, states = load_sokoban(track,num_examples,mode=mode,randomize_locations=move)
+    transitions, states = load_sokoban(**vars(args))
 
     ae = run(os.path.join("samples",common.sae_path), transitions)
 
@@ -81,4 +73,9 @@ def sokoban_objs(track="sokoban_image-10000-global-object-merged-train",num_exam
         ae.reload_with_shape(transitions.shape[1:])
         plot_autoencoding_image(ae,transitions,f"extrapolation-{i}")
     pass
+
+
+_parser = subparsers.add_parser('sokoban_objs', formatter_class=argparse.ArgumentDefaultsHelpFormatter, help='Object-based Sokoban environment rendered by PDDLGym.')
+_parser.add_argument('track', help='Name of the archive stored in latplan/puzzles/. Example: sokoban_image-10000-global-object-merged-train')
+add_common_arguments(_parser,sokoban_objs,True)
 
