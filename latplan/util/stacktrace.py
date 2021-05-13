@@ -4,7 +4,7 @@ import os.path
 import sys, traceback, types, linecache
 import numpy as np
 
-def print_object(o,include_private=False):
+def print_object(o,include_private=False,threshold=3):
     maxlinelen=1000
     maxlen=20
     def get(key):
@@ -24,7 +24,6 @@ def print_object(o,include_private=False):
             return thing
 
     def printer(thing):
-        threshold = 3
         if isinstance(thing,list):
             if len(thing) > threshold:
                 return [printer(remove_array(o)) for o, _ in [*list(zip(thing, range(threshold))),(f"...<{len(thing)-threshold} more>",None)]]
@@ -62,7 +61,7 @@ def print_object(o,include_private=False):
         except Exception as e:
             print("{} = Error printing object : {}".format(str(key).rjust(maxlen),e),file=sys.stderr)
 
-def format(exit=True):
+def format(exit=True,threshold=3):
     np.set_printoptions(threshold=25,formatter=None)
     print("Fancy Traceback (most recent call last):",file=sys.stderr)
     type, value, tb = sys.exc_info()
@@ -76,7 +75,7 @@ def format(exit=True):
         f_line = linecache.getline(f_filename, f_lineno).strip()
 
         print(" ","File",os.path.relpath(f_filename),"line",f_lineno,"function",f_name,":",f_line,file=sys.stderr)
-        print_object(f_locals)
+        print_object(f_locals,threshold=threshold)
         print(file=sys.stderr)
         
     
