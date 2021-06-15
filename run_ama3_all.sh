@@ -1,23 +1,19 @@
 #!/bin/bash -x
 
-# The complicated machinary in this file is made
-# because submitting a large number of short jobs
-# not only harm the performance of the job scheduler, but also
-# make the job handling cumbersome.
-# 
-# (e.g. after noticing a bug, it takes some time to cancel thousands of
-# jobs. Also, some HPC environment has a limit for the number of jobs a single
-# user can submit.)
-
-# This script writes the task commands for processing problem files into a file,
-# then batch-assign it in a single scheduler job which are assigned one hour and 8 cores.
-# Setting the runtime limit of 15 min to each task, each batch-scheduler job can run 4 * 8 tasks.
-
 ulimit -v 16000000000
 
 trap exit SIGINT
 
-probdir=problem-instances
+export cycle=1
+export noise=0.0
+probdir=problem-instances-10min-noise$noise-cycle$cycle
+traindir=samples
+suffix=
+domainfilename=domain
+proj=$(date +%Y%m%d%H%M)ama3
+
+# each Fast Downward uses maximum 8g memory; 8g * 8 process = 64g ; plus a slack for NN footprint
+submit="jbsub -cores 8 -mem 80g -queue x86_6h -proj $proj"
 
 #### foolproof check
 
@@ -33,88 +29,79 @@ probdir=problem-instances
 
 #### job submission
 
-key=${1:-*}
-
-suffix=planning
-base=samples-planning
-taskfile=benchmark
-
 task (){
     out=$(echo ${1%%.pddl} | sed 's@/@_@g')
     base=$2/ama3_${out}_$3
-    outfile=$base.log
-    errfile=$base.err
+    outfile=${base}.log
+    errfile=${base}.err
+    if [ -f ${base}_problem.json ]
+    then
+        echo skipping $base
+        return
+    fi
     trap "cat $outfile; cat $errfile >&2" RETURN
     ./ama3-planner.py \
-        $@ \
+        $@ $cycle $noise \
         1> $outfile \
         2> $errfile
 }
 export -f task
 
-(
-    parallel echo task \
-             ::: $base/puzzle_mnist*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.puzzle_mnist/* \
-             ::: blind gc lama lmcut mands
+# 8 cores per job.
+# singe task is timed out by 10 min, therefore 6 tasks / hour
+# since the queue is 6h, we can assign 36 tasks per core
 
-    parallel echo task \
-             ::: $base/puzzle_mandrill*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.puzzle_mandrill/* \
-             ::: blind gc lama lmcut mands
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/puzzle_mnist*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/puzzle*-mnist*/[0-9]* \
+                            ::: blind lama lmcut mands
 
-    parallel echo task \
-             ::: $base/puzzle_spider*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.puzzle_spider/* \
-             ::: blind gc lama lmcut mands
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/puzzle_mandrill*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/puzzle-mandrill*/[0-9]* \
+                            ::: blind lama lmcut mands
 
-    parallel echo task \
-             ::: $base/lightsout_digital*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.lightsout_digital/* \
-             ::: blind gc lama lmcut mands
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/lightsout_digital*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/lightsout-digital*/[0-9]* \
+                            ::: blind lama lmcut mands
 
-    parallel echo task \
-             ::: $base/lightsout_twisted*$suffix/${key}.pddl \
-             ::: $probdir/*/latplan.puzzles.lightsout_twisted/* \
-             ::: blind gc lama lmcut mands
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/lightsout_twisted*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/lightsout-twisted*/[0-9]* \
+                            ::: blind lama lmcut mands
 
-    # parallel echo task \
-        #          ::: $base/hanoi*$suffix/${key}.pddl \
-        #          ::: $probdir/*/latplan.puzzles.hanoi/* \
-        #          ::: blind gc lama lmcut mands
-) > $taskfile
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/blocks*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/prob-*/[0-9]* \
+                            ::: blind lama lmcut mands
 
-num=$(wc -l $taskfile)
-sort -R $taskfile -o $taskfile
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/sokoban*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/sokoban*/[0-9]* \
+                            ::: blind lama lmcut mands
 
-# 129600
-# 16 cores : 
 
-export hours=1
-export taskperhour=4                       # 15min each
-export cores=8
-export taskperjob=$(($hours*$taskperhour*$cores))
-export mem=3
-export memperjob=$(($mem*$cores))
 
-mkdir -p $taskfile-split
-rm $taskfile-split/*
-split -l $taskperjob $taskfile $taskfile-split/$taskfile.
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/hanoi_4_4*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/hanoi-4-4/[0-9]* \
+                            ::: blind lama lmcut mands
 
-proj=$(date +%Y%m%d%H%M)ama3
-submit="jbsub -cores $cores -mem ${memperjob}g -queue x86_${hours}h -proj $proj"
-export PYTHONUNBUFFERED=1
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/hanoi_3_9*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/hanoi-3-9/[0-9]* \
+                            ::: blind lama lmcut mands
 
-batchtask (){
-    set -x
-    echo $SHELL
-    /usr/bin/env
-    cat $1 | parallel --keep-order -j $cores
-}
-export -f batchtask
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/hanoi_4_9*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/hanoi-4-9/[0-9]* \
+                            ::: blind lama lmcut mands
 
-export SHELL=/bin/bash
-for sub in $taskfile-split/$taskfile.*
-do
-    $submit batchtask $sub
-done
+./run-jobscheduler-parallel 8 36 $submit -- task \
+                            ::: $traindir/hanoi_5_9*$suffix/logs/*/$domainfilename.pddl \
+                            ::: $probdir/*/hanoi-5-9/[0-9]* \
+                            ::: blind lama lmcut mands
+
+
+

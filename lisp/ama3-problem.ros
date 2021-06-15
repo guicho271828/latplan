@@ -100,10 +100,12 @@ https://helios.hud.ac.uk/scommv/IPC-14/planners.html
                    (1 (collect (z d)))
                    (0 (collect `(not ,(z d)))))))))))
 
-(defun main (&rest coordinates)
-  (let ((*print-right-margin* 70))
+(defun main (ig)
+  (let ((coordinates (iter (for b in-file ig)
+                           (collecting b)))
+        (*print-right-margin* 70))
     (format t "~(~:S~)~%"
-            (make-problem (mapcar #'read-from-string coordinates)))))
+            (make-problem coordinates))))
 
 
 ;;; vim: set ft=lisp lisp:

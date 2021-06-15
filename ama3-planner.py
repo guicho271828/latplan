@@ -1,30 +1,5 @@
 #!/usr/bin/env python3
 
-import config_cpu
-import numpy as np
-import subprocess
-import os
-import sys
-import latplan
-import latplan.model
-from latplan.util import *
-from latplan.util.planner import *
-from latplan.util.plot import *
-import latplan.util.stacktrace
-import os.path
-import keras.backend as K
-import tensorflow as tf
-import math
-import time
-import json
-
-float_formatter = lambda x: "%.3f" % x
-np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
-
-
-class PlanException(BaseException):
-    pass
-
 options = {
     "lmcut" : "--search astar(lmcut())",
     "blind" : "--search astar(blind())",
@@ -47,22 +22,44 @@ options = {
     "zopdb"  : "--search astar(zopdbs())",
 }
 
-def main(domainfile, problem_dir, heuristics):
-    network_dir = domainfile
-    success = False
-    while not success:
-        network_dir = os.path.dirname(network_dir)
-        print(network_dir)
-        if network_dir == "":
-            break
-        try:
-            p = puzzle_module(network_dir)
-            success = True
-        except Exception as e:
-            print(e)
-            latplan.util.stacktrace.format(False)
-    if not success:
-        sys.exit("could not locate the network")
+
+import argparse
+parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+parser.add_argument("domainfile", help="pathname to a PDDL domain file")
+parser.add_argument("problem_dir", help="pathname to a directory containing init.png and goal.png")
+parser.add_argument("heuristics", choices=options.keys(),
+                    help="heuristics configuration passed to fast downward. The details are:\n"+
+                    "\n".join([ " "*4+key+"\n"+" "*8+value for key,value in options.items()]))
+parser.add_argument("cycle", type=int, default=1, nargs="?",
+                    help="number of autoencoding cycles to perform on the initial/goal images")
+parser.add_argument("sigma", type=float, default=None, nargs="?",
+                    help="sigma of the Gaussian noise added to the normalized initial/goal images.")
+args = parser.parse_args()
+
+
+import subprocess
+import os
+import sys
+import latplan
+import latplan.model
+from latplan.util import *
+from latplan.util.planner import *
+from latplan.util.plot import *
+import latplan.util.stacktrace
+import os.path
+import keras.backend as K
+import tensorflow as tf
+import math
+import time
+import json
+
+import numpy as np
+float_formatter = lambda x: "%.3f" % x
+np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatter})
+
+
+def main(domainfile, problem_dir, heuristics, cycle, sigma):
+    network_dir = os.path.dirname(domainfile)
     domainfile_rel = os.path.relpath(domainfile, network_dir)
     
     def domain(path):
@@ -78,84 +75,97 @@ def main(domainfile, problem_dir, heuristics):
     log("loaded sae")
     setup_planner_utils(sae, problem_dir, network_dir, "ama3")
 
-    init, goal = init_goal_misc(p)
-    log("loaded init/goal")
+    p = puzzle_module(sae)
+    log("loaded puzzle")
 
-    log("start planning")
-    
+    log(f"loading init/goal")
+    init, goal = init_goal_misc(p,cycle,noise=sigma)
+    log(f"loaded init/goal")
+
+    log(f"start planning")
+
     bits = np.concatenate((init,goal))
 
     ###### files ################################################################
-    ig          = problem(ama(network("ig.csv")))
-    problemfile = problem(ama(network(domain(heur("problem.pddl")))))
-    planfile    = problem(ama(network(domain(heur("problem.plan")))))
-    tracefile   = problem(ama(network(domain(heur("problem.trace")))))
-    csvfile     = problem(ama(network(domain(heur("problem.csv")))))
-    pngfile     = problem(ama(network(domain(heur("problem.png")))))
-    jsonfile    = problem(ama(network(domain(heur("problem.json")))))
-    logfile     = problem(ama(network(domain(heur("problem.log")))))
-    npzfile     = problem(ama(network(domain(heur("problem.npz")))))
-    negfile     = problem(ama(network(domain(heur("problem.negative")))))
+    ig          = problem(ama(network(domain(heur(f"problem.ig")))))
+    problemfile = problem(ama(network(domain(heur(f"problem.pddl")))))
+    planfile    = problem(ama(network(domain(heur(f"problem.plan")))))
+    tracefile   = problem(ama(network(domain(heur(f"problem.trace")))))
+    csvfile     = problem(ama(network(domain(heur(f"problem.csv")))))
+    pngfile     = problem(ama(network(domain(heur(f"problem.png")))))
+    jsonfile    = problem(ama(network(domain(heur(f"problem.json")))))
+    logfile     = problem(ama(network(domain(heur(f"problem.log")))))
+    npzfile     = problem(ama(network(domain(heur(f"problem.npz")))))
+    negfile     = problem(ama(network(domain(heur(f"problem.negative")))))
+
+    valid = False
+    found = False
+    try:
+        ###### preprocessing ################################################################
+        log(f"start generating problem")
+        os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
+        echodo(["helper/ama3-problem.sh",ig,problemfile])
+        log(f"finished generating problem")
     
-    ###### preprocessing ################################################################
-    os.path.exists(ig) or np.savetxt(ig,[bits],"%d")
-    echodo(["helper/ama3-problem.sh",ig,problemfile])
-    log("generated problem")
-    
-    ###### do planning #############################################
-    echodo(["helper/fd-latest.sh", options[heuristics], problemfile, domainfile])
-    log("finished planning")
-    if os.path.exists(planfile):
-        log("running a validator")
+        ###### do planning #############################################
+        log(f"start planning")
+        echodo(["helper/fd-latest.sh", options[heuristics], problemfile, domainfile])
+        log(f"finished planning")
+
+        if not os.path.exists(planfile):
+            return valid
+        found = True
+        log(f"start running a validator")
         echodo(["arrival", domainfile, problemfile, planfile, tracefile])
-        log("simulated the plan")
+        log(f"finished running a validator")
+
+        log(f"start parsing the plan")
         with open(csvfile,"w") as f:
             echodo(["lisp/ama3-read-latent-state-traces.bin", tracefile, str(len(init))],
                    stdout=f)
         plan = np.loadtxt(csvfile, dtype=int)
-        log("parsed the plan")
-        img_states = sae.decode(plan)
-        log("decoded the plan")
-        plot_grid(img_states, path=pngfile, verbose=True)
-        log("plotted the plan")
-        validation = p.validate_transitions([img_states[0:-1], img_states[1:]])
+        log(f"finished parsing the plan")
+
+        if plan.ndim != 2:
+            assert plan.ndim == 1
+            print("Found a plan with length 0; single state in the plan.")
+            return valid
+
+        log(f"start plotting the plan")
+        sae.plot_plan(plan, pngfile, verbose=True)
+        log(f"finished plotting the plan")
+
+        log(f"start archiving the plan")
+        plan_images = sae.decode(plan)
+        np.savez_compressed(npzfile,img_states=plan_images)
+        log(f"finished archiving the plan")
+
+        log(f"start visually validating the plan image : transitions")
+        # note: only puzzle, hanoi, lightsout have the custom validator, which are all monochrome.
+        plan_images = sae.render(plan_images) # unnormalize the image
+        validation = p.validate_transitions([plan_images[0:-1], plan_images[1:]])
         print(validation)
         valid = bool(np.all(validation))
-        print(p.validate_states(img_states))
-        np.savez_compressed(npzfile,img_states=img_states)
-        log("validated the plan")
-        with open(jsonfile,"w") as f:
-            json.dump({
-                "network":network_dir,
-                "problem":os.path.normpath(problem_dir).split("/")[-1],
-                "domain" :os.path.normpath(problem_dir).split("/")[-2],
-                "noise"  :os.path.normpath(problem_dir).split("/")[-3],
-                "times":times,
-                "heuristics":heuristics,
-                "domainfile":domainfile.split("/"),
-                "problemfile":problemfile,
-                "planfile":planfile,
-                "tracefile":tracefile,
-                "csvfile":csvfile,
-                "pngfile":pngfile,
-                "jsonfile":jsonfile,
-                "statistics":json.loads(echo_out(["helper/fd-parser.awk", logfile])),
-                "parameters":sae.parameters,
-                "valid":valid,
-                "found":True,
-                "exhausted": False,
-                }, f)
+        log(f"finished visually validating the plan image : transitions")
+
+        log(f"start visually validating the plan image : states")
+        print(p.validate_states(plan_images))
+        log(f"finished visually validating the plan image : states")
         return valid
-    else:
+
+    finally:
         with open(jsonfile,"w") as f:
+            parameters = sae.parameters.copy()
+            del parameters["mean"]
+            del parameters["std"]
             json.dump({
                 "network":network_dir,
                 "problem":os.path.normpath(problem_dir).split("/")[-1],
                 "domain" :os.path.normpath(problem_dir).split("/")[-2],
-                "noise"  :os.path.normpath(problem_dir).split("/")[-3],
+                "noise":sigma,
                 "times":times,
                 "heuristics":heuristics,
-                "domainfile":domainfile.split("/"),
+                "domainfile":domainfile,
                 "problemfile":problemfile,
                 "planfile":planfile,
                 "tracefile":tracefile,
@@ -163,20 +173,18 @@ def main(domainfile, problem_dir, heuristics):
                 "pngfile":pngfile,
                 "jsonfile":jsonfile,
                 "statistics":json.loads(echo_out(["helper/fd-parser.awk", logfile])),
-                "parameters":sae.parameters,
-                "valid":False,
-                "found":False,
+                "parameters":parameters,
+                "valid":valid,
+                "found":found,
                 "exhausted": os.path.exists(negfile),
-                }, f)
-        return False
+                "cycle":cycle,
+            }, f, indent=2)
+
+
 
 if __name__ == '__main__':
     try:
-        valid = main(*sys.argv[1:])
-        if valid:
-            sys.exit(0)
-        else:
-            sys.exit(1)
+        main(**vars(args))
     except:
         import latplan.util.stacktrace
         latplan.util.stacktrace.format()

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import config_cpu
 import numpy as np
 import os
 import sys
@@ -40,10 +39,11 @@ def main(network_dir, problem_dir, heuristics='blind', action_type="all_actions"
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(heuristics, root, ext)
 
-    p = latplan.util.puzzle_module(network_dir)
-    log("loaded puzzle")
     sae = latplan.model.load(network_dir,allow_failure=True)
     log("loaded sae")
+    import importlib
+    p = importlib.import_module(sae.parameters["generator"])
+    log("loaded puzzle")
     setup_planner_utils(sae, problem_dir, network_dir, "ama1")
 
     init, goal = init_goal_misc(p)
@@ -81,7 +81,7 @@ def main(network_dir, problem_dir, heuristics='blind', action_type="all_actions"
     lines = out.splitlines()
     plan = np.array([ [ int(s) for s in l.split() ] for l in lines ])
     log("parsed the plan")
-    plot_grid(sae.decode(plan), path=pngfile, verbose=True)
+    sae.plot_plan(plan, pngfile, verbose=True)
     log("plotted the plan")
 
     validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])

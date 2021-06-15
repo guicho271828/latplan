@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import warnings
-import config_cpu
 import sys
 import numpy as np
 import latplan
@@ -98,7 +97,7 @@ def state_discriminator3_filtering(y):
 
 def cheating_validation_filtering(y):
     N = y.shape[1]//2
-    p = latplan.util.puzzle_module(sae.local(""))
+    p = puzzle_module(sae)
     pre_images = sae.decode(y[:,:N],batch_size=1000)
     suc_images = sae.decode(y[:,N:],batch_size=1000)
     return y[p.validate_transitions([pre_images, suc_images],batch_size=1000)]
@@ -305,9 +304,6 @@ def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="go
         root, ext = os.path.splitext(path)
         return "{}_{}{}".format(heuristics, root, ext)
 
-    p = latplan.util.puzzle_module(network_dir)
-    log("loaded puzzle")
-
     sae = latplan.model.load(network_dir)
     aae = latplan.model.load(sae.local(_aae       ))
     ad  = latplan.model.load(sae.local(_aae+"_ad/"))
@@ -315,6 +311,10 @@ def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="go
     cae = latplan.model.load(sae.local(    "_cae/"),allow_failure=True)
     setup_planner_utils(sae, problem_dir, network_dir, "ama2")
     log("loaded sae")
+
+    import importlib
+    p = importlib.import_module(sae.parameters["generator"])
+    log("loaded puzzle")
 
     decide_pruning_method()
     
@@ -359,13 +359,13 @@ def main(network_dir, problem_dir, searcher, first_solution=True, heuristics="go
             _searcher.stats["statistics"]["length"] = len(plan)-1
             print(plan)
             if first_solution:
-                plot_grid(sae.decode(plan),
-                        path=problem(ama(network(search(heur("problem.png"))))),
-                        verbose=True)
+                sae.plot_plan(plan,
+                              problem(ama(network(search(heur("problem.png"))))),
+                              verbose=True)
             else:
-                plot_grid(sae.decode(plan),
-                        path=problem(ama(network(search(heur("problem_{}.png".format(i)))))),
-                        verbose=True)
+                sae.plot_plan(plan,
+                              problem(ama(network(search(heur("problem_{}.png".format(i)))))),
+                              verbose=True)
             log("plotted the plan")
             
             validation = p.validate_transitions([sae.decode(plan[0:-1]), sae.decode(plan[1:])])
