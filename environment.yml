@@ -1,10 +1,9 @@
 
 name : latplan
 dependencies:
-  - python=3.7
+  - python=3.8
   - pip
   - pip:
-      - tensorflow-gpu==1.15.2
       - keras==2.2.5
       - h5py
       - matplotlib
@@ -19,3 +18,5 @@ dependencies:
       - pillow
       - git+https://github.com/tomsilver/pddlgym
       - tqdm
+      - nvidia-pyindex
+      - nvidia-tensorflow
