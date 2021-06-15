@@ -1,0 +1,45 @@
+#!/bin/bash
+
+dir=$(dirname $(readlink -ef $0))
+# sokoban / PDDLgym needs it
+export FF_PATH=$(readlink -ef $dir/../planner-scripts/ff)
+export SHELL=/bin/bash
+
+parallel --line-buffer <<EOF
+$dir/generate-propositional.py 7  20 puzzle mnist 3 3
+$dir/generate-propositional.py 14 20 puzzle mnist 3 3
+
+$dir/generate-propositional.py 7  20 puzzle_random_goal mnist 3 3
+$dir/generate-propositional.py 14 20 puzzle_random_goal mnist 3 3
+
+$dir/generate-propositional.py 7  20 puzzle_longest mnist 3 3
+
+$dir/generate-propositional.py 7  20 puzzle mandrill 4 4
+$dir/generate-propositional.py 14 20 puzzle mandrill 4 4
+
+## hanoi 4-4 do not have 14-step optimal plan (less than the graph diameter)
+$dir/generate-propositional.py 7  20 hanoi 4 4
+
+## hanoi 3-9 do not have 7-step optimal plan (less than the graph diameter)
+$dir/generate-propositional.py 5  20 hanoi 3 9
+
+## hanoi 4-9 do not have 14-step optimal plan (less than the graph diameter)
+$dir/generate-propositional.py 7  20 hanoi 4 9
+
+## hanoi 5-9 do not have 14-step optimal plan (less than the graph diameter)
+$dir/generate-propositional.py 7  20 hanoi 5 9
+
+$dir/generate-propositional.py 7  20 lightsout digital 5
+$dir/generate-propositional.py 14 20 lightsout digital 5
+
+$dir/generate-propositional.py 7  20 lightsout twisted 5
+$dir/generate-propositional.py 14 20 lightsout twisted 5
+
+$dir/generate-propositional.py 7  20 sokoban 2
+$dir/generate-propositional.py 14 20 sokoban 2
+
+$dir/generate-propositional.py 100 1 sokoban_pddlgoal 2
+
+EOF
+
+echo "done!"

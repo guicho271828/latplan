@@ -27,14 +27,7 @@ $common ./setup-dataset.py lightsout digital 4 50000
 $common ./setup-dataset.py lightsout digital 5 50000
 $common ./setup-dataset.py lightsout twisted 4 50000
 $common ./setup-dataset.py lightsout twisted 5 50000
-$common ./setup-dataset.py hanoi 3 3 50000
-$common ./setup-dataset.py hanoi 4 4 50000
-$common ./setup-dataset.py hanoi 9 3 50000
-$common ./setup-dataset.py hanoi 4 8 50000
-$common ./setup-dataset.py hanoi 5 5 50000
-$common ./setup-dataset.py hanoi 6 6 50000
-$common ./setup-dataset.py hanoi 7 7 50000
-$common ./setup-dataset.py hanoi 8 8 50000
+parallel $common ./setup-dataset.py hanoi {} 50000 ::: {3..9} ::: {3..9}
 
 download-and-extract (){
     wget https://github.com/IBM/photorealistic-blocksworld/releases/download/$1/$1.npz -O latplan/puzzles/$1.npz

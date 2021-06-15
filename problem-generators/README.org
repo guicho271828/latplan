@@ -1,0 +1,25 @@
+
+* Usage
+
+First, run =generate-all= to generate a backup of all problem instances.
+This takes one hour, mainly because lightsout domain is especially slow to generate.
+
+Then run =copy [fol|propositional] <target directory>= to copy the generated instances to
+a target directory. (this avoids accidentally losing your generated instances.)
+
+* Input format
+
+** Propositonal AMA (AMA1,2,3,4)
+
+Propositional AMA models assumes a directory containing two image files named init.png and goal.png.
+
+** Lifted AMA (AMA5)
+
+Lifted AMA models assumes a npz archive as an input.
+The archive should contain a field named by "init" and "goal", as well as "picsize".
+picsize is an array representing the shape of the rendered image.
+
+Init and goal are arrays containining image patches.
+Therefore, if init is an array of shape [5,30,30,3],
+this is an environment of 5 objects, each captured in 30x30 bounding box with RGB color.
+

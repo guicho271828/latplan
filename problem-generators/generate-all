@@ -1,0 +1,16 @@
+#!/bin/bash
+
+dir=$(dirname $(readlink -ef $0))
+
+$dir/generate fol $dir/backup-fol
+
+$dir/generate propositional $dir/backup-propositional
+
+cat <<EOF
+run
+
+\$ $dir/copy [fol|propositional] <target directory>
+
+to copy the generated instances to a new directory
+EOF
+

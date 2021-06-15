@@ -1,0 +1,20 @@
+#!/bin/bash
+
+dir=$(dirname $(readlink -ef $0))
+# sokoban / PDDLgym needs it
+export FF_PATH=$(readlink -ef $dir/../planner-scripts/ff)
+export SHELL=/bin/bash
+
+# for blocksworld, generate the problem instances with photorealsitic-blocksworld dataset generator
+
+parallel --line-buffer <<EOF
+$dir/generate-fol-puzzle.py 1 100 puzzle mnist 3 3
+$dir/generate-fol-puzzle.py 2 100 puzzle mnist 3 3
+$dir/generate-fol-puzzle.py 3 100 puzzle mnist 3 3
+$dir/generate-fol-puzzle.py 5 100 puzzle mnist 3 3
+$dir/generate-fol-puzzle.py 10 100 puzzle mnist 3 3
+$dir/generate-fol-puzzle.py 20 100 puzzle mnist 3 3
+$dir/generate-fol-sokoban.py
+EOF
+
+echo "done!"

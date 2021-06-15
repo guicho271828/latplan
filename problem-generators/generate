@@ -1,0 +1,34 @@
+#!/bin/bash
+
+mode=$1
+output_dir=$2
+
+script=$(readlink -ef $0)-$mode
+
+usage (){
+    echo "Usage: $0 mode output_dir"
+    exit
+}
+
+if [ -z $mode ]
+then
+    echo "missing mode."
+    usage
+fi
+if [ -z $output_dir ]
+then
+    echo "missing output directory."
+    usage
+fi
+if [ ! -f $script ]
+then
+    echo "mode argument ($mode) is illegal. should be one of: propositional, fol"
+    usage
+fi
+
+mkdir -vp $output_dir
+
+(
+    cd $output_dir
+    $script
+)
