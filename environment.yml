@@ -16,7 +16,7 @@ dependencies:
       - scikit-image
       - imageio
       - pillow
-      - git+https://github.com/tomsilver/pddlgym
+      - git+https://github.com/tomsilver/pddlgym@be55cbf458293edd419216ee71bead02d41c586d
       - tqdm
       - nvidia-pyindex
       - nvidia-tensorflow
