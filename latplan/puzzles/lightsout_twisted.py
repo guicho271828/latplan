@@ -8,7 +8,7 @@ from .util import wrap
 
 from keras.layers import Input, Reshape, Cropping2D, MaxPooling2D
 from keras.models import Model
-from keras import backend as K
+import keras.backend.tensorflow_backend as K
 import tensorflow as tf
 
 panels = np.zeros((2,9,9))
@@ -252,6 +252,10 @@ def validate_states(states,verbose=True,**kwargs):
     dim  = states.shape[1] - pad*2
     size = dim // base
     
+    if states.ndim == 4:
+        assert states.shape[-1] == 1
+        states = states[...,0]
+
     def build():
         states = Input(shape=(dim+2*pad,dim+2*pad))
         s = tensor_swirl(states, radius=dim+2*pad * relative_swirl_radius, **unswirl_args)
@@ -292,6 +296,10 @@ def to_configs(states, verbose=True, **kwargs):
     base = panels.shape[1]
     dim  = states.shape[1] - pad*2
     size = dim // base
+
+    if states.ndim == 4:
+        assert states.shape[-1] == 1
+        states = states[...,0]
     
     def build():
         states = Input(shape=(dim+2*pad,dim+2*pad))

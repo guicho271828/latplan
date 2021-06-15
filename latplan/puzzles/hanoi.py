@@ -2,35 +2,57 @@
 import random
 import numpy as np
 from .model.hanoi import generate_configs, generate_random_configs, successors, config_state
+from .model.util import binary_search
 import math
 from .util import wrap
 from .util import preprocess
 
 from keras.layers import Input
 from keras.models import Model
-from keras import backend as K
+import keras.backend.tensorflow_backend as K
 import tensorflow as tf
 
 ## code ##############################################################
 
-disk_height = 4
-disk_inc = 2
-base_disk_width_factor = 1
-base_disk_width = disk_height * base_disk_width_factor
+# see model/hanoi.py for the details of config encoding.
+# this file contains only the rendering and validation code.
 
-border = 0
-tile_factor = 1
+disk_height = 1                 # height of a single disk in pixel.
+disk_inc = 0                    # the increment of the width between disks in pixel. The actual width increases twice this amount because it is added on both the left and the right sides.
+base_disk_width_factor = 1      # ratio between the disk height and width. larger factor = more width
+base_disk_width = 3 + disk_height * base_disk_width_factor # the width of the smallest disk.
+
+colors = [
+    # r,g,b
+    # [0,0,0],
+    [1,1,1],
+    [1,0,0],
+    [0,1,0],
+    [0,0,1],
+    [1,1,0],
+    [0,1,1],
+    [1,0,1],
+    [1,0.5,0],
+    [0.5,1,0],
+    [0,1,0.5],
+    [0,0.5,1],
+    [0.5,0,1],
+    [1,0,0.5],
+]
+
+setting = {
+    'min_threshold' : 0.0,
+    'max_threshold' : 0.5,
+}
 
 def generate1(config,disks,towers, **kwargs):
     l = len(config)
-    tower_width  = disks * (2*disk_inc) + base_disk_width + border
+    tower_width  = disks * (2*disk_inc) + base_disk_width
     tower_height = disks*disk_height
-    figure = np.ones([tower_height,
-                      tower_width*towers],dtype=np.int8)
+    figure = np.full([tower_height, tower_width*towers, 3], 0.5) # gray
     state = config_state(config,disks,towers)
     for i, tower in enumerate(state):
         tower.reverse()
-        # print(i,tower)
         x_center = tower_width *  i + disks * disk_inc # lacks base_disk_width
         for j,disk in enumerate(tower):
             # print(j,disk,(l-j)*2)
@@ -39,13 +61,7 @@ def generate1(config,disks,towers, **kwargs):
                 tower_height - disk_height * j,
                 x_center - disk * disk_inc :
                 x_center + disk * disk_inc + base_disk_width] \
-                = 0
-                # = np.tile(np.tile(patterns[disk],(tile_factor,tile_factor)),
-                #           (1,2*disks+base_disk_width_factor))[:,:2 * disk * disk_inc + base_disk_width]
-                # = np.tile(np.tile(patterns[disk],(tile_factor,tile_factor)),
-                #           (1,disk+base_disk_width_factor))
-                # = np.tile(np.tile(patterns[disk],(tile_factor,tile_factor)),
-                #           (1,2*disk+base_disk_width_factor))
+                = colors[disk]
     return preprocess(figure)
 
 def generate(configs,disks,towers, **kwargs):
@@ -86,74 +102,61 @@ def setup():
     pass
 
 def get_panels(disks, tower_width):
-    panels = np.ones([disks+1, disk_height, tower_width], dtype=np.int8)
+    # build a single tower with all disks, plus one empty row
+    panels = np.full([disks+1, disk_height, tower_width, 3], 0.5)
     x_center = disks * disk_inc # lacks base_disk_width
     for disk, panel in enumerate(panels):
-        if disk != disks:
-            # last panel is empty
+        if disk != disks:       # except the last empty panel
             panel[:,
                 x_center - disk * disk_inc :
                 x_center + disk * disk_inc + base_disk_width] \
-                = 0
+                = colors[disk]
     return panels
 
 
-threshold = 0.01
 def build_error(s, disks, towers, tower_width, panels):
-    s = K.reshape(s,[-1,disks, disk_height, towers, tower_width])
-    s = K.permute_dimensions(s, [0,1,3,2,4])
-    s = K.reshape(s,[-1,disks,towers,1,    disk_height,tower_width])
-    s = K.tile   (s,[1, 1, 1, disks+1,1, 1,])
+    # s: [batch,disks*height,towers*width,3]
+    s = K.reshape(s,[-1,disks, disk_height, towers, tower_width, 3])
+    s = K.permute_dimensions(s, [0,1,3,2,4,5])
+    s = K.reshape(s,[-1,disks,towers, 1,      disk_height,tower_width,3])
+    s = K.tile   (s,[1, 1,    1,      disks+1,1,          1,          1])
+    # s: [batch,disks,towers,disks+1,height,width,3]
 
+    # allpanels: [disks+1,height,width,3]
     allpanels = K.variable(panels)
-    allpanels = K.reshape(allpanels, [1,1,1,disks+1,disk_height,tower_width])
-    allpanels = K.tile(allpanels, [K.shape(s)[0], disks, towers, 1, 1, 1])
+    allpanels = K.reshape(allpanels, [1,1,1,disks+1,disk_height,tower_width,3])
+    allpanels = K.tile(allpanels, [K.shape(s)[0], disks, towers, 1, 1, 1, 1])
+    # allpanels: [batch,disks,towers,disks+1,height,width,3]
 
-    def hash(x):
-        ## 2x2 average hashing (now it does not work since disks have 1 pixel height)
-        # x = K.reshape(x, [-1,disks,towers,disks+1, disk_height,tower_width//2,2])
-        # x = K.mean(x, axis=(4,))
-        # return K.round(x)
-        ## diff hashing (horizontal diff)
-        # x1 = x[:,:,:,:,:,:-1]
-        # x2 = x[:,:,:,:,:,1:]
-        # d = x1 - x2
-        # return K.round(d)
-        ## just rounding
-        return K.round(x)
-        ## do nothing
-        # return x
-
-    s         = hash(s)
-    allpanels = hash(allpanels)
-    
-    # error = K.binary_crossentropy(s, allpanels)
     error = K.abs(s - allpanels)
-    error = K.mean(error, axis=(4,5))
+    error = K.mean(error, axis=(4,5,6))
+    # error: [batch,disks,towers,disks+1]
     return error
     
 def validate_states(states,verbose=True, **kwargs):
     tower_height = states.shape[1]
     disks = tower_height // disk_height
     
-    tower_width  = disks * (2*disk_inc) + base_disk_width + border
+    tower_width  = disks * (2*disk_inc) + base_disk_width
     towers = states.shape[2] // tower_width
     panels = get_panels(disks, tower_width)
 
+    bs = binary_search(setting["min_threshold"],setting["max_threshold"])
     def build():
-        states = Input(shape=(tower_height, tower_width*towers))
+        states = Input(shape=(tower_height, tower_width*towers, 3))
         error = build_error(states, disks, towers, tower_width, panels)
-        matches = 1 - K.clip(K.sign(error - threshold),0,1)
+        matches = 1 - K.clip(K.sign(error - bs.value),0,1)
 
         num_matches = K.sum(matches, axis=3)
-        panels_ok = K.all(K.equal(num_matches, 1), (1,2))
-        panels_ng = K.any(K.not_equal(num_matches, 1), (1,2))
-        panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2))
-        panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2))
+        panels_ok = K.all(K.equal(num_matches, 1), (1,2)) # there is exactly one matched panel
+        panels_ng = K.any(K.not_equal(num_matches, 1), (1,2)) # number of matches are not 1
+        panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2)) # there are no matched panel
+        panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2)) # there are more than one matched panels
 
         panel_coverage = K.sum(matches,axis=(1,2))
         # ideally, this should be [[1,1,1...1,1,1,disks*tower-disk], ...]
-        
+
+        # there should be one match each + disks*towers-disks matches for the background
         ideal_coverage = np.ones(disks+1)
         ideal_coverage[-1] = disks*towers-disks
         ideal_coverage = K.variable(ideal_coverage)
@@ -161,47 +164,70 @@ def validate_states(states,verbose=True, **kwargs):
         coverage_ng = K.any(K.not_equal(panel_coverage, ideal_coverage), 1)
         validity = tf.logical_and(panels_ok, coverage_ok)
 
-        if verbose:
-            return Model(states,
-                         [ wrap(states, x) for x in [panels_ok,
-                                                     panels_ng,
-                                                     panels_nomatch,
-                                                     panels_ambiguous,
-                                                     coverage_ok,
-                                                     coverage_ng,
-                                                     validity]])
-        else:
-            return Model(states, wrap(states, validity))
+        return Model(states,
+                     [ wrap(states, x) for x in [panels_ok,
+                                                 panels_nomatch,
+                                                 panels_ambiguous,
+                                                 coverage_ok,
+                                                 coverage_ng,
+                                                 validity]])
 
-    model = build()
-    #     model.summary()
-    if verbose:
-        panels_ok, panels_ng, panels_nomatch, panels_ambiguous, \
+    while True:
+        model = build()
+        panels_ok, panels_nomatch, panels_ambiguous, \
             coverage_ok, coverage_ng, validity = model.predict(states, **kwargs)
-        print(np.count_nonzero(panels_ng),       "images have some panels which match 0 or >2 panels, out of which")
-        print(np.count_nonzero(panels_nomatch),  "images have some panels which are unlike any panels")
-        print(np.count_nonzero(panels_ambiguous),"images have some panels which match >2 panels")
-        print(np.count_nonzero(panels_ok),       "images have panels (all of them) which match exactly 1 panel each")
-        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
-        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
-        return validity
-    else:
-        validity = model.predict(states, **kwargs)
-        return validity
+        panels_nomatch = np.count_nonzero(panels_nomatch)
+        panels_ambiguous = np.count_nonzero(panels_ambiguous)
+        if verbose:
+            print(f"threshold value: {bs.value}")
+            print(panels_nomatch,                    "images have some panels which are unlike any panels")
+            print(np.count_nonzero(panels_ok),       "images have all panels which match exactly 1 panel each")
+            print(panels_ambiguous,                  "images have some panels which match >2 panels")
+        if np.abs(panels_nomatch - panels_ambiguous) <= 1:
+            if verbose:
+                print("threshold found")
+                print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
+                print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
+            return validity
+        elif panels_nomatch < panels_ambiguous:
+            bs.goleft()
+        else:
+            bs.goright()
 
 
 def to_configs(states,verbose=True, **kwargs):
     tower_height = states.shape[1]
     disks = tower_height // disk_height
     
-    tower_width  = disks * (2*disk_inc) + base_disk_width + border
+    tower_width  = disks * (2*disk_inc) + base_disk_width
     towers = states.shape[2] // tower_width
     panels = get_panels(disks, tower_width)
 
+    bs = binary_search(setting["min_threshold"],setting["max_threshold"])
     def build():
-        states = Input(shape=(tower_height, tower_width*towers))
+        states = Input(shape=(tower_height, tower_width*towers, 3))
         error = build_error(states, disks, towers, tower_width, panels)
-        matches = 1 - K.clip(K.sign(error - threshold),0,1)
+        # error: [batch,disks,towers,disks+1]
+        matches = 1 - K.clip(K.sign(error - bs.value),0,1)
+        # matches: [batch,disks,towers,disks+1]
+
+        num_matches = K.sum(matches, axis=3)
+        panels_ok = K.all(K.equal(num_matches, 1), (1,2)) # there is exactly one matched panel
+        panels_ng = K.any(K.not_equal(num_matches, 1), (1,2)) # number of matches are not 1
+        panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2)) # there are no matched panel
+        panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2)) # there are more than one matched panels
+
+        panel_coverage = K.sum(matches,axis=(1,2))
+        # ideally, this should be [[1,1,1...1,1,1,disks*tower-disk], ...]
+
+        # there should be one match each + disks*towers-disks matches for the background
+        ideal_coverage = np.ones(disks+1)
+        ideal_coverage[-1] = disks*towers-disks
+        ideal_coverage = K.variable(ideal_coverage)
+        coverage_ok = K.all(K.equal(panel_coverage, ideal_coverage), 1)
+        coverage_ng = K.any(K.not_equal(panel_coverage, ideal_coverage), 1)
+        validity = tf.logical_and(panels_ok, coverage_ok)
+
         # assume disks=4, towers=3
         # matches: a h w p
         # [[[00001][00001][00001]]  --- all panel 4 (empty panel)
@@ -234,9 +260,38 @@ def to_configs(states,verbose=True, **kwargs):
         config = K.sum(config, -1)
         # [0 0 1 0]
         config = K.cast(config, 'int32')
-        return Model(states, wrap(states, config))
 
-    return build().predict(states, **kwargs)
+        return Model(states,
+                     [ wrap(states, x) for x in [panels_ok,
+                                                 panels_nomatch,
+                                                 panels_ambiguous,
+                                                 coverage_ok,
+                                                 coverage_ng,
+                                                 validity,
+                                                 config]])
+
+    while True:
+        model = build()
+        panels_ok, panels_nomatch, panels_ambiguous, \
+            coverage_ok, coverage_ng, validity, config = model.predict(states, **kwargs)
+        panels_nomatch = np.count_nonzero(panels_nomatch)
+        panels_ambiguous = np.count_nonzero(panels_ambiguous)
+        if verbose:
+            print(f"threshold value: {bs.value}")
+            print(panels_nomatch,                    "images have some panels which are unlike any panels")
+            print(np.count_nonzero(panels_ok),       "images have all panels which match exactly 1 panel each")
+            print(panels_ambiguous,                  "images have some panels which match >2 panels")
+        if np.abs(panels_nomatch - panels_ambiguous) <= 1:
+            if verbose:
+                print("threshold found")
+                print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
+                print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
+            return config
+        elif panels_nomatch < panels_ambiguous:
+            bs.goleft()
+        else:
+            bs.goright()
+
 
 def validate_transitions(transitions, check_states=True, **kwargs):
     pre = np.array(transitions[0])
@@ -245,7 +300,7 @@ def validate_transitions(transitions, check_states=True, **kwargs):
     tower_height = pre.shape[1]
     disks = tower_height // disk_height
     
-    tower_width  = disks * (2*disk_inc) + base_disk_width + border
+    tower_width  = disks * (2*disk_inc) + base_disk_width
     towers = pre.shape[2] // tower_width
     
     if check_states:
@@ -270,121 +325,3 @@ def validate_transitions(transitions, check_states=True, **kwargs):
             results.append(np.any(np.all(np.equal(succs, suc_c), axis=1)))
     return results
 
-## patterns ##############################################################
-
-patterns = [
-    [[0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],],
-    [[1,1,1,1,1,1,1,1,],
-     [1,1,1,0,0,1,1,1,],
-     [1,1,1,0,0,1,1,1,],
-     [1,1,1,0,0,1,1,1,],
-     [1,1,1,0,0,1,1,1,],
-     [1,0,0,0,0,0,0,1,],
-     [1,0,0,0,0,0,0,1,],
-     [1,1,1,1,1,1,1,1,],],
-    [[1,1,0,0,1,1,0,0,],
-     [1,1,0,0,1,1,0,0,],
-     [0,0,1,1,0,0,1,1,],
-     [0,0,1,1,0,0,1,1,],
-     [1,1,0,0,1,1,0,0,],
-     [1,1,0,0,1,1,0,0,],
-     [0,0,1,1,0,0,1,1,],
-     [0,0,1,1,0,0,1,1,],],
-    [[1,1,1,1,1,1,1,1,],
-     [1,1,0,0,0,0,1,1,],
-     [1,0,1,1,1,1,0,1,],
-     [1,0,1,1,1,1,0,1,],
-     [1,0,1,1,1,1,0,1,],
-     [1,0,1,1,1,1,0,1,],
-     [1,1,0,0,0,0,1,1,],
-     [1,1,1,1,1,1,1,1,],],
-    [[0,0,0,1,0,0,0,1,],
-     [0,0,1,0,0,0,1,0,],
-     [0,1,0,0,0,1,0,0,],
-     [1,0,0,0,1,0,0,0,],
-     [0,0,0,1,0,0,0,1,],
-     [0,0,1,0,0,0,1,0,],
-     [0,1,0,0,0,1,0,0,],
-     [1,0,0,0,1,0,0,0,],],
-    [[1,1,1,1,1,1,1,1,],
-     [1,1,0,0,0,0,1,1,],
-     [1,0,0,0,0,0,0,1,],
-     [1,0,0,0,0,0,0,1,],
-     [1,0,0,0,0,0,0,1,],
-     [1,0,0,0,0,0,0,1,],
-     [1,1,0,0,0,0,1,1,],
-     [1,1,1,1,1,1,1,1,],],
-    [[0,0,0,0,0,0,0,0,],
-     [0,1,1,1,0,0,0,0,],
-     [0,1,1,1,0,0,0,0,],
-     [0,1,1,1,0,0,0,0,],
-     [0,0,0,0,1,1,1,0,],
-     [0,0,0,0,1,1,1,0,],
-     [0,0,0,0,1,1,1,0,],
-     [0,0,0,0,0,0,0,0,],],
-    [[1,0,0,0,1,0,0,0,],
-     [0,1,0,0,0,1,0,0,],
-     [0,0,1,0,0,0,1,0,],
-     [0,0,0,1,0,0,0,1,],
-     [1,0,0,0,1,0,0,0,],
-     [0,1,0,0,0,1,0,0,],
-     [0,0,1,0,0,0,1,0,],
-     [0,0,0,1,0,0,0,1,],],
-    [[0,0,0,1,1,0,0,0,],
-     [0,0,1,0,0,1,0,0,],
-     [0,1,0,0,0,0,1,0,],
-     [1,0,0,0,0,0,0,1,],
-     [0,0,0,1,1,0,0,0,],
-     [0,0,1,0,0,1,0,0,],
-     [0,1,0,0,0,0,1,0,],
-     [1,0,0,0,0,0,0,1,],],
-    [[1,0,0,0,0,0,0,1,],
-     [0,1,0,0,0,0,1,0,],
-     [0,0,1,0,0,1,0,0,],
-     [0,0,0,1,1,0,0,0,],
-     [1,0,0,0,0,0,0,1,],
-     [0,1,0,0,0,0,1,0,],
-     [0,0,1,0,0,1,0,0,],
-     [0,0,0,1,1,0,0,0,],],
-    [[1,0,1,0,1,0,1,0,],
-     [1,0,1,0,1,0,1,0,],
-     [1,0,1,0,1,0,1,0,],
-     [1,0,1,0,1,0,1,0,],
-     [1,0,1,0,1,0,1,0,],
-     [1,0,1,0,1,0,1,0,],
-     [1,0,1,0,1,0,1,0,],
-     [1,0,1,0,1,0,1,0,],],
-    [[1,1,1,1,1,1,1,1,],
-     [0,0,0,0,0,0,0,0,],
-     [1,1,1,1,1,1,1,1,],
-     [0,0,0,0,0,0,0,0,],
-     [1,1,1,1,1,1,1,1,],
-     [0,0,0,0,0,0,0,0,],
-     [1,1,1,1,1,1,1,1,],
-     [0,0,0,0,0,0,0,0,],],
-    [[0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],
-     [1,1,1,1,1,1,1,1,],
-     [1,1,1,1,1,1,1,1,],
-     [1,1,1,1,1,1,1,1,],
-     [1,1,1,1,1,1,1,1,],
-     [0,0,0,0,0,0,0,0,],
-     [0,0,0,0,0,0,0,0,],],
-    [[0,0,1,1,1,1,0,0,],
-     [0,0,1,1,1,1,0,0,],
-     [0,0,1,1,1,1,0,0,],
-     [0,0,1,1,1,1,0,0,],
-     [0,0,1,1,1,1,0,0,],
-     [0,0,1,1,1,1,0,0,],
-     [0,0,1,1,1,1,0,0,],
-     [0,0,1,1,1,1,0,0,],],
-]
-
-patterns = np.array(patterns)

@@ -7,7 +7,7 @@ from ..util import wrap
 
 from keras.layers import Input, Reshape
 from keras.models import Model
-from keras import backend as K
+import keras.backend.tensorflow_backend as K
 import tensorflow as tf
 
 # domain specific state representation:
@@ -21,6 +21,8 @@ setting = {
     'base' : None,
     'panels' : None,
     'loader' : None,
+    'min_threshold' : 0.0,
+    'max_threshold' : 0.5,
 }
 
 def load(width,height,force=False):
@@ -32,7 +34,7 @@ def generate(configs, width, height, **kwargs):
 
     from keras.layers import Input, Reshape
     from keras.models import Model
-    from keras import backend as K
+    import keras.backend.tensorflow_backend as K
     import tensorflow as tf
     
     def build():
@@ -54,7 +56,7 @@ def generate(configs, width, height, **kwargs):
     return model.predict(np.array(configs),**kwargs)
 
 
-threshold = 0.01
+
 def build_error(s, height, width, base):
     P = len(setting['panels'])
     s = K.reshape(s,[-1,height,base,width,base])
@@ -66,45 +68,31 @@ def build_error(s, height, width, base):
     allpanels = K.reshape(allpanels, [1,1,1,P,base,base])
     allpanels = K.tile(allpanels, [K.shape(s)[0], height, width, 1, 1, 1])
 
-    def hash(x):
-        ## 2x2 average hashing
-        x = K.reshape(x, [-1,height,width,P, base//2, 2, base//2, 2])
-        x = K.mean(x, axis=(5,7))
-        return K.round(x)
-        ## diff hashing (horizontal diff)
-        # x1 = x[:,:,:,:,:,:-1]
-        # x2 = x[:,:,:,:,:,1:]
-        # d = x1 - x2
-        # return K.round(d)
-        ## just rounding
-        # return K.round(x)
-        ## do nothing
-        # return x
-
-    # s         = hash(s)
-    # allpanels = hash(allpanels)
-    
-    # error = K.binary_crossentropy(s, allpanels)
     error = K.abs(s - allpanels)
-    error = hash(error)
     error = K.mean(error, axis=(4,5))
     return error
-    
+
+from .util import binary_search
+
 def validate_states(states, verbose=True, **kwargs):
     base = setting['base']
-    width  = states.shape[1] // base
     height = states.shape[1] // base
+    width  = states.shape[2] // base
     load(width,height)
     
+    if states.ndim == 4:
+        assert states.shape[-1] == 1
+        states = states[...,0]
+
+    bs = binary_search(setting["min_threshold"],setting["max_threshold"])
     def build():
         states = Input(shape=(height*base,width*base))
         error = build_error(states, height, width, base)
-        matches = 1 - K.clip(K.sign(error - threshold),0,1)
+        matches = K.cast(K.less_equal(error, bs.value), 'float32')
         # a, h, w, panel
         
         num_matches = K.sum(matches, axis=3)
         panels_ok = K.all(K.equal(num_matches, 1), (1,2))
-        panels_ng = K.any(K.not_equal(num_matches, 1), (1,2))
         panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2))
         panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2))
 
@@ -114,33 +102,37 @@ def validate_states(states, verbose=True, **kwargs):
         coverage_ng = K.any(K.greater(panel_coverage, 1), 1)
         validity = tf.logical_and(panels_ok, coverage_ok)
 
-        if verbose:
-            return Model(states,
-                         [ wrap(states, x) for x in [panels_ok,
-                                                     panels_ng,
-                                                     panels_nomatch,
-                                                     panels_ambiguous,
-                                                     coverage_ok,
-                                                     coverage_ng,
-                                                     validity]])
-        else:
-            return Model(states, wrap(states, validity))
+        return Model(states,
+                     [ wrap(states, x) for x in [panels_ok,
+                                                 panels_nomatch,
+                                                 panels_ambiguous,
+                                                 coverage_ok,
+                                                 coverage_ng,
+                                                 validity]])
 
-    model = build()
-    #     model.summary()
-    if verbose:
-        panels_ok, panels_ng, panels_nomatch, panels_ambiguous, \
+    while True:
+        model = build()
+        panels_ok, panels_nomatch, panels_ambiguous, \
             coverage_ok, coverage_ng, validity = model.predict(states, **kwargs)
-        print(np.count_nonzero(panels_ng),       "images have some panels which match 0 or >2 panels, out of which")
-        print(np.count_nonzero(panels_nomatch),  "images have some panels which are unlike any panels")
-        print(np.count_nonzero(panels_ambiguous),"images have some panels which match >2 panels")
-        print(np.count_nonzero(panels_ok),       "images have panels (all of them) which match exactly 1 panel each")
-        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
-        print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
-        return validity
-    else:
-        validity = model.predict(states, **kwargs)
-        return validity
+        panels_nomatch = np.count_nonzero(panels_nomatch)
+        panels_ambiguous = np.count_nonzero(panels_ambiguous)
+        if verbose:
+            print(f"threshold value: {bs.value}")
+            print(panels_nomatch,                    "images have some panels which are unlike any panels")
+            print(np.count_nonzero(panels_ok),       "images have all panels which match exactly 1 panel each")
+            print(panels_ambiguous,                  "images have some panels which match >2 panels")
+        if np.abs(panels_nomatch - panels_ambiguous) <= 1:
+            if verbose:
+                print("threshold found")
+                print(np.count_nonzero(np.logical_and(panels_ok, coverage_ng)),"images have duplicated tiles")
+                print(np.count_nonzero(np.logical_and(panels_ok, coverage_ok)),"images have no duplicated tiles")
+            return validity
+        elif panels_nomatch < panels_ambiguous:
+            bs.goleft()
+        else:
+            bs.goright()
+
+    return validity
 
 
 def to_configs(states, verbose=True, **kwargs):
@@ -149,23 +141,52 @@ def to_configs(states, verbose=True, **kwargs):
     height = states.shape[1] // base
     load(width,height)
 
+    if states.ndim == 4:
+        assert states.shape[-1] == 1
+        states = states[...,0]
+
     def build():
         P = len(setting['panels'])
         states = Input(shape=(height*base,width*base))
         error = build_error(states, height, width, base)
-
-        matches = 1 - K.clip(K.sign(error - threshold),0,1)
+        matches = 1 - K.clip(K.sign(error - setting["threshold"]),0,1)
         # a, h, w, panel
-        matches = K.reshape(matches, [K.shape(states)[0], height * width, -1])
+
+        config = K.reshape(matches, [K.shape(states)[0], height * width, -1])
         # a, pos, panel
-        matches = K.permute_dimensions(matches, [0,2,1])
+        config = K.permute_dimensions(config, [0,2,1])
         # a, panel, pos
-        config = matches * K.arange(height*width,dtype='float')
+        config = config * K.arange(height*width,dtype='float')
         config = K.sum(config, axis=-1)
-        return Model(states, wrap(states, config))
+
+        num_matches = K.sum(matches, axis=3)
+        panels_nomatch   = K.any(K.equal(num_matches, 0), (1,2))
+        panels_ambiguous = K.any(K.greater(num_matches, 1), (1,2))
+
+        return Model(states,
+                     [ wrap(states, x) for x in [config,
+                                                 panels_nomatch,
+                                                 panels_ambiguous]])
     
-    model = build()
-    return model.predict(states, **kwargs)
+    bs = binary_search(setting["min_threshold"],setting["max_threshold"])
+    setting["threshold"] = bs.value
+    while True:
+        model = build()
+        config, panels_nomatch, panels_ambiguous = model.predict(states, **kwargs)
+        panels_nomatch = np.count_nonzero(panels_nomatch)
+        panels_ambiguous = np.count_nonzero(panels_ambiguous)
+        if verbose:
+            print(f"threshold value: {bs.value}")
+            print(panels_nomatch,                    "images have some panels which are unlike any panels")
+            print(panels_ambiguous,                  "images have some panels which match >2 panels")
+        if np.abs(panels_nomatch - panels_ambiguous) <= 1:
+            return config
+        elif panels_nomatch < panels_ambiguous:
+            setting["threshold"] = bs.goleft()
+        else:
+            setting["threshold"] = bs.goright()
+
+    return config
 
 
 def states(width, height, configs=None, **kwargs):
@@ -264,8 +285,8 @@ def validate_transitions_cpu_old(transitions, **kwargs):
     pre = np.array(transitions[0])
     suc = np.array(transitions[1])
     base = setting['base']
-    width  = pre.shape[1] // base
     height = pre.shape[1] // base
+    width  = pre.shape[2] // base
     load(width,height)
 
     pre_validation = validate_states(pre, **kwargs)
@@ -287,8 +308,8 @@ def validate_transitions_cpu(transitions, check_states=True, **kwargs):
     pre = np.array(transitions[0])
     suc = np.array(transitions[1])
     base = setting['base']
-    width  = pre.shape[1] // base
     height = pre.shape[1] // base
+    width  = pre.shape[2] // base
     load(width,height)
 
     if check_states:

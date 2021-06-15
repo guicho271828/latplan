@@ -8,7 +8,7 @@ from .util import preprocess
 
 from keras.layers import Input
 from keras.models import Model
-from keras import backend as K
+import keras.backend.tensorflow_backend as K
 import tensorflow as tf
 
 panels = np.zeros((2,9,9))
@@ -133,6 +133,11 @@ def validate_states(states,verbose=True,**kwargs):
     base = panels.shape[1]
     size = states.shape[1]//base
     dim  = states.shape[1]
+
+    if states.ndim == 4:
+        assert states.shape[-1] == 1
+        states = states[...,0]
+
     def build():
         states = Input(shape=(dim,dim))
         error = build_errors(states,base,dim,size)
@@ -173,6 +178,10 @@ def to_configs(states, verbose=True, **kwargs):
     base = panels.shape[1]
     size = states.shape[1]//base
     dim  = states.shape[1]
+
+    if states.ndim == 4:
+        assert states.shape[-1] == 1
+        states = states[...,0]
     
     def build():
         states = Input(shape=(dim,dim))

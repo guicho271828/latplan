@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import config
 import numpy as np
 import numpy.random as nr
 import random
@@ -30,7 +29,7 @@ np.set_printoptions(threshold=sys.maxsize,formatter={'float_kind':float_formatte
 ################################################################
 
 # no egocentric, no global
-def sokoban_image(limit = 1000,test=False):
+def sokoban_image(limit = 1000, egocentric = False, objects=True, test=False):
     import gym
     import pddlgym
 
@@ -38,8 +37,8 @@ def sokoban_image(limit = 1000,test=False):
     all_picsizes = []
     for stage in tqdm(range(5)):
         list = ["sokoban_image",limit,
-                "global",
-                "object",
+                ("egocentric" if egocentric else "global"),
+                ("object"     if objects    else "global"),
                 stage,
                 ("test" if test else "train"),]
         path = os.path.join(latplan.__path__[0],"puzzles","-".join(map(str,list))+".npz")
@@ -54,7 +53,7 @@ def sokoban_image(limit = 1000,test=False):
             transitions = np.stack([pres,sucs],axis=1)   # B,2,O,F
             all_transitions.append(transitions)
             all_picsizes.append(data['picsize'])
-            print(f"loaded {stage}")
+            print(f"loaded {path}")
 
     print(all_picsizes)
     new_picsize = np.max(np.stack(all_picsizes),axis=0) # [5,3] -> [3]
@@ -69,23 +68,35 @@ def sokoban_image(limit = 1000,test=False):
     print("new_picsize:",new_picsize)
 
     all_masked_transitions=[]
-    for picsize, transitions in tqdm(zip(all_picsizes, all_transitions)):
+    for i, picsize, transitions in zip(range(5), all_picsizes, all_transitions):
+        print(i,"0:", transitions.shape)
         # avoid imbalance
         ids = np.arange(len(transitions))
         nr.shuffle(ids)
         transitions = transitions[ids[:min_size]]
 
+        print(i,"1:", transitions.shape)
         # standardize the number of objects
         if transitions.shape[2] != min_objects:
             transitions = random_object_masking(transitions,min_objects)
 
+        print(i,"2:", transitions.shape)
+
+        # move the global coordinate to the center
+        picsize_diff = new_picsize - picsize
+        dH, dW, _ = picsize_diff
+        transitions[...,-4] += dW//2
+        transitions[...,-3] += dH//2
+        transitions[...,-2] += dW//2
+        transitions[...,-1] += dH//2
+        
         # move the global coordinate of the environment randomly
         # in order to evenly cover the maximum canvas size
-        picsize_diff = new_picsize - picsize
-        transitions = location_augmentation(transitions,
-                                            height=picsize_diff[0],
-                                            width=picsize_diff[1],
-                                            mode="bbox")
+        # picsize_diff = new_picsize - picsize
+        # transitions = location_augmentation(transitions,
+        #                                     height=picsize_diff[0],
+        #                                     width=picsize_diff[1])
+        print(i,"3:", transitions.shape)
         all_masked_transitions.append(transitions)
 
 

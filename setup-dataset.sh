@@ -31,6 +31,10 @@ $common ./setup-dataset.py hanoi 3 3 50000
 $common ./setup-dataset.py hanoi 4 4 50000
 $common ./setup-dataset.py hanoi 9 3 50000
 $common ./setup-dataset.py hanoi 4 8 50000
+$common ./setup-dataset.py hanoi 5 5 50000
+$common ./setup-dataset.py hanoi 6 6 50000
+$common ./setup-dataset.py hanoi 7 7 50000
+$common ./setup-dataset.py hanoi 8 8 50000
 
 download-and-extract (){
     wget https://github.com/IBM/photorealistic-blocksworld/releases/download/$1/$1.npz -O latplan/puzzles/$1.npz
@@ -53,19 +57,19 @@ $common download-and-extract blocks-3-3-multi-global
 
 # layout-based dataset generation is fast enough
 # train dataset
-parallel $common ./setup-dataset.py sokoban_layout ::: 1000 10000 ::: True False ::: True ::: 0 1 2 3 4 ::: False
+parallel $common ./setup-dataset.py sokoban_layout ::: inf ::: False ::: True False ::: 0 1 2 3 4 ::: False
 # test dataset
-parallel $common ./setup-dataset.py sokoban_layout ::: 1000 10000 ::: True False ::: True ::: 0 1 2 3 ::: True
+parallel $common ./setup-dataset.py sokoban_layout ::: inf ::: False ::: True False ::: 0 1 2 3 ::: True
 
 
 # for image-based datasets, we speed up the processing with more cpus
-common="jbsub -mem 64g -cores 16 -queue x86_1h -proj $proj PYTHONUNBUFFERED=1"
+common="jbsub -mem 64g -cores 24 -queue x86_1h -proj $proj PYTHONUNBUFFERED=1"
 # train dataset
-parallel $common ./setup-dataset.py sokoban_image ::: 1000 10000 ::: True False ::: True False ::: 0 1 2 3 4 ::: False
-# test dataset -- no need for depth=28
-parallel $common ./setup-dataset.py sokoban_image ::: 1000 10000 ::: True False ::: True False ::: 0 1 2 3 ::: True
+parallel $common ./setup-dataset.py sokoban_image ::: 20000 ::: False ::: True False ::: 0 1 2 3 4 ::: False
+# test dataset
+parallel $common ./setup-dataset.py sokoban_image ::: 20000 ::: False ::: True False ::: 0 1 2 3 ::: True
 
 # Merging sokoban datasets from different stages.
 # This performs object number normalization and position rescaling
 echo "After sokoban image is generated, run:"
-echo parallel ./merge-sokobans.py ::: 1000 10000 ::: True False
+echo parallel ./merge-sokobans.py ::: 20000 ::: False ::: True ::: True False
