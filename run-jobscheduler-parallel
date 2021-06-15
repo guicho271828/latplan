@@ -1,0 +1,77 @@
+#!/bin/bash
+
+if [[ $# == 0 ]]
+then
+    cat <<EOF
+
+  Usage:
+
+    run-jobscheduler-parallel core_per_job task_per_core [submission-command] -- [parallel-args]
+
+  This script runs exactly like GNU Parallel, but through a job scheduler.
+  It takes a same set of arguments as parallel, and is indeed a wrapper over GNU Parallel.
+  It works by writing the commands into a file, then batch-assign it to a single scheduler job.
+
+  This complicated machinary is made because submitting a large number of short jobs
+  not only harm the performance of the job scheduler, but also make the job handling cumbersome.
+  For example, after noticing a bug, it takes some time to cancel if there are thousands of
+  jobs. Also, some HPC environment has a limit on the number of jobs a single user can submit.
+
+
+
+  Examples:
+
+  These examples run 128 echo commands in total.
+  It creates 4 jobs submitted to a 1 hour queue, where each job runs 32 tasks with 8 cores.
+  4 tasks are assigned to each core assuming that each task takes at most 15 minutes so that
+  the 4 tasks finished in an hour.
+
+  Running 1 hour queue, 4g memory, 8 cores on jbsub cluster:
+
+    run-jobscheduler-parallel 8 4 jbsub -queue x86_1h -mem 4g -cores 8 -- echo ::: {1..128}
+
+  Running 1 hour, 4g virtual memory per process, 8 cores on Torque/PBS cluster:
+
+    run-jobscheduler-parallel 8 4 qsub -l ppn=8,cput=3600,pvmem=4g -- echo ::: {1..128}
+
+EOF
+    exit 1
+fi
+
+core_per_job=${1:-8}
+task_per_core=${2:-4}
+task_per_job=$((core_per_job*task_per_core))
+shift 2
+
+submission_command=""
+
+for arg in $@
+do
+    if [[ $arg == "--" ]]
+    then
+        shift
+        break
+    else
+        submission_command="$submission_command $arg"
+        shift
+    fi
+done
+
+echo $core_per_job
+echo $task_per_core
+echo $submission_command
+echo $@
+
+tmp=$(mktemp -d -p .)
+echo $tmp
+
+parallel --keep-order echo $@ > $tmp/tasks
+
+split --verbose -l $task_per_job $tmp/tasks $tmp/split
+
+for file in $tmp/split*
+do
+    $submission_command "parallel -v -j $core_per_job < $file"
+done
+
+
