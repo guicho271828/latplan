@@ -1,5 +1,5 @@
 
-import keras.backend as K
+import keras.backend.tensorflow_backend as K
 
 from keras.objectives import categorical_crossentropy as cce
 from keras.objectives import binary_crossentropy as bce

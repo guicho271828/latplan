@@ -26,6 +26,13 @@ def mse(x,y,axis=None):
     else:
         return result
 
+def inf(x,y,axis=None):
+    result = np.max(np.abs(x - y),axis=axis)
+    if result.size == 1:
+        return float(result)
+    else:
+        return result
+
 # def bce(x,y):
 #     from keras.layers import Input
 #     from keras.models import Model

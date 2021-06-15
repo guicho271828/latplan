@@ -1,5 +1,5 @@
 import keras.initializers
-import keras.backend as K
+import keras.backend.tensorflow_backend as K
 from keras.layers import *
 from keras.initializers import Initializer
 import numpy as np
@@ -35,14 +35,24 @@ def list_layer_io(net):
     else:
         print("nothing can be displayed")
 
+
+debug_level = 0
 def Sequential (array):
     from functools import reduce
     def apply1(arg,f):
+        global debug_level
         if debug:
-            print("applying {}({})".format(f,arg))
-        result = f(arg)
+            print(" "*debug_level+"applying {}({})".format(f,arg))
+        debug_level += 2
+        try:
+            result = f(arg)
+        finally:
+            debug_level -= 2
         if debug:
-            print(K.int_shape(result), K.shape(result))
+            try:
+                print(" "*debug_level,"->",K.int_shape(result), K.shape(result))
+            except:
+                print(" "*debug_level,"->",result)
         return result
     return lambda x: reduce(apply1, array, x)
 
@@ -73,25 +83,77 @@ def Densify(layers):
     "Apply layers in a densenet-like manner."
     def densify_fn(x):
         def rec(x,layers):
-            layer, *rest = layers
-
-            result = layer(x)
-            if len(rest) == 0:
-                return result
+            if len(layers) == 0:
+                return x
             else:
-                return rec(concatenate([x,result]), rest)
+                layer, *rest = layers
+                result = layer(x)
+                return rec(concatenate([x,result],axis=-1), rest)
         return rec(x,layers)
     return densify_fn
 
-def flatten(x):
-    if K.ndim(x) >= 3:
-        try:
-            # it sometimes fails to infer shapes
-            return Reshape((int(np.prod(K.int_shape(x)[1:])),))(x)
-        except:
-            return Flatten()(x)
-    else:
-        return x
+
+class MyFlatten(Layer):
+    """MyFlattens the input. Does not affect the batch size.
+
+    # Arguments
+        data_format: A string,
+            one of `channels_last` (default) or `channels_first`.
+            The ordering of the dimensions in the inputs.
+            The purpose of this argument is to preserve weight
+            ordering when switching a model from one data format
+            to another.
+            `channels_last` corresponds to inputs with shape
+            `(batch, ..., channels)` while `channels_first` corresponds to
+            inputs with shape `(batch, channels, ...)`.
+            It defaults to the `image_data_format` value found in your
+            Keras config file at `~/.keras/keras.json`.
+            If you never set it, then it will be "channels_last".
+
+    # Example
+
+    ```python
+        model = Sequential()
+        model.add(Conv2D(64, (3, 3),
+                         input_shape=(3, 32, 32), padding='same',))
+        # now: model.output_shape == (None, 64, 32, 32)
+
+        model.add(MyFlatten())
+        # now: model.output_shape == (None, 65536)
+    ```
+    """
+
+    def __init__(self, data_format=None, **kwargs):
+        super(MyFlatten, self).__init__(**kwargs)
+        self.input_spec = InputSpec(min_ndim=2)
+        self.data_format = K.normalize_data_format(data_format)
+
+    def compute_output_shape(self, input_shape):
+        if not all(input_shape[1:]):
+            raise ValueError('The shape of the input to "MyFlatten" '
+                             'is not fully defined '
+                             '(got ' + str(input_shape[1:]) + '). '
+                             'Make sure to pass a complete "input_shape" '
+                             'or "batch_input_shape" argument to the first '
+                             'layer in your model.')
+        return (input_shape[0], np.prod(input_shape[1:]))
+
+    def call(self, inputs):
+        if self.data_format == 'channels_first':
+            # Ensure works for any dim
+            permutation = [0]
+            permutation.extend([i for i in
+                                range(2, K.ndim(inputs))])
+            permutation.append(1)
+            inputs = K.permute_dimensions(inputs, permutation)
+
+        return K.batch_flatten(inputs)
+
+    def get_config(self):
+        config = {'data_format': self.data_format}
+        base_config = super(MyFlatten, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 def flatten1D(x):
     def fn(x):
         if K.ndim(x) == 3:
@@ -307,7 +369,7 @@ class ExplosionEarlyStopping(HistoryBasedEarlyStopping):
         if current is None:
             warnings.warn('Early stopping requires %s available!' %
                           (self.monitor), RuntimeWarning)
-        if epoch == 0:
+        if epoch == self.epoch_start:
             self.ub = current * 10
         if np.isnan(current) :
             self.model.stop_training = True
@@ -316,11 +378,12 @@ class ExplosionEarlyStopping(HistoryBasedEarlyStopping):
         self.history.append(current) # to the last
         if len(self.history) > self.sample_epochs:
             self.history.pop(0) # from the front
-            if (np.median(self.history) >= self.ub) and (self.epoch_start <= epoch) :
+            if (np.median(self.history) >= self.ub) and (epoch >= self.epoch_start) :
                 self.model.stop_training = True
                 self.stopped_epoch = epoch
 
 def anneal_rate(epoch,min=0.1,max=5.0):
+    assert epoch > 0
     import math
     return math.log(max/min) / epoch
 
@@ -412,92 +475,132 @@ def delay(self, x, amount):
     self.callbacks.append(LambdaCallback(on_epoch_end=fn))
     return switch * x
 
+dmerge_counter = 0
 def dmerge(x1, x2):
-    return concatenate([wrap(x1, x1[:,None,...]),wrap(x2, x2[:,None,...])],axis=1)
+    """Take a pair of batched tensors (e.g. shape : [B,D,E,F]), then concatenate
+    them as a batch of pairs (e.g. shape : [B,2,D,E,F])."""
+    global dmerge_counter
+    dmerge_counter += 1
+    return concatenate([wrap(x1, x1[:,None,...]),wrap(x2, x2[:,None,...])],axis=1,name="dmerge_{}".format(dmerge_counter))
 
-def dapply(x,fn):
+def dapply(x,fn=None):
+    """Take a batch of pairs of elements (e.g. shape : [B,2,D,E,F]), apply fn to each half
+([B,D,E,F]), then concatenate the result into pairs ([B,2,result_shape])."""
     x1 = wrap(x,x[:,0,...])
     x2 = wrap(x,x[:,1,...])
-    y1 = fn(x1)
-    y2 = fn(x2)
+    if fn is not None:
+        y1 = fn(x1)
+        y2 = fn(x2)
+    else:
+        y1 = x1
+        y2 = x2
     y = dmerge(y1, y2)
     return y, y1, y2
 
-class Gaussian:
+
+class Variational(Layer):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+    def __call__(self,*args,**kwargs):
+        result = super().__call__(*args,**kwargs)
+        result.variational_source = args, kwargs
+        result.loss = self.loss
+        # now you can compute a KL loss using the resultng tensor T like T.loss(...)
+        return result
+
+class Gaussian(Variational):
+    """Gaussian variational layer.
+
+Call this instance with mean_log_var which represents q.
+Its first half in the last dimension represents the mean, and the second half the log-variance.
+It adds the KL divergence loss against p=N(0,1).
+
+Optionally, you can call the instance with two argumetns (mean_log_var_q, mean_log_var_p),
+the latter of which represents a target / prior distribution p.
+Then it adds a KL divergence loss KL(q=N(mu_q,sigma_q)||p=N(mu_p,sigma_p)).
+It is useful when you want to match two distributions.
+    """
     count = 0
 
-    def __init__(self, beta=0.):
-        self.beta = beta
-        
-    def call(self, mean_log_var):
-        sym_shape = K.shape(mean_log_var)
-        shape = K.int_shape(mean_log_var)
+    def sample(self, mean_log_var_q):
+        sym_shape = K.shape(mean_log_var_q)
+        shape = K.int_shape(mean_log_var_q)
         dims = [sym_shape[i] for i in range(len(shape)-1)]
         dim = shape[-1]//2
-        mean    = mean_log_var[...,:dim]
-        log_var = mean_log_var[...,dim:]
-        noise = K.exp(0.5 * log_var) * K.random_normal(shape=(*dims, dim))
-        return K.in_train_phase(mean + noise, mean)
-    
-    def __call__(self, mean_log_var):
+        mean_q    = mean_log_var_q[...,:dim]
+        log_var_q = mean_log_var_q[...,dim:]
+        noise = K.exp(0.5 * log_var_q) * K.random_normal(shape=(*dims, dim))
+        return K.in_train_phase(mean_q + noise, mean_q)
+
+    def loss(self, mean_log_var_q, mean_log_var_p=None):
+        sym_shape = K.shape(mean_log_var_q)
+        shape = K.int_shape(mean_log_var_q)
+        dims = [sym_shape[i] for i in range(len(shape)-1)]
+        dim = shape[-1]//2
+        mean_q    = mean_log_var_q[...,:dim]
+        log_var_q = mean_log_var_q[...,dim:]
+
+        if mean_log_var_p is None:
+            # assume mean=0, variance=1
+            # mean_p    = 0
+            # log_var_p = 0
+            loss = 0.5 * (- log_var_q + K.exp(log_var_q) + K.square(mean_q) - 1)
+        else:
+            mean_p    = mean_log_var_p[...,:dim]
+            log_var_p = mean_log_var_p[...,dim:]
+            # loss = 0.5 * (log_var_p-log_var_q) + 0.5 * (K.exp(log_var_q) + K.square(mean_q-mean_p)) / K.exp(log_var_p) - 0.5
+            # optimized
+            loss = 0.5 * ((log_var_p-log_var_q) + (K.exp(log_var_q) + K.square(mean_q-mean_p)) / K.exp(log_var_p) - 1)
+
+        # sum across dimensions
+        loss = K.batch_flatten(loss)
+        loss = K.sum(loss, axis=-1)
+        return loss
+
+    def call(self, mean_log_var_q):
         Gaussian.count += 1
         c = Gaussian.count-1
+        layer = Lambda(self.sample,name="gaussian_{}".format(c))
+        return layer(mean_log_var_q)
 
-        layer = Lambda(self.call,name="gaussian_{}".format(c))
-
-        sym_shape = K.shape(mean_log_var)
-        shape = K.int_shape(mean_log_var)
-        dims = [sym_shape[i] for i in range(len(shape)-1)]
-        dim = shape[-1]//2
-        mean    = mean_log_var[...,:dim]
-        log_var = mean_log_var[...,dim:]
-
-        loss = -0.5 * K.mean(K.sum(1 + log_var - K.square(mean) - K.exp(log_var), axis=-1)) * self.beta
-
-        layer.add_loss(K.in_train_phase(loss, 0.0), mean_log_var)
-        
-        return layer(mean_log_var)
-
-class Uniform:
+class Uniform(Variational):
     count = 0
 
-    def __init__(self, beta=0.):
-        self.beta = beta
-
-    def call(self, mean_width):
-        sym_shape = K.shape(mean_width)
-        shape = K.int_shape(mean_width)
+    def sample(self, mean_width_q):
+        sym_shape = K.shape(mean_width_q)
+        shape = K.int_shape(mean_width_q)
         dims = [sym_shape[i] for i in range(len(shape)-1)]
         dim = shape[-1]//2
-        mean = mean_width[...,:dim]
-        width = mean_width[...,dim:]
-        noise = width * K.random_uniform(shape=(*dims, dim),minval=-0.5, maxval=0.5)
-        return K.in_train_phase(mean + noise, mean)
+        mean_q = mean_width_q[...,:dim]
+        width_q = mean_width_q[...,dim:]
+        noise = width_q * K.random_uniform(shape=(*dims, dim),minval=-0.5, maxval=0.5)
+        return K.in_train_phase(mean_q + noise, mean_q)
 
-    def __call__(self, mean_width):
-        Uniform.count += 1
-        c = Uniform.count-1
-
-        layer = Lambda(self.call,name="uniform_{}".format(c))
-
-        sym_shape = K.shape(mean_width)
-        shape = K.int_shape(mean_width)
+    def loss(self, mean_width_q):
+        sym_shape = K.shape(mean_width_q)
+        shape = K.int_shape(mean_width_q)
         dims = [sym_shape[i] for i in range(len(shape)-1)]
         dim = shape[-1]//2
-        mean = mean_width[...,:dim]
-        width = mean_width[...,dim:]
+        mean_q = mean_width_q[...,:dim]
+        width_q = mean_width_q[...,dim:]
 
         # KL
-        high = mean + width/2
-        low  = mean - width/2
-        high = K.clip(high, 0.0, 1.0)
-        low  = K.clip(low,  0.0, 1.0)
-        intersection = high-low
-        loss = K.mean(intersection) * self.beta
-        # but this does not seem informative --- if it has no overlap with [0,1], it is always 0
-        # Total Variation / Earth Mover would seem much better choice
-        layer.add_loss(K.in_train_phase(loss, 0.0))
-        return layer(mean_width)
+        high_q = mean_q + width_q/2
+        low_q  = mean_q - width_q/2
+        high_q = K.clip(high_q, 0.0, 1.0)
+        low_q  = K.clip(low_q,  0.0, 1.0)
+        loss = high_q-low_q
+
+        # sum across dimensions
+        loss = K.batch_flatten(loss)
+        loss = K.sum(loss, axis=-1)
+        return loss
+
+    def call(self, mean_width_q):
+        Uniform.count += 1
+        c = Uniform.count-1
+        layer = Lambda(self.sample,name="uniform_{}".format(c))
+        return layer(mean_width_q)
 
 class ScheduledVariable:
     """General variable which is changed during the course of training according to some schedule"""
@@ -515,17 +618,17 @@ Each subclasses should implement a method for it."""
             self.variable,
             self.value(epoch))
 
-class GumbelSoftmax(ScheduledVariable):
+class GumbelSoftmax(Variational,ScheduledVariable):
     count = 0
     
-    def __init__(self,N,M,min,max,full_epoch,
+    def __init__(self,N,M,min,max,
+                 annealing_start,
+                 annealing_end,
                  annealer    = anneal_rate,
-                 beta        = 1.,
-                 offset      = 0,
                  train_noise = True,
                  train_hard  = False,
                  test_noise  = False,
-                 test_hard   = True, ):
+                 test_hard   = True, **kwargs):
         self.N           = N
         self.M           = M
         self.min         = min
@@ -534,24 +637,24 @@ class GumbelSoftmax(ScheduledVariable):
         self.train_hard  = train_hard
         self.test_noise  = test_noise
         self.test_hard   = test_hard
-        self.anneal_rate = annealer(full_epoch-offset,min,max)
-        self.offset      = offset
-        self.beta        = beta
-        super(GumbelSoftmax, self).__init__("temperature")
+        self.anneal_rate = annealer(annealing_end-annealing_start,min,max)
+        self.annealing_start      = annealing_start
+        ScheduledVariable.__init__(self,"temperature")
+        Variational.__init__(self,**kwargs)
         
-    def call(self,logits):
-        u = K.random_uniform(K.shape(logits), 0, 1)
-        gumbel = - K.log(-K.log(u + 1e-20) + 1e-20)
+    def sample(self,logit_q):
+        u = K.random_uniform(K.shape(logit_q), 1e-5, 1-1e-5)
+        gumbel = - K.log(-K.log(u))
 
         if self.train_noise:
-            train_logit = logits + gumbel
+            train_logit_q = logit_q + gumbel
         else:
-            train_logit = logits
+            train_logit_q = logit_q
             
         if self.test_noise:
-            test_logit = logits + gumbel
+            test_logit_q = logit_q + gumbel
         else:
-            test_logit = logits
+            test_logit_q = logit_q
 
         def soft_train(x):
             return K.softmax( x / self.variable )
@@ -576,63 +679,101 @@ class GumbelSoftmax(ScheduledVariable):
             test_activation = soft_test
 
         return K.in_train_phase(
-            train_activation( train_logit ),
-            test_activation ( test_logit  ))
+            train_activation( train_logit_q ),
+            test_activation ( test_logit_q  ))
     
-    def __call__(self,prev):
+    def loss(self,logit_q,logit_p=None,p=None):
+        q = K.softmax(logit_q)
+        q = K.clip(q,1e-5,1-1e-5) # avoid nan in log
+        q = q / K.sum(q,axis=-1,keepdims=True) # ensure sum is 1
+        log_q = K.log(q)
+        if (logit_p is None) and (p is None):
+            # p = 1 / self.M
+            # log_p = K.log(1/self.M)
+            # loss = q * (log_q - log_p)
+            # loss = K.sum(loss, axis=-1)
+            # sum (q*logq - qlogp) = sum (q*logq) - sum (q*(-logM)) = sum qlogq + sum q logM = sum qlogq + 1*logM
+            loss = K.sum(q * log_q, axis=-1) + K.log(K.cast(self.M, "float"))
+        elif logit_p is not None:
+            s = K.shape(logit_p)
+            logit_p = wrap(logit_p, K.reshape(logit_p, (s[0], self.N, self.M)))
+            p = K.softmax(logit_p)
+            p = K.clip(p,1e-5,1-1e-5) # avoid nan in log
+            p = p / K.sum(p,axis=-1,keepdims=True) # ensure sum is 1
+            log_p = K.log(p)
+            loss = q * (log_q - log_p)
+            loss = K.sum(loss, axis=-1)
+        elif p is not None:
+            p = K.clip(p,1e-5,1-1e-5) # avoid nan in log
+            # p = p / K.sum(p,axis=-1,keepdims=True) # ensure sum is 1
+            log_p = K.log(p)
+            loss = q * (log_q - log_p)
+            loss = K.sum(loss, axis=-1)
+        else:
+            raise Exception("what??")
+
+        # sum across dimensions
+        loss = K.batch_flatten(loss)
+        loss = K.sum(loss, axis=-1)
+        return loss
+
+    def call(self,logit_q):
         GumbelSoftmax.count += 1
         c = GumbelSoftmax.count-1
-
-        layer = Lambda(self.call,name="gumbel_{}".format(c))
-
-        logits = Reshape((self.N,self.M))(prev)
-        q = K.softmax(logits)
-        log_q = K.log(q + 1e-20)
-        loss = K.mean(q * log_q) * self.beta
-
-        layer.add_loss(K.in_train_phase(loss, 0.0), logits)
-
-        return layer(logits)
+        s = K.shape(logit_q)
+        logit_q = wrap(logit_q, K.reshape(logit_q, (s[0], self.N,self.M)))
+        layer = Lambda(self.sample,name="gumbel_{}".format(c))
+        return layer(logit_q)
 
     def value(self,epoch):
         return np.max([self.min,
-                       self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
+                       self.max * np.exp(- self.anneal_rate * max(epoch - self.annealing_start, 0))])
 
-class BinaryConcrete(ScheduledVariable):
+class BinaryConcrete(Variational,ScheduledVariable):
+    """BinaryConcrete variational layer.
+
+Call this instance with a logit log_q (log probability),
+then it adds the KL divergence loss against Bernoulli(0.5).
+
+Optionally, you can call the instance with two logits (log_q, log_p),
+where the second argument represents a target / prior distribution.
+In such a case, it adds the KL divergence loss KL(Bern(q)||Bern(p)).
+It is useful when you want to match two distributions.
+    """
     count = 0
 
-    def __init__(self,min,max,full_epoch,
+    def __init__(self,min,max,
+                 annealing_start,
+                 annealing_end,
                  annealer    = anneal_rate,
-                 beta        = 1.,
-                 offset      = 0,
                  train_noise = True,
                  train_hard  = False,
                  test_noise  = False,
-                 test_hard   = True, ):
+                 test_hard   = True, **kwargs):
         self.min         = min
         self.max         = max
         self.train_noise = train_noise
         self.train_hard  = train_hard
         self.test_noise  = test_noise
         self.test_hard   = test_hard
-        self.anneal_rate = annealer(full_epoch-offset,min,max)
-        self.offset      = offset
-        self.beta        = beta
-        super(BinaryConcrete, self).__init__("temperature")
+        self.anneal_rate = annealer(annealing_end-annealing_start,min,max)
+        self.annealing_start      = annealing_start
+        ScheduledVariable.__init__(self,"temperature")
+        Variational.__init__(self,**kwargs)
 
-    def call(self,logits):
-        u = K.random_uniform(K.shape(logits), 0, 1)
-        logistic = K.log(u + 1e-20) - K.log(1 - u + 1e-20)
+    def sample(self,logit_q):
+        u = K.random_uniform(K.shape(logit_q), 1e-5, 1-1e-5)
+        logistic = K.log(u) - K.log(1 - u)
 
         if self.train_noise:
-            train_logit = logits + logistic
+            train_logit_q = logit_q + logistic
         else:
-            train_logit = logits
+            train_logit_q = logit_q
 
         if self.test_noise:
-            test_logit = logits + logistic
+            test_logit_q = logit_q + logistic
         else:
-            test_logit = logits
+            test_logit_q = logit_q
 
         def soft_train(x):
             return K.sigmoid( x / self.variable )
@@ -658,28 +799,57 @@ class BinaryConcrete(ScheduledVariable):
             test_activation = soft_test
 
         return K.in_train_phase(
-            train_activation( train_logit ),
-            test_activation ( test_logit  ))
+            train_activation( train_logit_q ),
+            test_activation ( test_logit_q  ))
 
-    def __call__(self,logits):
+    def loss(self,logit_q,logit_p=None,p=None):
+        q = K.sigmoid(logit_q)
+        q = K.clip(q,1e-5,1-1e-5) # avoid nan in log
+        q0 = q
+        q1 = 1-q
+        log_q0 = K.log(q0)
+        log_q1 = K.log(q1)
+
+        if (logit_p is None) and (p is None):
+            # p0 = 0.5
+            # p1 = 0.5
+            # log_p0 = K.log(0.5)
+            # log_p1 = K.log(0.5)
+            # loss = q0 * (log_q0-log_p0) + q1 * (log_q1-log_p1)
+            # since -q0*log_p0 -q1*log_p1 = -q0*(log1/2) -q1*(log1/2) = -(q0+q1)*(log1/2) = 1*log2 = log2
+            loss = q0 * log_q0 + q1 * log_q1 + K.log(2.0)
+        elif logit_p is not None:
+            p = K.sigmoid(logit_p)
+            p = K.clip(p,1e-5,1-1e-5) # avoid nan in log
+            p0 = p
+            p1 = 1-p
+            log_p0 = K.log(p0)
+            log_p1 = K.log(p1)
+            loss = q0 * (log_q0-log_p0) + q1 * (log_q1-log_p1)
+        elif p is not None:
+            p = K.clip(p,1e-5,1-1e-5) # avoid nan in log
+            p0 = p
+            p1 = 1-p
+            log_p0 = K.log(p0)
+            log_p1 = K.log(p1)
+            loss = q0 * (log_q0-log_p0) + q1 * (log_q1-log_p1)
+        else:
+            raise Exception("what??")
+        
+        # sum across dimensions
+        loss = K.batch_flatten(loss)
+        loss = K.sum(loss, axis=-1)
+        return loss
+
+    def call(self,logit_q):
         BinaryConcrete.count += 1
         c = BinaryConcrete.count-1
-
-        layer = Lambda(self.call,name="concrete_{}".format(c))
-
-        q0 = K.sigmoid(logits)
-        q1 = 1-q0
-        log_q0 = K.log(q0 + 1e-20)
-        log_q1 = K.log(q1 + 1e-20)
-        loss = K.mean(q0 * log_q0 + q1 * log_q1) * self.beta
-
-        layer.add_loss(K.in_train_phase(loss, 0.0), logits)
-
-        return layer(logits)
+        layer = Lambda(self.sample,name="concrete_{}".format(c))
+        return layer(logit_q)
 
     def value(self,epoch):
         return np.max([self.min,
-                       self.max * np.exp(- self.anneal_rate * max(epoch - self.offset, 0))])
+                       self.max * np.exp(- self.anneal_rate * max(epoch - self.annealing_start, 0))])
 
 
 class RandomLogistic(Initializer):
@@ -830,16 +1000,6 @@ class LinearSchedule(BaseSchedule):
                 pkey, pvalue = key, value
 
         return pvalue
-
-# modified version
-import progressbar
-class DynamicMessage(progressbar.DynamicMessage):
-    def __call__(self, progress, data):
-        val = data['dynamic_messages'][self.name]
-        if val:
-            return self.name + ': ' + '{}'.format(val)
-        else:
-            return self.name + ': ' + 6 * '-'
 
 
 
