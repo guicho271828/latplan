@@ -2,24 +2,16 @@
 name : latplan
 dependencies:
   - python=3.8
-  - sqlite=3.35                 # need 3.35 which has sqrt function
+  - sqlite>=3.35                 # need 3.35 which has sqrt function
+  - parallel
+  - gnuplot
+  - libcurl
+  - gcc_linux-64
+  - automake
+  - cmake
+  - flex
+  - bison
+  - libmagic
   - pip
   - pip:
-      - keras==2.2.5
-      - h5py
-      - matplotlib
-      - progressbar2
-      - keras-adabound
-      - keras-rectified-adam
-      - timeout_decorator
-      - ansicolors
-      - scipy==1.4.1
-      - scikit-image
-      - sklearn
-      - pandas
-      - imageio
-      - pillow
-      - git+https://github.com/tomsilver/pddlgym@be55cbf458293edd419216ee71bead02d41c586d
-      - tqdm
-      - nvidia-pyindex
-      - nvidia-tensorflow
+      - -r requirements.txt

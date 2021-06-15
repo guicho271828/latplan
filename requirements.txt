@@ -1,0 +1,13 @@
+nvidia-pyindex
+nvidia-tensorflow
+keras==2.2.5
+keras-rectified-adam==0.17.0
+matplotlib
+progressbar2
+tqdm
+ansicolors
+imageio
+scikit-image
+sklearn
+pandas
+git+https://github.com/tomsilver/pddlgym@be55cbf458293edd419216ee71bead02d41c586d

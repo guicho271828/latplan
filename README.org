@@ -53,16 +53,54 @@ This repository contains the source code of LatPlan.
   + In Cognitum Workshop at ICJAI-2017.
   + In Neural-Symbolic Workshop 2017.
 
-* Setup
+* Notes on NVIDIA port of Tensorflow
 
-On Ubuntu, prerequisites can be installed via launching [[./install.sh]] (It requires =sudo= several times).
-OSX users should be able to find the equivalents in homebrew. We listed the requirements.
+The system is built on Tensorflow 1.15.
+Since the official Tensorflow by Google (both the source code and the package) no longer supports 1.15,
+machines with recent GPUs require a [[https://developer.nvidia.com/blog/accelerating-tensorflow-on-a100-gpus/][port maintained by NVIDIA]]. Our installation script installs this port.
+*The port only supports Linux, therefore we do not support OSX and Windows.*
+
+Also, NVIDIA port requires LIBC 2.29 or later. If your system does not come with LIBC 2.29,
+you should obtain the source code from https://ftp.gnu.org/gnu/libc/, build it, and install it somewhere *locally*.
+*Do not install it system-wide*, as libc is widely incompatibile between versions and causes a nightmare for inexperienced linux beginners ---
+you can no longer run normal commands like `ls`, `rm`, `cat` or any other programs.
+
+The only shared object by required the NVIDIA port is =libm.so.6=.
+To run the program later, run =export LD_PRELOAD=/path/to/glibc-2.29/lib/libm.so.6= on the command line
+before launching python.
+
+* Setup with Anaconda / Miniconda (recommended)
+
+=anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html) is a
+dependency management system that can install both python and non-python dependencies into a local environment.
+It is conceptually similar to docker, but it does not use virtualization or container infrastructure.
+We recommend using =miniconda=, as it is smaller.
+
+After the installation, run the following code:
+
+#+begin_src sh
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+conda env create -f environment.yml   # This takes about 15-30 min. Conda does not provide an informative progress, so be patient
+conda activate latplan
+./install.sh
+#+end_src>
+
+* Setup without Anaconda / Miniconda
+
+On Ubuntu, prerequisites can be installed by running [[./install-non-anaconda.sh]] .
+It is not well-tested, so beware of hiccup.
+Note that this requires several libraries system-wide with sudo.
+Users of other distributions should inspect the file and find the equivalent packages in the respective system.
+
+#+begin_src sh
+./install-non-anaconda.sh
+./install.sh
+#+end_src>
 
 ** General Requirements
 
-Python 3.5 or later is required.
-
-+ =mercurial g++ cmake make python flex bison g++-multilib= --- these are required for compiling Fast Downward.
++ =g++ cmake make python flex bison g++-multilib= --- these are required for compiling Fast Downward.
 
 + =git build-essential automake libcurl4-openssl-dev= --- these are required for compiling [Roswell](http://roswell.github.io/).
  OSX users should use =brew install roswell=.
@@ -71,26 +109,18 @@ Python 3.5 or later is required.
 
 + =parallel= --- for running some scripts.
 
-+ =libmagic-dev= --- for filetype detection used by file processor.
++ =libmagic-dev= --- for filetype detection used by file processor. *NOTE: you need a header source code in CPATH. Installing the shared object library is not sufficient*
 
-+ Common Lisp library dependencies (lines started by =ros= in  [[./install.sh]] )
-  + =ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot=
-  + =ros dynamic-space-size=8000 install guicho271828/magicffi guicho271828/dataloader=
++ =sqlite3= --- version 3.35 or later is required. Used only for generating tables and figures.
 
-** Python Dependency Installation with Anaconda / Miniconda (recommended)
++ =libc= version 2.29 or later, because NVIDIA port of tensorflow is compiled against it.
 
-=anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html) is a
-python version dependency & mini environment management system.
-We recommend using =miniconda=, as it is smaller.
++ *python 3.8 (not later or older),* because NVIDIA port of tensorflow is compiled only against it.
+  
++ Common Lisp library dependencies (lines starting with =ros= in  [[./install.sh]] )
+  + =ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot magicffi dataloader=
 
-Run =conda env create -f environment.yml= then =conda activate latplan=.
-
-Also run =./setup.py install=, which install =latplan=.
-
-** Python Dependency Installation without Anaconda / Miniconda on Ubuntu
-
-You should install =python3-pip= and =python3-pil= from the APT repository.
-Afterwards, run =./setup.py install=, which installs =latplan=.
++ =python3-pip= for pip.
 
 
 * Command Line Interface
@@ -191,8 +221,8 @@ You also need to uncomment the commands to run.
 By default, everything is commented out and nothing runs.
 
 #+begin_src sh
-# You first need to set up a dataset.
-./setup-dataset.sh
+# If you installed glibc locally
+export LD_PRELOAD=/path/to/glibc-2.29/lib/libm.so.6
 
 # Submit the jobs for training AMA3+ (Cube-Space AEs) and AMA4+ (Bidirectional Cube-Space AEs)
 ./train_propositional.sh
@@ -200,11 +230,8 @@ By default, everything is commented out and nothing runs.
 # Submit the jobs for converting the training results into PDDL files
 ./pddl-ama3.sh
 
-# Generates problem instances.
-problem-generators/generate-all
-
-# Copies the generated instances into a target directory.
-problem-generators/copy propositional [directory]
+# Copy the problem instances into a target directory.
+problem-generators/copy propositional problem-instances-10min-0.0-1
 
 # Edit run_ama3_all.sh to specify appropriate target directory and then submit the jobs for planning.
 # To reproduce the exact same experiments in the paper,
