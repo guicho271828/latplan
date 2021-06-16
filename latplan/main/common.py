@@ -98,7 +98,7 @@ def add_common_arguments(subparser,task,objs=False):
 
 
 
-def main(parameters):
+def main(parameters={}):
     import latplan.util.tuning
     latplan.util.tuning.parameters.update(parameters)
 
