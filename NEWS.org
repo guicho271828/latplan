@@ -1,0 +1,26 @@
++ *NEWS* Initial release: Published after AAAI18.
++ *NEWS* Updates on version 2: Mainly the refactoring. AAAI18 experiments still works.
++ *NEWS* Updates on version 2.1: Version 2 was not really working and I could finally have time to fix it. Added ZSAE experiments.
++ *NEWS* Updates on version 2.2: Backported more minor improvements from the private repository
++ *NEWS* Updates on version 3.0: Updates for DSAMA system. More refactoring is done on the learner code.
+  We newly introduced ama3-planner which takes a PDDL domain file.
++ *NEWS* Updates on version 4.0: Updates for Cube-Space AE in IJCAI2020 paper.
+  + This is a version that can exploit the full potential of search heuristics (lower bounds in Branch-and-Bound),
+    such as LM-cut or Bisimulation Merge-and-Shrink in Fast Downward.
+  + We added the tuned hyperparameters to the repository so that reproducing the experiments will be easy(ish).
+  + We now included a script for 15-puzzle instances randomly sampled from the states
+    14 or 21 steps away from the goal.
+  + We also included a script for Korf's 100 instances of 15-puzzle, but the accuracy
+    was not sufficient in those problems where the shortest path length are typically around 50.
+    Problems that require deeper searches also require more model accuracy because
+    errors accumulate in each state transition.
++ *NEWS* Updates on version 4.1:
+  + Improved the installation procedure. Now I recommend =conda= based installation, which specifies the correct Keras + TF versions.
+  + The repository is now reorganized so that the library code goes to =latplan= directory and all other scripts remain in the root directory.
+    During this migration I used [[https://github.com/newren/git-filter-repo][git-filter-repo]] utility, which rewrites the history.
+    This may have broken the older tags --- I will inspect the breakage and fix them soon.
++ *NEWS* Updates on version 4.1.1, 4.1.2: The project is loadable with Anaconda, is pip-installable (somewhat).
++ *NEWS* Updates on version 4.1.3: Minor refactoring. We also released the trained weights. See [[https://github.com/guicho271828/latplan/releases][Releases]].
++ *NEWS* Updates on version 5: Updates for Bidirectional Cube-Space AE in JAIR paper.
+  + AMA3+ Cube-Space AE : A revised version of AMA3 Cube-Space AE (IJCAI20 version) which is now modeled as a sound generative model.
+  + AMA4+ Bidirectional Cube-Space AE : An extension of Cube-Space AE which can learn both effects and preconditions.
