@@ -62,7 +62,7 @@ After the installation, run the following code:
 #+begin_src sh
 conda config --add channels conda-forge
 conda config --set channel_priority strict
-conda env create -f environment.yml   # This takes about 15-30 min. Conda does not provide an informative progress, so be patient
+conda env create -v -f environment.yml   # This takes about 15-30 min. Conda does not provide an informative progress, so be patient
 conda activate latplan
 ./install.sh
 #+end_src>
