@@ -135,7 +135,7 @@ class BayesGaussianOutput(VanillaRenderer):
 
 
 class PNormOutput(VanillaRenderer):
-    """I do not know what this loss function correspond to."""
+    """Generalized Normal Distribution https://en.wikipedia.org/wiki/Generalized_normal_distribution."""
     def __init__(self,sigma=0.1,p=4):
         self._sigma = sigma
         self.p = p
