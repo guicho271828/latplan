@@ -53,7 +53,7 @@ before launching python.
 * Setup with Anaconda / Miniconda (recommended)
 
 =anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html) is a
-dependency management system that can install both python and non-python dependencies into a local environment.
+dependency management system that can install both python and non-python dependencies into a local, encapsulated environment.
 It is conceptually similar to docker, but it does not use virtualization or container infrastructure.
 We recommend using =miniconda=, as it is smaller.
 
