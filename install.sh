@@ -22,6 +22,6 @@ ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot magicffi dataload
 
 make -j 1 -C lisp
 
-./setup.py install
+pip install -e .
 
 ./download-dataset.sh
