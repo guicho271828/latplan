@@ -46,7 +46,7 @@ def puzzle(args):
 
 
 _parser = subparsers.add_parser('puzzle', formatter_class=argparse.ArgumentDefaultsHelpFormatter, help='Sliding tile puzzle.')
-_parser.add_argument('type', choices=["mnist","mandrill","spider"], help='')
+_parser.add_argument('type', choices=["mnist","mandrill","spider"], help='The images used for generating the puzzle.')
 _parser.add_argument('width', type=int, default=3, help='Integer width of the puzzle. In MNIST, the value must be 3.')
 _parser.add_argument('height', type=int, default=3, help='Integer height of the puzzle. In MNIST, the value must be 3.')
 add_common_arguments(_parser,puzzle)
@@ -75,7 +75,7 @@ def puzzle_objs(args):
 
 
 _parser = subparsers.add_parser('puzzle_objs', formatter_class=argparse.ArgumentDefaultsHelpFormatter, help='Object-based sliding tile puzzle.')
-_parser.add_argument('type', choices=["mnist","mandrill","spider"], help='')
+_parser.add_argument('type', choices=["mnist","mandrill","spider"], help='The images used for generating the puzzle.')
 _parser.add_argument('width', type=int, default=3, help='Integer width of the puzzle. In MNIST, the value must be 3.')
 _parser.add_argument('height', type=int, default=3, help='Integer height of the puzzle. In MNIST, the value must be 3.')
 add_common_arguments(_parser,puzzle_objs,True)
