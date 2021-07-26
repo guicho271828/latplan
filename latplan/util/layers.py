@@ -67,7 +67,8 @@ def ConditionalSequential (array, condition, **kwargs):
 
 def Residual (layer):
     def res(x):
-        return x+layer(x)
+        dx = layer(x)
+        return x+dx
     return Lambda(res)
 
 def ResUnit (*layers):
