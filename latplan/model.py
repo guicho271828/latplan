@@ -1310,14 +1310,6 @@ class BaseActionMixinAMA3Plus(UnidirectionalMixin, BaseActionMixin):
             Dense(A),
             Reshape(self.adim()),
         ]
-        def update_dynamics_training_flag(epoch, logs=None):
-            if epoch == self.parameters["kl_cycle_start"]:
-                print(f"epoch {epoch}: freezing the decoder")
-                for layer in self.decoder_net:
-                    layer.trainable = False
-                # force compilation
-                self._compile(self.optimizers)
-        self.callbacks.append(LambdaCallback(on_epoch_begin = update_dynamics_training_flag))
         super()._build_around(input_shape)
 
     def _build_primary(self,input_shape):
@@ -1437,26 +1429,6 @@ class BaseActionMixinAMA4Plus(BidirectionalMixin, BaseActionMixin):
             Dense(A),
             Reshape(self.adim()),
         ]
-        initial_weights = []
-        def save_initial_weight(epoch, logs=None):
-            for layer in self.encoder_net:
-                initial_weights.append(layer.get_weights())
-        def reset_initial_weight(epoch, logs=None):
-            if epoch == self.parameters["kl_cycle_start"]:
-                for layer,weights in zip(self.encoder_net,initial_weights):
-                    layer.set_weights(weights)
-        # self.callbacks.append(LambdaCallback(on_train_begin = save_initial_weight))
-        # self.callbacks.append(LambdaCallback(on_epoch_begin = reset_initial_weight))
-        def update_dynamics_training_flag(epoch, logs=None):
-            if epoch == self.parameters["kl_cycle_start"]:
-                print(f"epoch {epoch}: freezing the decoder")
-                for layer in (*self.decoder_net,
-                              *self.eff_decoder_net,
-                              *self.pre_decoder_net):
-                    layer.trainable = False
-                # force compilation
-                self._compile(self.optimizers)
-        # self.callbacks.append(LambdaCallback(on_epoch_begin = update_dynamics_training_flag))
         super()._build_around(input_shape)
 
     def _build_primary(self,input_shape):

@@ -5,7 +5,6 @@ from latplan.util import *
 
 gs_annealing_epoch = 1000
 main_epoch         = 1000
-kl_annealing_epoch = 0
 
 # parameters : a dictionary of { name : [ *values ] or value }.
 # If the value is a list, it is interpreted as a hyperparameter choice.
@@ -21,10 +20,9 @@ parameters = {
     'dropout'         :0.2,
     'optimizer'       :"radam",
     'min_temperature' :0.5,
-    'epoch'           :gs_annealing_epoch+main_epoch+kl_annealing_epoch,
+    'epoch'           :gs_annealing_epoch+main_epoch,
     'gs_annealing_start':0,
     'gs_annealing_end'  :gs_annealing_epoch,
-    'kl_cycle_start'    :gs_annealing_epoch+main_epoch,
     'clipnorm'        :0.1,
     'batch_size'      :[400],
     'lr'              :[0.001],
