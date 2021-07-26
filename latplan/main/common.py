@@ -248,7 +248,7 @@ def run(path,transitions,extra=None):
             report             = report,
         )
 
-    elif 'debug' in args.mode:
+    if 'debug' in args.mode:
         print("debug run. removing past logs...")
         for _path in glob.glob(os.path.join(path,"*")):
             if os.path.isfile(_path):
@@ -268,7 +268,7 @@ def run(path,transitions,extra=None):
             report             = report,
         )
 
-    elif 'reproduce' in args.mode:   # reproduce the best result from the grid search log
+    if 'reproduce' in args.mode:   # reproduce the best result from the grid search log
         reproduce(
             curry(nn_task, latplan.model.get(parameters["aeclass"]),
                   path,
