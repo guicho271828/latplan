@@ -621,7 +621,7 @@ Each subclasses should implement a method for it."""
 class GumbelSoftmax(Variational,ScheduledVariable):
     count = 0
     
-    def __init__(self,N,M,min,max,
+    def __init__(self,min,max,
                  annealing_start,
                  annealing_end,
                  annealer    = anneal_rate,
@@ -629,8 +629,6 @@ class GumbelSoftmax(Variational,ScheduledVariable):
                  train_hard  = False,
                  test_noise  = False,
                  test_hard   = True, **kwargs):
-        self.N           = N
-        self.M           = M
         self.min         = min
         self.max         = max
         self.train_noise = train_noise
@@ -660,13 +658,13 @@ class GumbelSoftmax(Variational,ScheduledVariable):
             return K.softmax( x / self.variable )
         def hard_train(x):
             # use straight-through estimator
-            argmax  = K.one_hot(K.argmax( x ), self.M)
+            argmax  = K.one_hot(K.argmax( x ), K.shape(x)[-1])
             softmax = K.softmax( x / self.variable )
             return K.stop_gradient(argmax-softmax) + softmax
         def soft_test(x):
             return K.softmax( x / self.min )
         def hard_test(x):
-            return K.one_hot(K.argmax( x ), self.M)
+            return K.one_hot(K.argmax( x ), K.shape(x)[-1])
 
         if self.train_hard:
             train_activation = hard_train
@@ -693,10 +691,8 @@ class GumbelSoftmax(Variational,ScheduledVariable):
             # loss = q * (log_q - log_p)
             # loss = K.sum(loss, axis=-1)
             # sum (q*logq - qlogp) = sum (q*logq) - sum (q*(-logM)) = sum qlogq + sum q logM = sum qlogq + 1*logM
-            loss = K.sum(q * log_q, axis=-1) + K.log(K.cast(self.M, "float"))
+            loss = K.sum(q * log_q, axis=-1) + K.log(K.cast(K.shape(x)[-1], "float"))
         elif logit_p is not None:
-            s = K.shape(logit_p)
-            logit_p = wrap(logit_p, K.reshape(logit_p, (s[0], self.N, self.M)))
             p = K.softmax(logit_p)
             p = K.clip(p,1e-5,1-1e-5) # avoid nan in log
             p = p / K.sum(p,axis=-1,keepdims=True) # ensure sum is 1
@@ -720,8 +716,6 @@ class GumbelSoftmax(Variational,ScheduledVariable):
     def call(self,logit_q):
         GumbelSoftmax.count += 1
         c = GumbelSoftmax.count-1
-        s = K.shape(logit_q)
-        logit_q = wrap(logit_q, K.reshape(logit_q, (s[0], self.N,self.M)))
         layer = Lambda(self.sample,name="gumbel_{}".format(c))
         return layer(logit_q)
 

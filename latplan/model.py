@@ -138,11 +138,10 @@ The latter two are used for verifying the performance of the AE.
         self.autoencoder.summary()
         return self
 
-    def build_gs(self,N=None,M=None,
+    def build_gs(self,
                  **kwargs):
         # python methods cannot use self in the
         # default values, because python sucks
-        assert (N is not None) or (M is not None)
         def fn(max_temperature = self.parameters["max_temperature"],
                min_temperature = self.parameters["min_temperature"],
                annealing_start = self.parameters["gs_annealing_start"],
@@ -152,7 +151,7 @@ The latter two are used for verifying the performance of the AE.
                test_noise      = self.parameters["test_noise"],
                test_hard       = self.parameters["test_hard"]):
             gs = GumbelSoftmax(
-                N,M,min_temperature,max_temperature,
+                min_temperature,max_temperature,
                 annealing_start,
                 annealing_end,
                 train_noise = train_noise,
@@ -620,8 +619,8 @@ class DetActionMixin:
             ([self.build_action_fc_unit() for i in range(self.parameters["aae_depth"]-1)]),
             Sequential([
                 Dense(self.parameters["A"]),
-                self.build_gs(N=1,
-                              M=self.parameters["A"],),
+                Reshape(self.adim()),
+                self.build_gs(),
             ]),
         ]
         super()._build_around(input_shape)
