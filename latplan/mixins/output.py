@@ -41,78 +41,55 @@ class GaussianOutput(VanillaRenderer):
             self._eval_sigma = sigma
         else:
             self._eval_sigma = eval_sigma
-    def loss(self, true, pred):
+
+    def sigma(self, true, pred):
+        return K.in_train_phase(self._sigma, self._eval_sigma)
+
+    def loss(self, true, pred, include_sigma=False):
         # Gaussian distribution N(x|y, sigma) is exp [- (x-y)^2 / (2*sigma^2)] / sqrt(2*pi*sigma^2)
         # negative log probability that the prediction y follows N(x, sigma) is
         # (x-y)^2 / 2sigma^2  + log (2*pi*sigma^2) / 2
-        sigma = K.in_train_phase(self._sigma, self._eval_sigma)
+        sigma = self.sigma(true, pred)
         v1 = 2*sigma*sigma
         v2 = 2*math.pi*sigma*sigma
 
-        loss = K.square(true - pred) / v1 # + K.log(v2)/2
+        loss = K.square(true - pred) / v1
+        if include_sigma:
+            loss += K.log(v2)/2
         # sum across dimensions
         loss = K.batch_flatten(loss)
         loss = K.sum(loss, axis=-1)
         return loss
 
-    def sigma(self, true, pred):
-        return self.sigma
-
     def activation(self):
         return Activation("linear")
 
 
-class StepScheduleGaussianOutput(StepSchedule,VanillaRenderer):
-    def loss(self, true, pred):
-        # negative log probability that the prediction y follows N(x, sigma) is
-        # (x-y)^2 / 2sigma^2  + log (2*pi*sigma^2) / 2
-
-        # use the sharpest sigma in the schedule
-        sigma = K.in_train_phase(self.variable, min(self.schedule.values()))
-        v1 = 2*sigma*sigma
-        v2 = 2*math.pi*sigma*sigma
-
-        loss = K.square(true - pred) / v1 # + K.log(v2)/2
-        # sum across dimensions
-        loss = K.batch_flatten(loss)
-        loss = K.sum(loss, axis=-1)
-        return loss
-
+class ScheduleGaussianOutput(GaussianOutput):
     def sigma(self, true, pred):
-        return self.sigma
-
-    def activation(self):
-        return Activation("linear")
+        return K.in_train_phase(self.variable, min(self.schedule.values()))
 
 
-class LinearScheduleGaussianOutput(LinearSchedule,VanillaRenderer):
-    def loss(self, true, pred):
-        # negative log probability that the prediction y follows N(x, sigma) is
-        # (x-y)^2 / 2sigma^2  + log (2*pi*sigma^2) / 2
-
-        # use the sharpest sigma in the schedule
-        sigma = K.in_train_phase(self.variable, min(self.schedule.values()))
-        v1 = 2*sigma*sigma
-        v2 = 2*math.pi*sigma*sigma
-
-        loss = K.square(true - pred) / v1 # + K.log(v2)/2
-        # sum across dimensions
-        loss = K.batch_flatten(loss)
-        loss = K.sum(loss, axis=-1)
-        return loss
-
-    def sigma(self, true, pred):
-        return self.sigma
-
-    def activation(self):
-        return Activation("linear")
+class StepScheduleGaussianOutput(StepSchedule,ScheduleGaussianOutput):
+    pass
 
 
-class BayesGaussianOutput(VanillaRenderer):
+class LinearScheduleGaussianOutput(LinearSchedule,ScheduleGaussianOutput):
+    pass
+
+
+class BayesGaussianOutput(GaussianOutput):
     "The prediction has twice the channel size of the true data."
     def __init__(self):
         pass
-    def loss(self, true, pred):
+
+    def sigma(self, true, pred):
+        shape = K.int_shape(pred)
+        dim = shape[-1]//2
+        log_var = pred[...,dim:]
+        return K.exp(log_var/2)
+
+    def loss(self, true, pred, include_sigma=True):
         # negative log probability that the prediction y follows N(x, sigma) is
         # (x-y)^2 / 2sigma^2  + log (2*pi*sigma^2) / 2
         # (x-y)^2 / 2var  + log (2*pi*var) / 2
@@ -121,17 +98,13 @@ class BayesGaussianOutput(VanillaRenderer):
         dim = shape[-1]//2
         mean    = pred[...,:dim]
         log_var = pred[...,dim:]
-        loss = K.square(true - pred) / (2*K.exp(log_var)) + (K.log(2*pi)+log_var)/2
+        loss = K.square(true - pred) / (2*K.exp(log_var))
+        if include_sigma:
+            loss += (K.log(2*pi)+log_var)/2
         # sum across dimensions
         loss = K.batch_flatten(loss)
         loss = K.sum(loss, axis=-1)
         return loss
-
-    def sigma(self, true, pred):
-        return self.sigma
-
-    def activation(self):
-        return Activation("linear")
 
 
 class PNormOutput(VanillaRenderer):
@@ -153,32 +126,16 @@ class PNormOutput(VanillaRenderer):
         return Activation("linear")
 
 
-class SharedSigmaGaussianOutput(VanillaRenderer):
+class SharedSigmaGaussianOutput(GaussianOutput):
     """Learns a single sigma shared across the data points and output dimensions."""
     def __init__(self):
         self.logsigma = K.softplus(K.variable(0.0)+6)-6 # sigma=1.0, with soft clipping at -6
 
-    def loss(self, true, pred):
-        # negative log probability that the prediction y follows N(x, sigma) is
-        # (x-y)^2 / 2sigma^2  + log (2*pi*sigma^2) / 2
-        sigma_square = K.exp(2*self.logsigma)
-        v1 = 2*sigma_square
-        v2 = 2*math.pi*sigma_square
-
-        loss = K.square(true - pred) / v1 + K.log(v2)/2
-        # sum across dimensions
-        loss = K.batch_flatten(loss)
-        loss = K.sum(loss, axis=-1)
-        return loss
-
     def sigma(self, true, pred):
         return K.exp(self.logsigma)
 
-    def activation(self):
-        return Activation("linear")
 
-
-class OptimalSigmaGaussianOutput(VanillaRenderer):
+class OptimalSigmaGaussianOutput(GaussianOutput):
     """Uses an analytically obtained sigma that maximizes the negative log likelihood of Gaussian.
 Axes specify which dimension to share the sigma across.
 For example:
@@ -190,7 +147,7 @@ For example:
     def __init__(self,axis=None):
         self.axis = axis
 
-    def loss(self, true, pred):
+    def sigma(self, true, pred):
         # L = (x-y)^2 / 2sigma^2  + log (2*pi*sigma^2) / 2
         #   = (x-y)^2 / 2sigma^2  + log sigma + log (2*pi) / 2
         # sigma* = argmin_sigma L
@@ -200,22 +157,7 @@ For example:
         # sigma^2 = (x-y)^2
         square = K.square(true - pred)
         sigma_square = K.maximum(K.mean(square, axis=self.axis, keepdims=True), K.epsilon())
-        v1 = 2*sigma_square
-        v2 = 2*math.pi*sigma_square
-
-        loss = square / v1 + K.log(v2)/2
-        # sum across dimensions
-        loss = K.batch_flatten(loss)
-        loss = K.sum(loss, axis=-1)
-        return loss
-
-    def sigma(self, true, pred):
-        square = K.square(true - pred)
-        sigma_square = K.mean(square, axis=self.axis, keepdims=True)
         return K.sqrt(sigma_square)
-
-    def activation(self):
-        return Activation("linear")
 
 
 class ProbabilityOutput(VanillaRenderer):
