@@ -297,34 +297,142 @@ def _crossover(parent1,parent2):
             child[k] = v2
     return child
 
-def _adjusted_inverse_weighted_sampling(top_k):
+
+def _negative_softplus_weighted_selection(top_k):
     """Roulette-based selection where the scores are softplus of the original.
 By applying a softplus, the "optimal solution" is assumed to be -inf.
-Unlike previous versions, it works on negative scores and it is scale invariant.
 """
     import numpy as np
     import math
-    # top_k = [ elem for elem in top_k if not math.isinf(elem[0])]
-    pevals = np.array([ elem[0] for elem in top_k])
+    pevals = np.array([
+        ensure_list(elem[0])[0] # note: elem[0] could be a list or a number
+        for elem in top_k])
 
-    weights = np.log(1 + np.exp(pevals))
-
-    pos = np.where(np.cumsum(weights) >= np.random.uniform(0.0,1.0))[0][0]
+    # note: smaller the better.
+    
+    weights = np.log(1 + np.exp(-pevals))
+    cum = np.cumsum(weights)
+    pos = np.where(cum >= np.random.uniform(0.0,cum[-1]))[0][0]
+    print("selected rank:", pos)
 
     # try this to understand
-    # np.cumsum([0,1,2,3])
-    # np.cumsum([0,1,2,3]) < 1.5
-    # np.where(np.cumsum([0,1,2,3]) < 1.5)
-    # np.where(np.cumsum([0,1,2,3]) < 1.5)[0][-1]
+    # np.cumsum([0,1,2,3])                        -> array([0,      1,    3,     6])
+    # np.cumsum([0,1,2,3]) < 1.5                  -> array([ True,  True, False, False])
+    # np.where(np.cumsum([0,1,2,3]) < 1.5)        -> (array([2, 3]),)
+    # np.where(np.cumsum([0,1,2,3]) < 1.5)[0][-1] -> 2
 
     return top_k[pos]
 
+def _rank_based_selection(top_k):
+    """Roulette-based selection where the scores are ranks of the original."""
+    import numpy as np
+    import math
+
+    weights = np.arange(len(top_k),0,-1)
+    cum = np.cumsum(weights)
+    pos = np.where(cum >= np.random.uniform(0.0,cum[-1]))[0][0]
+    print("selected rank:", pos)
+    return top_k[pos]
+
+def _boltzmann_selection(top_k):
+    """Select based on softmax of minus of scores."""
+    import numpy as np
+    import math
+
+    t = 1.0
+    
+    pevals = np.array([
+        ensure_list(elem[0])[0] # note: elem[0] could be a list or a number
+        for elem in top_k])
+
+    def softmax(x):
+        e_x = np.exp(x - np.max(x,axis=-1))
+        return e_x / e_x.sum(axis=-1)
+    
+    # note: smaller the better.
+    weights = softmax(-pevals / t)
+    cum = np.cumsum(weights)    # should sum up to 1
+    pos = np.where(cum >= np.random.uniform(0.0,1.0))[0][0]
+    print("selected rank:", pos)
+    return top_k[pos]
+
+def _adaptive_boltzmann_selection(top_k):
+    """Select based on softmin of the scores, adjusted by the temperature.
+Temperature is determined by the entropy of the resulting probability distribution.
+It is increased until the entropy is larger than 1.
+"""
+    import numpy as np
+    import math
+
+   
+    pevals = np.array([
+        ensure_list(elem[0])[0] # note: elem[0] could be a list or a number
+        for elem in top_k])
+
+    def softmax(x):
+        e_x = np.exp(x - np.max(x,axis=-1))
+        return e_x / e_x.sum(axis=-1)
+    
+    # note: smaller the better.
+    t = 1.0
+    while True:
+        weights = softmax(-pevals / t)
+        entropy = np.sum(-weights * np.log(weights+1e-8))
+        print("entropy:",entropy,"temperature:",t)
+        assert not np.any(np.isnan(entropy))
+        if entropy < 1.0:
+            t *= 2.0
+        else:
+            break
+    
+    cum = np.cumsum(weights)    # should sum up to 1
+    pos = np.where(cum >= np.random.uniform(0.0,1.0))[0][0]
+    print("selected rank:", pos)
+    return top_k[pos]
+
+def _roulette_selection(top_k):
+    """Fitness proportionate selection."""
+    import numpy as np
+    import math
+
+    pevals = np.array([
+        ensure_list(elem[0])[0] # note: elem[0] could be a list or a number
+        for elem in top_k])
+
+    # note: smaller the better.
+    weights = pevals
+    weights = weights + np.min(weights) # make it positive
+    weights = np.max(weights) - weights # reverse order
+    
+    cum = np.cumsum(weights)
+    pos = np.where(cum >= np.random.uniform(0.0,cum[-1]))[0][0]
+    print("selected rank:", pos)
+    return top_k[pos]
+
+def _tournament_selection(top_k):
+    """Select by p(1-p)^r where p = 0.5, r is the rank."""
+    import numpy as np
+    import math
+
+    p = 0.5
+
+    for pos, candidate in enumerate(top_k):
+        if np.random.uniform(0.0,1.0) < p:
+            print("selected rank:", pos)
+            return candidate
+
+    print("selected rank:", len(top_k))
+    return top_k[-1]
+
+
 def _generate_child_by_crossover(open_list, close_list, k, parameters):
     top_k = open_list[:k]
-    peval1, parent1, *_ = _adjusted_inverse_weighted_sampling(top_k)
-    peval2, parent2, *_ = _adjusted_inverse_weighted_sampling(top_k)
+    selection = _adaptive_boltzmann_selection
+    peval1, parent1, *_ = selection(top_k)
+    peval2, parent2, *_ = selection(top_k)
     while parent1 == parent2:
-        peval2, parent2, *_ = _adjusted_inverse_weighted_sampling(top_k)
+        print("same parents!")
+        peval2, parent2, *_ = selection(top_k)
 
     non_mutated_child = _crossover(parent1, parent2)
     non_mutated_child = _check_missing_hyperparameter(non_mutated_child, parameters)
@@ -340,7 +448,6 @@ def _generate_child_by_crossover(open_list, close_list, k, parameters):
         print("parent2: ", parent2)
         print("peval2 : ", peval2)
         print("child  : ", child)
-        print("attempted trials : ", tried)
         return child
     else:
         raise HyperparameterGenerationError()
