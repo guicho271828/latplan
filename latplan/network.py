@@ -298,12 +298,16 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         self.losses[0] = loss
         return loss
 
-    def add_metric(self, name,loss=None):
+    def add_metric(self, name,loss=None, force=False):
+        if name in map(lambda thunk: thunk.__name__, self.metrics) and not force:
+            print("Metric '",name,"' already registered, not added.")
+            return
         if loss is None:
             loss = eval(name)
         thunk = lambda *args: loss
         thunk.__name__ = name
         self.metrics.append(thunk)
+        return
 
     def train(self,train_data,
               val_data      = None,
