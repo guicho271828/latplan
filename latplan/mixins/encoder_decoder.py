@@ -45,8 +45,8 @@ class EncoderDecoderMixin:
         return Sequential(self.decoder_net)(x)
     def build_encoder(self,input_shape):
         return [
-            GaussianNoise(self.parameters["noise"]),
-            BN(),
+            *([GaussianNoise(self.parameters["noise"])] if self.parameters["noise"] > 0 else []),
+            # BN(),
             *self._build_encoder(input_shape),
             self.activation(),
         ]
