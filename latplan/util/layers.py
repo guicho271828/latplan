@@ -619,68 +619,20 @@ Each subclasses should implement a method for it."""
             self.variable,
             self.value(epoch))
 
-class GumbelSoftmax(Variational,ScheduledVariable):
-    count = 0
-    
-    def __init__(self,min,max,
-                 annealing_start,
-                 annealing_end,
-                 annealer    = anneal_rate,
-                 train_noise = True,
-                 train_hard  = False,
-                 test_noise  = False,
-                 test_hard   = True, **kwargs):
-        self.min         = min
-        self.max         = max
-        self.train_noise = train_noise
-        self.train_hard  = train_hard
-        self.test_noise  = test_noise
-        self.test_hard   = test_hard
-        self.anneal_rate = annealer(annealing_end-annealing_start,min,max)
-        self.annealing_start      = annealing_start
-        ScheduledVariable.__init__(self,"temperature")
-        Variational.__init__(self,**kwargs)
-        
-    def sample(self,logit_q):
-        u = K.random_uniform(K.shape(logit_q), 1e-5, 1-1e-5)
-        gumbel = - K.log(-K.log(u))
 
-        if self.train_noise:
-            train_logit_q = logit_q + gumbel
-        else:
-            train_logit_q = logit_q
-            
-        if self.test_noise:
-            test_logit_q = logit_q + gumbel
-        else:
-            test_logit_q = logit_q
+class AbstractGumbelSoftmax:
+    def soft_train(self,x):
+        return K.softmax( x / self.variable )
+    def hard_train(self,x):
+        # use straight-through estimator
+        argmax  = K.one_hot(K.argmax( x ), K.shape(x)[-1])
+        softmax = K.softmax( x / self.variable )
+        return K.stop_gradient(argmax-softmax) + softmax
+    def soft_test(self,x):
+        return K.softmax( x / self.min )
+    def hard_test(self,x):
+        return K.one_hot(K.argmax( x ), K.shape(x)[-1])
 
-        def soft_train(x):
-            return K.softmax( x / self.variable )
-        def hard_train(x):
-            # use straight-through estimator
-            argmax  = K.one_hot(K.argmax( x ), K.shape(x)[-1])
-            softmax = K.softmax( x / self.variable )
-            return K.stop_gradient(argmax-softmax) + softmax
-        def soft_test(x):
-            return K.softmax( x / self.min )
-        def hard_test(x):
-            return K.one_hot(K.argmax( x ), K.shape(x)[-1])
-
-        if self.train_hard:
-            train_activation = hard_train
-        else:
-            train_activation = soft_train
-
-        if self.test_hard:
-            test_activation = hard_test
-        else:
-            test_activation = soft_test
-
-        return K.in_train_phase(
-            train_activation( train_logit_q ),
-            test_activation ( test_logit_q  ))
-    
     def loss(self,logit_q,logit_p=None,p=None):
         q = K.softmax(logit_q)
         q = K.clip(q,1e-5,1-1e-5) # avoid nan in log
@@ -714,29 +666,10 @@ class GumbelSoftmax(Variational,ScheduledVariable):
         loss = K.sum(loss, axis=-1)
         return loss
 
-    def call(self,logit_q):
-        GumbelSoftmax.count += 1
-        c = GumbelSoftmax.count-1
-        layer = Lambda(self.sample,name="gumbel_{}".format(c))
-        return layer(logit_q)
 
-    def value(self,epoch):
-        return np.max([self.min,
-                       self.max * np.exp(- self.anneal_rate * max(epoch - self.annealing_start, 0))])
-
-class BinaryConcrete(Variational,ScheduledVariable):
-    """BinaryConcrete variational layer.
-
-Call this instance with a logit log_q (log probability),
-then it adds the KL divergence loss against Bernoulli(0.5).
-
-Optionally, you can call the instance with two logits (log_q, log_p),
-where the second argument represents a target / prior distribution.
-In such a case, it adds the KL divergence loss KL(Bern(q)||Bern(p)).
-It is useful when you want to match two distributions.
-    """
+class GumbelSoftmax(AbstractGumbelSoftmax,Variational,ScheduledVariable):
     count = 0
-
+    
     def __init__(self,min,max,
                  annealing_start,
                  annealing_end,
@@ -753,49 +686,62 @@ It is useful when you want to match two distributions.
         self.test_hard   = test_hard
         self.anneal_rate = annealer(annealing_end-annealing_start,min,max)
         self.annealing_start      = annealing_start
+
+        if self.train_hard:
+            self.train_activation = self.hard_train
+        else:
+            self.train_activation = self.soft_train
+
+        if self.test_hard:
+            self.test_activation = self.hard_test
+        else:
+            self.test_activation = self.soft_test
+
         ScheduledVariable.__init__(self,"temperature")
         Variational.__init__(self,**kwargs)
 
     def sample(self,logit_q):
         u = K.random_uniform(K.shape(logit_q), 1e-5, 1-1e-5)
-        logistic = K.log(u) - K.log(1 - u)
+        gumbel = - K.log(-K.log(u))
 
         if self.train_noise:
-            train_logit_q = logit_q + logistic
+            train_logit_q = logit_q + gumbel
         else:
             train_logit_q = logit_q
 
         if self.test_noise:
-            test_logit_q = logit_q + logistic
+            test_logit_q = logit_q + gumbel
         else:
             test_logit_q = logit_q
 
-        def soft_train(x):
-            return K.sigmoid( x / self.variable )
-        def hard_train(x):
-            # use straight-through estimator
-            sigmoid = K.sigmoid(x / self.variable )
-            step    = K.round(sigmoid)
-            return K.stop_gradient(step-sigmoid) + sigmoid
-        def soft_test(x):
-            return K.sigmoid( x / self.min )
-        def hard_test(x):
-            sigmoid = K.sigmoid(x / self.min )
-            return K.round(sigmoid)
-
-        if self.train_hard:
-            train_activation = hard_train
-        else:
-            train_activation = soft_train
-
-        if self.test_hard:
-            test_activation = hard_test
-        else:
-            test_activation = soft_test
-
         return K.in_train_phase(
-            train_activation( train_logit_q ),
-            test_activation ( test_logit_q  ))
+            self.train_activation( train_logit_q ),
+            self.test_activation ( test_logit_q  ))
+
+    def call(self,logit_q):
+        GumbelSoftmax.count += 1
+        c = GumbelSoftmax.count-1
+        layer = Lambda(self.sample,name="gumbel_{}".format(c))
+        return layer(logit_q)
+
+    def value(self,epoch):
+        return np.max([self.min,
+                       self.max * np.exp(- self.anneal_rate * max(epoch - self.annealing_start, 0))])
+
+
+class AbstractBinaryConcrete:
+    def soft_train(self,x):
+        return K.sigmoid( x / self.variable )
+    def hard_train(self,x):
+        # use straight-through estimator
+        sigmoid = K.sigmoid(x / self.variable )
+        step    = K.round(sigmoid)
+        return K.stop_gradient(step-sigmoid) + sigmoid
+    def soft_test(self,x):
+        return K.sigmoid( x / self.min )
+    def hard_test(self,x):
+        sigmoid = K.sigmoid(x / self.min )
+        return K.round(sigmoid)
 
     def loss(self,logit_q,logit_p=None,p=None):
         q = K.sigmoid(logit_q)
@@ -830,11 +776,73 @@ It is useful when you want to match two distributions.
             loss = q0 * (log_q0-log_p0) + q1 * (log_q1-log_p1)
         else:
             raise Exception("what??")
-        
+
         # sum across dimensions
         loss = K.batch_flatten(loss)
         loss = K.sum(loss, axis=-1)
         return loss
+
+
+class BinaryConcrete(AbstractBinaryConcrete,Variational,ScheduledVariable):
+    """BinaryConcrete variational layer.
+
+Call this instance with a logit log_q (log probability),
+then it adds the KL divergence loss against Bernoulli(0.5).
+
+Optionally, you can call the instance with two logits (log_q, log_p),
+where the second argument represents a target / prior distribution.
+In such a case, it adds the KL divergence loss KL(Bern(q)||Bern(p)).
+It is useful when you want to match two distributions.
+    """
+    count = 0
+
+    def __init__(self,min,max,
+                 annealing_start,
+                 annealing_end,
+                 annealer    = anneal_rate,
+                 train_noise = True,
+                 train_hard  = False,
+                 test_noise  = False,
+                 test_hard   = True, **kwargs):
+        self.min         = min
+        self.max         = max
+        self.train_noise = train_noise
+        self.train_hard  = train_hard
+        self.test_noise  = test_noise
+        self.test_hard   = test_hard
+        self.anneal_rate = annealer(annealing_end-annealing_start,min,max)
+        self.annealing_start      = annealing_start
+
+        if self.train_hard:
+            self.train_activation = self.hard_train
+        else:
+            self.train_activation = self.soft_train
+
+        if self.test_hard:
+            self.test_activation = self.hard_test
+        else:
+            self.test_activation = self.soft_test
+
+        ScheduledVariable.__init__(self,"temperature")
+        Variational.__init__(self,**kwargs)
+
+    def sample(self,logit_q):
+        u = K.random_uniform(K.shape(logit_q), 1e-5, 1-1e-5)
+        logistic = K.log(u) - K.log(1 - u)
+
+        if self.train_noise:
+            train_logit_q = logit_q + logistic
+        else:
+            train_logit_q = logit_q
+
+        if self.test_noise:
+            test_logit_q = logit_q + logistic
+        else:
+            test_logit_q = logit_q
+
+        return K.in_train_phase(
+            self.train_activation( train_logit_q ),
+            self.test_activation ( test_logit_q  ))
 
     def call(self,logit_q):
         BinaryConcrete.count += 1
