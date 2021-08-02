@@ -855,6 +855,35 @@ It is useful when you want to match two distributions.
                        self.max * np.exp(- self.anneal_rate * max(epoch - self.annealing_start, 0))])
 
 
+class AlternativeRelaxation:
+    """Alternative reparameterization proposed in REBAR, that temperature -> infty matches the original probability."""
+    def sample(self,logit_q):
+        t = self.variable
+        t2 = t + 1/(t+1)      # (t^2 + t + 1) / (t + 1)
+
+        return super().sample(t2 * logit_q)
+
+class AltGumbelSoftmax(AlternativeRelaxation,GumbelSoftmax):
+    """Alternative reparameterization proposed in REBAR, that temperature -> infty matches the original probability."""
+    count = 0
+
+    def call(self,logit_q):
+        AltGumbelSoftmax.count += 1
+        c = AltGumbelSoftmax.count-1
+        layer = Lambda(self.sample,name="altgumbel_{}".format(c))
+        return layer(logit_q)
+
+class AltBinaryConcrete(AlternativeRelaxation,BinaryConcrete):
+    """Alternative reparameterization proposed in REBAR, that temperature -> infty matches the original probability."""
+    count = 0
+
+    def call(self,logit_q):
+        AltBinaryConcrete.count += 1
+        c = AltBinaryConcrete.count-1
+        layer = Lambda(self.sample,name="altconcrete_{}".format(c))
+        return layer(logit_q)
+
+
 class RandomLogistic(Initializer):
     """Initializer that generates tensors with a normal distribution.
 
