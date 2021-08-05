@@ -5,7 +5,7 @@ import glob
 import numpy as np
 import latplan.model
 import latplan.util.stacktrace
-from latplan.util.tuning import simple_genetic_search, parameters, nn_task, reproduce
+from latplan.util.tuning import simple_genetic_search, parameters, nn_task, reproduce, load_history
 from latplan.util        import curry
 
 ################################################################
@@ -278,9 +278,14 @@ def run(path,transitions,extra=None):
         )
 
     if 'iterate' in args.mode:
-        wild = os.path.join(path,"logs","*")
-        print(f"iterating mode {args.mode} for all weights stored under {wild}")
-        for path in glob.glob(wild):
+        open_list, _ = load_history(path)
+        topk = open_list[:10]
+        topk_dirnames = [
+            os.path.join(path,"logs",elem[1]["time_start"])
+            for elem in topk
+        ]
+        print(f"iterating mode {args.mode} for all weights stored under logs")
+        for path in topk_dirnames:
             postprocess(latplan.model.load(path))
 
 
