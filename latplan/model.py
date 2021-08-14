@@ -1348,12 +1348,12 @@ class BaseActionMixinAMA3Plus(UnidirectionalMixin, BaseActionMixin):
         x0y0 = _rec(x_pre,y_pre)
         x1y1 = _rec(x_suc,y_suc)
         x1y2 = _rec(x_suc,y_suc_aae)
-        ama3_forward_loss1  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + self.parameters["beta_d"] * kl_z1z2 + x1y1
-        ama3_forward_loss2  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + x1y2
-        total_loss = (ama3_forward_loss1 + ama3_forward_loss2)/2
-        ama3_forward_elbo1  = kl_z0 + x0y0 + kl_a_z0 + kl_z1z2 + x1y1
-        ama3_forward_elbo2  = kl_z0 + x0y0 + kl_a_z0 + x1y2
-        elbo = (ama3_forward_elbo1 + ama3_forward_elbo2)/2
+        forward_loss1  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + self.parameters["beta_d"] * kl_z1z2 + x1y1
+        forward_loss2  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + x1y2
+        total_loss = (forward_loss1 + forward_loss2)/2
+        forward_elbo1  = kl_z0 + x0y0 + kl_a_z0 + kl_z1z2 + x1y1
+        forward_elbo2  = kl_z0 + x0y0 + kl_a_z0 + x1y2
+        elbo = (forward_elbo1 + forward_elbo2)/2
         self.add_metric("pdiff_z1z2",pdiff_z1z2)
         self.add_metric("pdiff_z0z1",pdiff_z0z1)
         self.add_metric("pdiff_z0z2",pdiff_z0z2)
@@ -1475,16 +1475,16 @@ class BaseActionMixinAMA4Plus(BidirectionalMixin, BaseActionMixin):
         x1y1 = _rec(x_suc,y_suc)
         x0y3 = _rec(x_pre,y_pre_aae)
         x1y2 = _rec(x_suc,y_suc_aae)
-        ama3_forward_loss1  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + self.parameters["beta_d"] * kl_z1z2 + x1y1
-        ama3_forward_loss2  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + x1y2
-        ama3_backward_loss1 = self.parameters["beta_z"] * kl_z1 + x1y1 + kl_a_z1 + self.parameters["beta_d"] * kl_z0z3 + x0y0
-        ama3_backward_loss2 = self.parameters["beta_z"] * kl_z1 + x1y1 + kl_a_z1 + x0y3
-        total_loss = (ama3_forward_loss1 + ama3_forward_loss2 + ama3_backward_loss1 + ama3_backward_loss2)/4 
-        ama3_forward_elbo1  = kl_z0 + x0y0 + kl_a_z0 + kl_z1z2 + x1y1
-        ama3_forward_elbo2  = kl_z0 + x0y0 + kl_a_z0 + x1y2
-        ama3_backward_elbo1 = kl_z1 + x1y1 + kl_a_z1 + kl_z0z3 + x0y0
-        ama3_backward_elbo2 = kl_z1 + x1y1 + kl_a_z1 + x0y3
-        elbo = (ama3_forward_elbo1 + ama3_forward_elbo2 + ama3_backward_elbo1 + ama3_backward_elbo2)/4
+        forward_loss1  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + self.parameters["beta_d"] * kl_z1z2 + x1y1
+        forward_loss2  = self.parameters["beta_z"] * kl_z0 + x0y0 + kl_a_z0 + x1y2
+        backward_loss1 = self.parameters["beta_z"] * kl_z1 + x1y1 + kl_a_z1 + self.parameters["beta_d"] * kl_z0z3 + x0y0
+        backward_loss2 = self.parameters["beta_z"] * kl_z1 + x1y1 + kl_a_z1 + x0y3
+        total_loss = (forward_loss1 + forward_loss2 + backward_loss1 + backward_loss2)/4 
+        forward_elbo1  = kl_z0 + x0y0 + kl_a_z0 + kl_z1z2 + x1y1
+        forward_elbo2  = kl_z0 + x0y0 + kl_a_z0 + x1y2
+        backward_elbo1 = kl_z1 + x1y1 + kl_a_z1 + kl_z0z3 + x0y0
+        backward_elbo2 = kl_z1 + x1y1 + kl_a_z1 + x0y3
+        elbo = (forward_elbo1 + forward_elbo2 + backward_elbo1 + backward_elbo2)/4
         self.add_metric("pdiff_z1z2",pdiff_z1z2)
         self.add_metric("pdiff_z0z3",pdiff_z0z3)
         self.add_metric("pdiff_z0z1",pdiff_z0z1)
