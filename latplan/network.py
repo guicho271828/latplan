@@ -178,6 +178,9 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         for i, net in enumerate(self.nets):
             net.save_weights(self.local(os.path.join(path,f"net{i}.h5")))
 
+        for i, o in enumerate(self.optimizers):
+            np.savez_compressed(self.local(os.path.join(path,f"opt{i}.npz")),*o.get_weights())
+
         with open(self.local(os.path.join(path,"aux.json")), "w") as f:
             json.dump({"parameters":self.parameters,
                        "class"     :self.__class__.__name__,
@@ -228,6 +231,9 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             self.build_aux(tuple(data["input_shape"]))
         for i, net in enumerate(self.nets):
             net.load_weights(self.local(os.path.join(path,f"net{i}.h5")))
+        for i, o in enumerate(self.optimizers):
+            with np.load(self.local(os.path.join(path,f"opt{i}.npz"))) as data:
+                o.set_weights([ data[key] for key in data.files ])
 
     def reload_with_shape(self,input_shape,path=""):
         """Rebuild the network for a shape that is different from the training time, then load the weights."""
