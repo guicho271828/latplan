@@ -436,6 +436,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
 
         try:
             clist.on_train_begin()
+            aborted = True
             logs = {}
             for epoch in range(start_epoch,start_epoch+epoch):
                 np.random.shuffle(index_array)
@@ -455,13 +456,14 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                 clist.on_epoch_end(epoch,logs)
                 if self.nets[0].stop_training:
                     break
-            clist.on_train_end()
+            aborted = False
 
         except KeyboardInterrupt:
             print("learning stopped\n")
         finally:
             self.save()
             self.loaded = True
+            clist.on_train_end({"aborted":aborted})
         return self
 
     def evaluate(self,*args,**kwargs):
