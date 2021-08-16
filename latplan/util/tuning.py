@@ -1,6 +1,8 @@
 import json
+import os
 import os.path
 import random
+import hashlib
 from .stacktrace import print_object
 import datetime
 from .util import ensure_list, NpEncoder, gpu_info
@@ -149,7 +151,7 @@ def nn_task(network, path, train_in, train_out, val_in, val_out, parameters, res
     return net, error
 
 
-keys_to_ignore = ["time_start","time_duration","time_end","HOSTNAME","LSB_JOBID","gpu","mean","std"]
+keys_to_ignore = ["time_start","time_duration","time_end","HOSTNAME","LSB_JOBID","gpu","mean","std","hash"]
 
 def _key(config):
     def tuplize(x):
@@ -159,6 +161,20 @@ def _key(config):
             return x
     return tuple( tuplize(v) for k, v in sorted(config.items())
                   if k not in keys_to_ignore)
+
+def _add_misc_info(config):
+    for key in ["HOSTNAME", "LSB_JOBID"]:
+        try:
+            config[key] = os.environ[key]
+        except KeyError:
+            pass
+    try:
+        config["gpu"] = gpu_info()[0]["name"]
+    except:
+        # not very important
+        pass
+    config["hash"] = hashlib.md5(bytes(str(_key(config)),"utf-8")).hexdigest()
+    return
 
 
 def _runs(open_list):
@@ -213,18 +229,20 @@ def grid_search(task, parameters, path,
     open_list, close_list = call_with_lock(path,lambda : load_history(path))
 
     def _iter(config):
+        _add_misc_info(config)
         def fn1():
             open_list, close_list = load_history(path)
             if _key(config) in close_list:
                 raise HyperparameterGenerationError()
             else:
-                time_start = datetime.datetime.now()
-                config["time_start"]   = time_start.isoformat(timespec='milliseconds')[5:]
                 # insert infinity and block the duplicated effort.
                 # Third field indicating the placeholder
                 save_history(path, (float("inf"), config, "placeholder"))
-                return time_start
-        time_start = call_with_lock(path, fn1)
+                return
+        call_with_lock(path, fn1)
+        # note: call_with_lock could take a long time, so time_start should be measured here
+        time_start = datetime.datetime.now()
+        config["time_start"]   = time_start.isoformat(timespec='milliseconds')[5:]
         artifact, eval = task(config)
         time_end = datetime.datetime.now()
         config["time_end"]     = time_end.isoformat(timespec='milliseconds')[5:]
@@ -478,29 +496,20 @@ def simple_genetic_search(task, parameters, path,
     open_list, close_list = call_with_lock(path,lambda : load_history(path))
 
     def _iter(config):
-        import os
-        for key in ["HOSTNAME", "LSB_JOBID"]:
-            try:
-                config[key] = os.environ[key]
-            except KeyError:
-                pass
-        try:
-            config["gpu"] = gpu_info()[0]["name"]
-        except:
-            # not very important
-            pass
+        _add_misc_info(config)
         def fn1():
             open_list, close_list = load_history(path)
             if _key(config) in close_list:
                 raise HyperparameterGenerationError()
             else:
-                time_start = datetime.datetime.now()
-                config["time_start"]   = time_start.isoformat(timespec='milliseconds')[5:]
                 # insert infinity and block the duplicated effort.
                 # Third field indicating the placeholder
                 save_history(path, (float("inf"), config, "placeholder"))
-                return time_start
-        time_start = call_with_lock(path, fn1)
+                return
+        call_with_lock(path, fn1)
+        # note: call_with_lock could take a long time, so time_start should be measured here
+        time_start = datetime.datetime.now()
+        config["time_start"]   = time_start.isoformat(timespec='milliseconds')[5:]
         artifact, eval = task(config)
         time_end = datetime.datetime.now()
         config["time_end"]     = time_end.isoformat(timespec='milliseconds')[5:]

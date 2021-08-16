@@ -49,7 +49,7 @@ This dict can be used while building the network, making it easier to perform a 
         self.losses  = [None]
         if parameters:
             # handle the test-time where parameters is not given
-            self.path = os.path.join(path,"logs",self.parameters["time_start"])
+            self.path = os.path.join(path,"logs",str(self.parameters["hash"]))
             self.file_writer = tf.summary.FileWriter(self.path)
             self.epoch = LinearSchedule(schedule={
                 0:0,

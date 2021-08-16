@@ -281,7 +281,7 @@ def run(path,transitions,extra=None):
         open_list, _ = load_history(path)
         topk = open_list[:10]
         topk_dirnames = [
-            os.path.join(path,"logs",elem[1]["time_start"])
+            os.path.join(path,"logs",elem[1]["hash"])
             for elem in topk
         ]
         print(f"iterating mode {args.mode} for all weights stored under logs")
