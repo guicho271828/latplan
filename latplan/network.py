@@ -317,13 +317,11 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         """Main method for training.
  This method may be overloaded by the subclass into a specific training method, e.g. GAN training."""
 
-        if resume:
-            print("resuming the training")
-            self.load(allow_failure=False, path="logs/"+self.parameters["resume_from"])
-        else:
-            input_shape = train_data.shape[1:]
-            self.build(input_shape)
-            self.build_aux(input_shape)
+        self.load(allow_failure=True)
+        input_shape = train_data.shape[1:]
+        # these will not build if loading is successful
+        self.build(input_shape)
+        self.build_aux(input_shape)
 
         epoch      = self.parameters["epoch"]
         batch_size = self.parameters["batch_size"]
