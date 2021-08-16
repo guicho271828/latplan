@@ -47,19 +47,14 @@ This dict can be used while building the network, making it easier to perform a 
         self.metrics = []
         self.nets    = [None]
         self.losses  = [None]
+        self.epoch   = 0
         if parameters:
             # handle the test-time where parameters is not given
             self.path = os.path.join(path,"logs",str(self.parameters["hash"]))
             self.file_writer = tf.summary.FileWriter(self.path)
-            self.epoch = LinearSchedule(schedule={
-                0:0,
-                self.parameters["epoch"]:self.parameters["epoch"],
-            }, name="epoch")
             self.callbacks = [
                 # keras.callbacks.LambdaCallback(
                 #     on_epoch_end = self.save_epoch(path=self.path,freq=1000)),
-                keras.callbacks.LambdaCallback(
-                    on_epoch_end=self.epoch.update),
                 keras.callbacks.TerminateOnNaN(),
                 keras.callbacks.LambdaCallback(
                     on_epoch_end = self.bar_update,),
@@ -184,6 +179,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         with open(self.local(os.path.join(path,"aux.json")), "w") as f:
             json.dump({"parameters":self.parameters,
                        "class"     :self.__class__.__name__,
+                       "epoch"     :self.epoch,
                        "input_shape":self.net.input_shape[1:]}, f , skipkeys=True, cls=NpEncoder, indent=2)
 
     def save_epoch(self, freq=10, path=""):
@@ -227,6 +223,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             _params = self.parameters
             self.parameters = data["parameters"]
             self.parameters.update(_params)
+            self.epoch = data["epoch"]
             self.build(tuple(data["input_shape"]))
             self.build_aux(tuple(data["input_shape"]))
         for i, net in enumerate(self.nets):
@@ -253,11 +250,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             progressbar.AbsoluteETA(format="%(eta)s"), " ",
             DynamicMessage("status", format='{formatted_value}')
         ]
-        if "start_epoch" in self.parameters:
-            start_epoch = self.parameters["start_epoch"] # for resuming
-        else:
-            start_epoch = 0
-        self.bar = progressbar.ProgressBar(max_value=start_epoch+self.parameters["epoch"], widgets=widgets)
+        self.bar = progressbar.ProgressBar(max_value=self.parameters["epoch"], widgets=widgets)
 
     def bar_update(self, epoch, logs):
         "Used for updating the progress bar."
@@ -338,10 +331,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         lr         = self.parameters["lr"]
         clipnorm   = self.parameters["clipnorm"]
         # clipvalue  = self.parameters["clipvalue"]
-        if "start_epoch" in self.parameters:
-            start_epoch = self.parameters["start_epoch"] # for resuming
-        else:
-            start_epoch = 0
 
         # batch size should be smaller / eq to the length of train_data
         batch_size = min(batch_size, len(train_data))
@@ -414,7 +403,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         clist.set_model(self.nets[0])
         clist.set_params({
             "batch_size": batch_size,
-            "epochs": start_epoch+epoch,
+            "epochs": epoch,
             "steps": None,
             "samples": len(train_data[0]),
             "verbose": 0,
@@ -444,12 +433,12 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             clist.on_train_begin()
             aborted = True
             logs = {}
-            for epoch in range(start_epoch,start_epoch+epoch):
+            for self.epoch in range(self.epoch,epoch):
                 np.random.shuffle(index_array)
                 indices_cache       = [ indices for indices in make_batch(index_array) ]
                 train_data_cache    = [[ train_subdata   [indices] for train_subdata    in train_data    ] for indices in indices_cache ]
                 train_data_to_cache = [[ train_subdata_to[indices] for train_subdata_to in train_data_to ] for indices in indices_cache ]
-                clist.on_epoch_begin(epoch,logs)
+                clist.on_epoch_begin(self.epoch,logs)
                 for train_subdata_cache,train_subdata_to_cache in zip(train_data_cache,train_data_to_cache):
                     for net,train_subdata_batch_cache,train_subdata_to_batch_cache in zip(self.nets, train_subdata_cache,train_subdata_to_cache):
                         net.train_on_batch(train_subdata_batch_cache, train_subdata_to_batch_cache)
@@ -459,7 +448,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                     logs["t_"+k] = v
                 for k,v in generate_logs(val_data,  val_data_to).items():
                     logs["v_"+k] = v
-                clist.on_epoch_end(epoch,logs)
+                clist.on_epoch_end(self.epoch,logs)
                 if self.nets[0].stop_training:
                     break
             aborted = False
