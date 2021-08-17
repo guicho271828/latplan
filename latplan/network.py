@@ -72,7 +72,7 @@ Users should not overload this method; Define _build_around() for each subclass 
 This function calls _build bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         if self.built:
-            # print("Avoided building {} twice.".format(self))
+            print("Avoided building {} twice.".format(self))
             return
         print("Building networks")
         self._build_around(*args,**kwargs)
@@ -100,7 +100,7 @@ Users should not overload this method; Define _build_around() for each subclass 
 This function calls _build bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         if self.built_aux:
-            # print("Avoided building {} twice.".format(self))
+            print("Avoided building {} twice.".format(self))
             return
         print("Building auxiliary networks")
         self._build_aux_around(*args,**kwargs)
@@ -125,7 +125,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
     def compile(self,*args,**kwargs):
         """An interface for compiling a network."""
         if self.compiled:
-            # print("Avoided compiling {} twice.".format(self))
+            print("Avoided compiling {} twice.".format(self))
             return
         print("Compiling networks")
         self._compile(*args,**kwargs)
@@ -187,7 +187,7 @@ Users should not overload this method; Define _load() for each subclass instead.
 This function calls _load bottom-up from the least specialized class.
 Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around methods."""
         if self.loaded:
-            # print("Avoided loading {} twice.".format(self))
+            print("Avoided loading {} twice.".format(self))
             return
 
         if allow_failure:
