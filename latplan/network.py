@@ -130,7 +130,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         print("Compiling networks")
         self._compile(*args,**kwargs)
         self.compiled = True
-        self.loaded = True
         print("Network compiled")
         return self
 
