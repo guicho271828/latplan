@@ -158,7 +158,7 @@ The latter two are used for verifying the performance of the AE.
                 train_hard  = train_hard,
                 test_noise  = test_noise,
                 test_hard   = test_hard)
-            self.callbacks.append(LambdaCallback(on_epoch_end=gs.update))
+            self.callbacks.append(LambdaCallback(on_epoch_begin=gs.update))
             self.add_metric("tau",gs.variable)
             return gs
 
@@ -184,7 +184,7 @@ The latter two are used for verifying the performance of the AE.
                 train_hard  = train_hard,
                 test_noise  = test_noise,
                 test_hard   = test_hard)
-            self.callbacks.append(LambdaCallback(on_epoch_end=bc.update))
+            self.callbacks.append(LambdaCallback(on_epoch_begin=bc.update))
             return bc
 
         return fn(**kwargs)
