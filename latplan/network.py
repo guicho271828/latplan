@@ -57,7 +57,8 @@ This dict can be used while building the network, making it easier to perform a 
                 #     on_epoch_end = self.save_epoch(path=self.path,freq=1000)),
                 keras.callbacks.TerminateOnNaN(),
                 keras.callbacks.LambdaCallback(
-                    on_epoch_end = self.bar_update,),
+                    on_epoch_end = self.bar_update,
+                    on_training_end = self.save_at_end,),
                 keras.callbacks.TensorBoard(
                     histogram_freq = 0,
                     log_dir     = self.path,
@@ -461,10 +462,15 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         except KeyboardInterrupt:
             print("learning stopped\n")
         finally:
-            self.save()
-            self.loaded = True
             clist.on_train_end({"aborted":aborted})
         return self
+
+    def save_at_end(self,logs):
+        if logs["aborted"]:
+            print("training aborted")
+        self.save()
+        self.loaded = True
+
 
     def evaluate(self,*args,**kwargs):
 
