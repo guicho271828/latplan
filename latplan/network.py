@@ -226,6 +226,7 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
             self.epoch = data["epoch"]
             self.build(tuple(data["input_shape"]))
             self.build_aux(tuple(data["input_shape"]))
+            self.compile(self.optimizers)
         for i, net in enumerate(self.nets):
             net.load_weights(self.local(os.path.join(path,f"net{i}.h5")))
         for i, o in enumerate(self.optimizers):
@@ -317,12 +318,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         """Main method for training.
  This method may be overloaded by the subclass into a specific training method, e.g. GAN training."""
 
-        self.load(allow_failure=True)
-        input_shape = train_data.shape[1:]
-        # these will not build if loading is successful
-        self.build(input_shape)
-        self.build_aux(input_shape)
-
         epoch      = self.parameters["epoch"]
         batch_size = self.parameters["batch_size"]
         optimizer  = self.parameters["optimizer"]
@@ -330,9 +325,9 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
         clipnorm   = self.parameters["clipnorm"]
         # clipvalue  = self.parameters["clipvalue"]
 
-        # batch size should be smaller / eq to the length of train_data
-        batch_size = min(batch_size, len(train_data))
-
+        input_shape = train_data.shape[1:]
+        self.build(input_shape)
+        self.build_aux(input_shape)
         def make_optimizer(net):
             return getattr(keras.optimizers,optimizer)(
                 lr,
@@ -342,6 +337,18 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
 
         self.optimizers = list(map(make_optimizer, self.nets))
         self.compile(self.optimizers)
+
+        # populate the optimizers with gradients, otherwise loading fails. this does not need data.
+        # two fields, trainable_weights and total_loss, are filled by Model.compile method.
+        for net in self.nets:
+            net._make_train_function()
+
+        # load the weights to resume if the weights exist
+        self.load(allow_failure=True)
+
+
+        # batch size should be smaller / eq to the length of train_data
+        batch_size = min(batch_size, len(train_data))
 
         if val_data     is None:
             val_data     = train_data
