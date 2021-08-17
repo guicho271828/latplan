@@ -53,8 +53,6 @@ This dict can be used while building the network, making it easier to perform a 
             self.path = os.path.join(path,"logs",str(self.parameters["hash"]))
             self.file_writer = tf.summary.FileWriter(self.path)
             self.callbacks = [
-                # keras.callbacks.LambdaCallback(
-                #     on_epoch_end = self.save_epoch(path=self.path,freq=1000)),
                 keras.callbacks.TerminateOnNaN(),
                 keras.callbacks.LambdaCallback(
                     on_epoch_end = self.bar_update,
@@ -182,12 +180,6 @@ Poor python coders cannot enjoy the cleanness of CLOS :before, :after, :around m
                        "class"     :self.__class__.__name__,
                        "epoch"     :self.epoch,
                        "input_shape":self.net.input_shape[1:]}, f , skipkeys=True, cls=NpEncoder, indent=2)
-
-    def save_epoch(self, freq=10, path=""):
-        def fn(epoch, logs):
-            if (epoch % freq) == 0:
-                self.save(os.path.join(path,str(epoch)))
-        return fn
 
     def load(self,allow_failure=False,path=""):
         """An interface for loading a network.
