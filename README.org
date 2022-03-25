@@ -41,15 +41,6 @@ Since the official Tensorflow by Google (both the source code and the package) n
 machines with recent GPUs require a [[https://developer.nvidia.com/blog/accelerating-tensorflow-on-a100-gpus/][port maintained by NVIDIA]]. Our installation script installs this port.
 *The port only supports Linux, therefore we do not support OSX and Windows.*
 
-Also, NVIDIA port requires LIBC 2.29 or later. If your system does not come with LIBC 2.29,
-you should obtain the source code from https://ftp.gnu.org/gnu/libc/, build it, and install it somewhere *locally*.
-*Do not install it system-wide*, as libc is widely incompatibile between versions and causes a nightmare for inexperienced linux beginners
---- for example, you may no longer run normal commands like `ls`, `rm`, `cat` or any other programs if you mess it up.
-
-The only shared object required by the NVIDIA port is =libm.so.6=.
-To run the program later, run =export LD_PRELOAD=/path/to/glibc-2.29/lib/libm.so.6= on the command line
-before launching python.
-
 * Setup with Anaconda / Miniconda (recommended)
 
 =anaconda= / =miniconda= (https://docs.conda.io/en/latest/miniconda.html) is a
@@ -165,9 +156,6 @@ You also need to uncomment the commands to run.
 By default, everything is commented out and nothing runs.
 
 #+begin_src sh
-# If you installed glibc locally
-export LD_PRELOAD=/path/to/glibc-2.29/lib/libm.so.6
-
 # Submit the jobs for training AMA3+ (Cube-Space AEs) and AMA4+ (Bidirectional Cube-Space AEs)
 ./train_propositional.sh
 
