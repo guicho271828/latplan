@@ -6,7 +6,7 @@ dependencies:
   - parallel
   - gnuplot
   - libcurl
-  - gcc_linux-64
+  - compilers
   - automake
   - cmake
   - flex
