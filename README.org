@@ -67,42 +67,6 @@ conda activate latplan
 ./install.sh
 #+end_src>
 
-* Setup without Anaconda / Miniconda (Highly un-recommended)
-
-On Ubuntu, prerequisites can be installed by running [[./install-non-anaconda.sh]] .
-It is not well-tested, so beware of hiccup.
-Note that this requires several libraries system-wide with sudo.
-Users of other distributions should inspect the file and find the equivalent packages in the respective system.
-
-#+begin_src sh
-./install-non-anaconda.sh
-./install.sh
-#+end_src>
-
-** General Requirements
-
-+ =g++ cmake make python flex bison g++-multilib= --- these are required for compiling Fast Downward.
-
-+ =git build-essential automake libcurl4-openssl-dev= --- these are required for compiling [Roswell](http://roswell.github.io/).
- OSX users should use =brew install roswell=.
-
-+ =gnuplot= --- for plotting.
-
-+ =parallel= --- for running some scripts.
-
-+ =libmagic-dev= --- for filetype detection used by file processor. *NOTE: you need a header source code in CPATH. Installing the shared object library is not sufficient*
-
-+ =sqlite3= --- version 3.35 or later is required. Used only for generating tables and figures.
-
-+ =libc= version 2.29 or later, because NVIDIA port of tensorflow is compiled against it.
-
-+ *python 3.8 (not later or older),* because NVIDIA port of tensorflow is compiled only against it.
-  
-+ Common Lisp library dependencies (lines starting with =ros= in  [[./install.sh]] )
-  + =ros dynamic-space-size=8000 install numcl arrival eazy-gnuplot magicffi dataloader=
-
-+ =python3-pip= for pip.
-
 
 * Command Line Interface
 
