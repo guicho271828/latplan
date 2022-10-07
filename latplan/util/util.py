@@ -1,5 +1,5 @@
 def curry(fn,*args1,**kwargs1):
-    return lambda *args,**kwargs: fn(*args1,*args,**{**kwargs1,**kwargs})
+    return lambda *args,**kwargs: fn(*args1,**kwargs1)
 
 def prepare_binary_classification_data(real, fake):
     import numpy as np
